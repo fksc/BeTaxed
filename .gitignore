@@ -1,28 +1,50 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
 # Local SS / contract samples — real PII, never commit
 .KB/Samples/*
 !.KB/Samples/README.md
 !.KB/Samples/.gitignore
 
-# Env / secrets
+# Env and secrets (keep local only)
 .env
 .env.*
 !.env.example
+!.env.dev.example
+!.env.staging.example
+!.env.prod.example
+
+# Logs and caches
+*.log
+.cache/
 
 # Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
 .venv/
-**/__pycache__/
-*.pyc
+venv/
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-# Node
+# Node / Next.js
 node_modules/
 .next/
 out/
 dist/
-
-# OS / editor
-.DS_Store
-*.swp
-.idea/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

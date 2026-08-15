@@ -1,0 +1,10 @@
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+sqlalchemy[asyncio]==2.0.41
+asyncpg==0.30.0
+alembic==1.15.2
+python-dotenv==1.1.0
+
+# Dev/test
+pytest==9.0.3
+httpx==0.28.1
