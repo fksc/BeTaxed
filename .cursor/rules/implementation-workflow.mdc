@@ -1,0 +1,15 @@
+---
+description: Confirm-before-implement — Linear issue, proposed plan, then wait for approval
+alwaysApply: true
+---
+
+# Implementation workflow (BeTaxed)
+
+For **substantive work** (new behaviour, refactors, multi-file changes, infra, or anything tied to a Linear issue):
+
+1. **Anchor on the issue** — Use the Linear issue the user references (or ask for the issue key if missing). Load scope from the issue and `.KB/` where cited.
+2. **Propose first** — Summarize understanding, outline a **concrete approach**, and call out risks or open decisions (`OD-*` in `KB/00_mother_doc.md`). **Do not** silently lock OD-1 (account vs upload first).
+3. **Wait for explicit confirmation** — **Do not** implement until the user clearly confirms.
+4. **After confirmation** — Implement, test as appropriate, and keep the change set aligned with what was agreed.
+
+**Exceptions:** purely read-only investigation; tiny follow-ups explicitly requested after a confirmed implementation.

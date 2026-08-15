@@ -1,0 +1,45 @@
+---
+description: Git branching, PR flow, branch naming, and Linear integration for BeTaxed
+alwaysApply: true
+---
+
+# Git and Linear (BeTaxed)
+
+## Branches
+
+- **main** — production only. Do not commit directly; merge via release PR.
+- **dev** — default integration branch for ongoing work.
+
+## Flow
+
+1. Branch **from `dev`** only (never from `main` for feature work).
+2. Implement and test; open a **PR into `dev`**.
+3. For a release, open a **PR from `dev` into `main`** after the team agrees.
+
+**Starting a Linear issue:** Before coding, fetch/pull `dev`, then create the branch from Linear’s **`gitBranchName`** (`get_issue`). See **`linear-issue-branch-start.mdc`**.
+
+## Branch naming
+
+Linear project name: **BeTaxed**. Issue keys use the prefix **`DEV-`**.
+
+Format: `{Type}/{ISSUE-KEY}-{short-kebab-title}`
+
+Allowed `Type` values (exact casing):
+
+- `Feature/`
+- `Bug/`
+- `DevFix/`
+- `Enhancement/`
+- `Refactor/`
+
+Examples: `Feature/DEV-12-ss-parser`, `Bug/DEV-5-niss-hash`.
+
+## Commits and PRs (Linear + GitHub)
+
+- Include the **issue id** in branch names, commit messages, and/or PR title/body.
+- Use Linear **magic words**: `Fixes DEV-12`, `Closes DEV-12`, `Resolves DEV-12`, `Refs DEV-12`, `Addresses DEV-12`.
+
+## Linear issue fields (when creating issues)
+
+- **Estimate:** Always set Fibonacci **0–21** (`0`, `1`, `2`, `3`, `5`, `8`, `13`, `21`). Never leave unset unless the user says to omit.
+- **Status:** Default new issues to **Backlog** unless the user specifies another state.

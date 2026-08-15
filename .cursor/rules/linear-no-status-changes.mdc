@@ -1,0 +1,27 @@
+---
+description: Do not change Linear issue workflow statuses via MCP — read and link only
+alwaysApply: true
+---
+
+# Linear — no status changes
+
+Agents must **not** change Linear issue **workflow status** (state) in this project.
+
+## Forbidden
+
+- Do **not** call Linear MCP `save_issue` with a **`state`** argument — e.g. `Done`, `Todo`, `In Progress`, `Canceled`.
+- Do **not** mark issues complete, reopen them, or move them on the board on the user's behalf.
+- Do **not** do this even when the user says "close the ticket", "mark done", or work is finished — status is owned by the team in Linear.
+
+## Allowed
+
+- **Read** issues: `get_issue`, search/list, load scope and acceptance criteria.
+- **Create** issues when explicitly asked (default new issues to **Backlog**; still **no** `state` unless the user explicitly overrides this rule for that one call).
+- **Update non-status fields** when asked: title, description, labels, assignee, estimate, links, relations — **without** `state`.
+- **Git / GitHub linking**: issue keys in branches, commits, and PR bodies. Let Linear automation sync status from merge if configured.
+
+## When work is done
+
+1. Summarize what was implemented and which acceptance criteria are met.
+2. Propose commit/PR text with the correct magic words.
+3. Tell the user to **move the issue to the desired status in Linear**.

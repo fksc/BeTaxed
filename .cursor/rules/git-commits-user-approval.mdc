@@ -1,0 +1,17 @@
+---
+description: Always show full commit messages for review; no git commit without explicit user ask
+alwaysApply: true
+---
+
+# Git commits (BeTaxed)
+
+**Every time** a commit would be appropriate — whether the user asked you to commit or not — you must **show the complete proposed commit message in the chat first**: full **subject** and full **body**, in a **single fenced or plain block**. No shorthand.
+
+When the user **explicitly** asked you to commit: still output that **same full message in full in chat** immediately before any `git commit`.
+
+## No surprise commits
+
+1. **Never run `git commit` (or `git commit --amend`) unless the user explicitly asks you to commit.** Staging (`git add`) is also off-limits unless they ask for it as part of an agreed commit flow.
+2. If work is done but the user did **not** ask to commit, end with a **short summary**, **`git add` paths**, and the **full proposed commit message**.
+
+Never commit `.KB/Samples/` or `.env`. See `KB/GIT_STRATEGY.md`.

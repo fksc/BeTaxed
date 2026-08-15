@@ -1,0 +1,28 @@
+# Local SS / contract samples — real PII, never commit
+.KB/Samples/*
+!.KB/Samples/README.md
+!.KB/Samples/.gitignore
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/

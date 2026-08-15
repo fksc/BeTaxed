@@ -1,0 +1,31 @@
+---
+description: Before implementing a Linear issue, branch from pulled dev using Linear gitBranchName
+alwaysApply: true
+---
+
+# Linear issue — branch before you code
+
+When the user asks to **start**, **work on**, or **implement** a **Linear issue** (e.g. `DEV-900`), do this **before** non-trivial edits — unless they give a different base branch or branch name.
+
+## 1. Load the issue
+
+- Call Linear `get_issue` for the issue key.
+- Read **`gitBranchName`**. Use it **as-is** for `git checkout -b`.
+
+If `gitBranchName` is missing, derive a kebab slug from the title: `{issue-key-lowercase}-{slug}`.
+
+## 2. Refresh `dev` and create the branch
+
+```bash
+git fetch origin dev
+git checkout dev
+git pull origin dev
+git checkout -b <gitBranchName>
+```
+
+- Do **not** branch from `main` for feature work.
+- Do **not** create the issue branch until `dev` is fetched and pulled (or the user says `dev` is already up to date).
+
+## 3. Then implement
+
+Keep PRs into **`dev`**. Release is **`dev` → `main`**. See `git-branching-linear.mdc` and `KB/GIT_STRATEGY.md`.
