@@ -1,0 +1,38 @@
+---
+description: Comprehensive commit and PR messages with Linear linking (BeTaxed)
+alwaysApply: true
+---
+
+# Commit and pull request messages (BeTaxed)
+
+Apply to **every** proposed or executed `git commit` and to **GitHub pull request** titles/descriptions unless the user overrides.
+
+## Structure (required content)
+
+Write in clear prose. Use a **short subject line** (≤72 chars when possible) plus a **detailed body**.
+
+The body must cover, in order (omit only if truly N/A, and say so):
+
+1. **What we implemented** — user-visible or architectural outcome.
+2. **Why** — problem, constraint, or ticket driver (link KB paths if relevant).
+3. **What has changed** — areas touched (services, routes, UI, schema, migrations); call out breaking API or env changes.
+4. **What’s new** — new endpoints, flags, env vars, user flows, or docs.
+5. **Tests** — commands run (`pytest`, `npm run lint`, manual checks) and results; if none, state **Tests: not run** and why.
+6. **Other important information** — rollout notes, follow-ups, known limitations.
+
+## Linear / GitHub linking
+
+- Include the **issue key** (e.g. `DEV-827`) in the subject or body.
+- Use GitHub / Linear magic words so automation can link and move issues:
+  - **`Closes DEV-###`** / **`Fixes DEV-###`** / **`Resolves DEV-###`** — only when this change **fully resolves** the issue and should close it on merge.
+  - **`Refs DEV-###`** / **`Addresses DEV-###`** — for partial work, follow-ups, or stacked PRs.
+- Do not claim **Closes** if the issue stays open or is only partially addressed.
+
+## Pull requests
+
+PR **title** should mirror the commit subject style. PR **description** should follow the same body structure as commits, plus a link to the Linear issue.
+
+## Interaction with other rules
+
+- Still comply with `git-commits-user-approval.mdc`.
+- Branch naming and Linear workflow: `git-branching-linear.mdc`.

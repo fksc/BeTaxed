@@ -55,10 +55,11 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 
 | Layer | Technology |
 |---|---|
-| Backend | FastAPI (Python) |
+| Backend | FastAPI 0.136.1 (Python 3.13) |
 | Auth | Firebase Auth |
-| Frontend | Next.js (App Router) + shadcn/ui |
-| Database | PostgreSQL (Cloud SQL) |
+| Frontend | Next.js 16 App Router + shadcn/ui (Node 24) |
+| Database | PostgreSQL 18 (local compose / Cloud SQL) |
+| Cache | Redis 8 (local compose, host 6380) |
 | File storage | GCS (paths in DB, never blobs; signed URLs on demand) |
 | Deployment | Google Cloud Run (backend + frontend, independent) |
 | Payments | Stripe (SEPA Direct Debit intended); certified PT invoicing software as alternate path |
@@ -73,9 +74,12 @@ Same shape as other DEV repos: GCP, Cloud Run, Firebase, Postgres, FastAPI, Next
 ```
 BeTaxed/                    ← monorepo
   .KB/                      ← knowledge base (this folder)
-  backend/                  ← FastAPI (to be created)
-  frontend/                 ← Next.js (to be created)
-  infra/                    ← Cloud Run, env, jobs
+  backend/                  ← FastAPI (`app/`, Alembic)
+  frontend/                 ← Next.js + shadcn (`app/`, `components/`, `lib/`)
+  infra/                    ← Cloud Run placeholders
+  docs/                     ← setup notes
+  scripts/                  ← local / CI helpers
+  docker-compose.yml        ← local Postgres 18 + Redis 8
 ```
 
 ---
