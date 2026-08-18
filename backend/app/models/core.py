@@ -43,13 +43,16 @@ class UserBase(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     user_type: Mapped[str] = mapped_column(String(20), nullable=False)
     preferred_language: Mapped[str] = mapped_column(
-        String(10), nullable=False, server_default=text("'pt'")
+        String(10), nullable=False, server_default=text("'pt'"), default="pt"
     )
     timezone: Mapped[str] = mapped_column(
-        String(64), nullable=False, server_default=text("'Europe/Lisbon'")
+        String(64),
+        nullable=False,
+        server_default=text("'Europe/Lisbon'"),
+        default="Europe/Lisbon",
     )
     is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("TRUE")
+        Boolean, nullable=False, server_default=text("TRUE"), default=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -159,7 +162,7 @@ class CompanyMembership(Base):
     )
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     is_active: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, server_default=text("TRUE")
+        Boolean, nullable=False, server_default=text("TRUE"), default=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

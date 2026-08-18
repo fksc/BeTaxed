@@ -4,7 +4,7 @@ FastAPI service. Layout matches Talent Journey: `app/{routers,models,schemas,ser
 
 ```bash
 # from repo root
-docker compose up -d postgres redis
+docker compose up -d postgres redis firebase-auth
 
 cd backend
 python -m venv .venv && source .venv/bin/activate
@@ -14,6 +14,19 @@ alembic upgrade head   # DEV-828 core spine
 uvicorn app.main:app --reload --port 8080
 ```
 
+Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
+
+```bash
+# from repo root
+./scripts/mint-firebase-emulator-token.sh hr@acme.example password
+# then: curl -H "Authorization: Bearer <idToken>" http://localhost:8080/v1/me
+```
+
 - `GET /health` — process liveness (no DB)
 - `GET /ready` — PostgreSQL `SELECT 1`
+- `GET /v1/me` — Firebase Bearer token; upserts `user_base` (`COMPANY_STAFF` on first login; `BETAXED_STAFF` is a DB promotion)
+- `GET /v1/me/company` — requires `X-Company-Id` (never inferred). Staff: any company, no membership. Company users: active member.
+- `GET /v1/me/intake` — requires `X-Intake-Id`. Owner or staff. Unbound intake (`user_id` null) is staff-only (OD-1).
 - Tests: `PYTHONPATH=. pytest`
+
+DEV verifies tokens against the Auth emulator (`FIREBASE_AUTH_EMULATOR_HOST`). Tests mock the verifier. Staging/prod: unset the emulator host, set a real `FIREBASE_PROJECT_ID`, and use Application Default Credentials.

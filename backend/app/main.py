@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.routers import me_router
 from app.settings import get_cors_origins, get_redis_url
 
 app = FastAPI(title="BeTaxed API", version="0.1.0")
@@ -23,6 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(me_router)
 
 
 @app.get("/health")
