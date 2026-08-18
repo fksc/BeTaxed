@@ -120,14 +120,14 @@ Employee / employment / compensation / events have `source` (`SS` \| `USER` \| `
 
 ## Open Decisions
 
-Leave these open until explicitly locked. Do not implement a silent default in product copy as if it were decided.
+Leave **open** rows unlocked. Do not implement a silent default in product copy as if an open row were decided.
 
-| ID | Topic | Options | Notes |
+| ID | Topic | Status | Decision / remaining |
 |---|---|---|---|
-| OD-1 | **When identity happens** | (A) Account (even thin) → upload → teaser → continue or wipe. (B) Upload → teaser → account or wipe. | Prefer (A) for GDPR/ToS; (B) converts more. Schema supports both (`intake.user_id` nullable). |
-| OD-2 | Teaser payload | One aggregate number vs vaguer “opportunity found” | Lean one number, no breakdown. |
-| OD-3 | Salary at rest | NUMERIC in CMEK Cloud SQL vs app-level encrypt | Lean NUMERIC so invoicing can `SUM`. Identifiers still app-encrypted. |
-| OD-4 | Regime edge cases | Age at **sem termo** vs first hire; leave vs billable; fee %; certified vendor | Working assumptions in `KB/20`; hammer later. |
+| OD-1 | **When identity happens** | **Open** — iterate | (A) Account → upload → teaser → continue or wipe. (B) Upload → teaser → account or wipe. Schema supports both (`intake.user_id` nullable). Ticket: DEV-840. |
+| OD-2 | Teaser payload | **Locked** 2026-08-18 | **Two buckets**, each as **monthly** and **5-year** (four figures): (1) **Now** — already sem termo, company not using the benefit; (2) **Potential** — convert to sem termo. Still no recipe, names, remaining months per person. Persist on `intake` (`KB/01`). Ticket: DEV-833. |
+| OD-3 | Salary at rest | **Locked** 2026-08-18 | **NUMERIC + Cloud SQL CMEK.** Identifiers stay app-encrypted. Amounts + quasi-identifiers remain visible in SQL; company APIs still omit per-employee recipe. Ticket: DEV-830. |
+| OD-4 | Regime edge cases | **Locked** 2026-08-18 (period grain pending) | **Age:** at sem termo ≤ 30; 60 months from that date. **Leave:** not billable. **Fee:** platform default, per-client override on `commercial_terms` (each deal can differ). **Certified:** `company.certified_vendor_name` nullable; `invoice.atcud` nullable. **Still pending confirm:** SS/AT access-condition period (yearly vs quarterly) — DEV-838. |
 
 ---
 

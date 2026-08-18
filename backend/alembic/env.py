@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
+from app.models import Base
 from app.settings import get_database_url
 
 config = context.config
@@ -17,7 +18,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def get_url() -> str:

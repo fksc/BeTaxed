@@ -28,11 +28,11 @@ KMS: GCP KMS wrapping a per-company (or per-intake) DEK. Rotate by rewrap; do no
 
 ---
 
-## What stays numeric (OD-3 lean)
+## What stays numeric (OD-3 **locked**)
 
-Base salary, TSU amounts, `saving_amount`, `fee_amount`, invoice totals: `NUMERIC` in Cloud SQL with **CMEK**. Billing must `SUM` in SQL.
+Base salary, TSU amounts, `saving_amount`, `fee_amount`, invoice totals: `NUMERIC` in Cloud SQL with **CMEK**. Billing must `SUM` in SQL. Identifiers (NISS, NIF, name, DOB) stay app-encrypted.
 
-If OD-3 flips to app-encrypt salary, `saving_month` amounts still stay numeric (the billable artifact).
+A SQL dump can still see UUID + amounts + plaintext quasi-identifiers (workplace label, profession, dates). CMEK does not hide live SQL. Company APIs must still omit per-employee recipe fields.
 
 ---
 
