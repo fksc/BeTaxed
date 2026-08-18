@@ -57,12 +57,13 @@ CREATE TABLE company (
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
         CHECK (status IN ('ACTIVE', 'SUSPENDED', 'CHURNED')),
     locale VARCHAR(10) NOT NULL DEFAULT 'pt',
-    ss_regularized BOOLEAN,
+    ss_regularized BOOLEAN,                 -- current-cache only; yearly ledger TBD (DEV-838)
     at_regularized BOOLEAN,
     payroll_not_in_arrears BOOLEAN,
     stripe_customer_id VARCHAR(128),
     invoicing_method VARCHAR(32)
         CHECK (invoicing_method IN ('STRIPE_SEPA', 'CERTIFIED_SOFTWARE')),
+    certified_vendor_name VARCHAR(128),     -- nullable until finance picks a tool
     created_from_intake_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -74,8 +75,8 @@ CREATE UNIQUE INDEX idx_company_employer_niss_hash
 
 **Rules:**
 - `employer_niss_hash` matches the SS export (Power Query name in the sample: `{niss}_vinculos_{date}`). After convert, later batches must match this hash.
-- Access-condition booleans are checklist fields, not the recipe.
-- `invoicing_method` may be null until finance sets it.
+- Access-condition booleans (`ss_regularized`, `at_regularized`, `payroll_not_in_arrears`) are a **current checklist**, not a period ledger and not the recipe. Dated certificates (yearly **or quarterly** — pending confirm) live with `company_application` / files (`KB/05`, DEV-838).
+- `invoicing_method` may be null until finance sets it. `certified_vendor_name` stays null until they pick the certified tool (DEV-841).
 - Soft-delete with `deleted_at`.
 
 ---
@@ -115,7 +116,10 @@ CREATE TABLE intake (
     session_token_hash BYTEA,                       -- anonymous/browser bind if OD-1 B
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN'
         CHECK (status IN ('OPEN', 'CONVERTED', 'DECLINED', 'PURGED')),
-    teaser_amount NUMERIC(14, 2),
+    teaser_now_monthly NUMERIC(14, 2),              -- OD-2: already sem termo, unused benefit
+    teaser_now_window NUMERIC(14, 2),               -- same bucket, ~5-year / remaining window
+    teaser_potential_monthly NUMERIC(14, 2),        -- OD-2: convert to sem termo
+    teaser_potential_window NUMERIC(14, 2),
     teaser_currency CHAR(3) NOT NULL DEFAULT 'EUR',
     teaser_regime_id UUID,                          -- FK added when incentive_regime exists
     converted_company_id UUID REFERENCES company(id),
@@ -129,8 +133,8 @@ CREATE INDEX idx_intake_status ON intake(status);
 ```
 
 **Rules:**
-- `user_id` nullable **on purpose** (OD-1).
-- `teaser_amount` is what we **showed**, not a live ledger.
+- `user_id` nullable **on purpose** (OD-1 still open).
+- The four `teaser_*` amounts are what we **showed** (OD-2), not a live ledger. Do not use JSONB.
 - Convert: create `company`, set `converted_company_id`, `status = CONVERTED`, attach batches/employees (`KB/10_product_flow.md#pass-2--stay`).
 - Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed.
 - Add FK `intake.teaser_regime_id → incentive_regime(id)` in the benefit migration.

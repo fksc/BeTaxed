@@ -128,6 +128,6 @@ CREATE TABLE saving_month (
 
 **Rules:**
 - One row per case per month while in window and granted (or whatever ops lock as “realized”).
-- `billable = FALSE` if terminated, clawback, or leave rule (leave vs billable is OD-4).
+- `billable = FALSE` if terminated, clawback, or **leave** (OD-4 locked: no success fee on leave months).
 - Once `locked_at` is set, do not update amounts. Corrections = new month or credit note.
 - Company invoices **sum fee_amount** where billable; they do not list employees (`KB/06`).

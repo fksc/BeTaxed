@@ -27,12 +27,12 @@ These match the client deck and the locked call: age at hire/sem termo **≤ 30*
 | Employer TSU | 23.75% | Employee share is not the product. Combined 34.75% in the sample = standard, no reduction applied. |
 | Reduction | 50% of employer rate | ≈ 11.875% of base (the ~11.9% in the analyst sheet). |
 | Duration | 60 months from **sem termo start** | Not from application date. |
-| Age | ≤ 30 at signing the **permanent** contract | Deck wording. Conversion at 31 after a term hire at 29 → likely fail. Hammer if needed. |
+| Age | ≤ 30 at signing the **permanent** contract | **Locked (OD-4):** clock is age at **sem termo**, 60 months from that date. Conversion at 31 after a term hire at 29 → fail. |
 | First permanent job | Never signed another sem termo | SS extract of **this** employer cannot prove other employers. `first_permanent_elsewhere = UNKNOWN` until contract/confirmation. |
 | Late application | Remaining time to 60 months; benefit from **next month** after apply | Apply within 10 days of sem termo start for the full window (deck). |
 | Contract | Permanent, full-time or part-time, including conversion from fixed-term | |
 | Company gates at application | Headcount this month **>** average of previous 12 months; SS + AT regularized; salaries not in arrears; duly registered | Headcount test is one-off at application (deck). |
-| Our fee | % of **realized** saving | Period follows the remaining benefit window (commercial 5-year story). % is commercial_terms, not this doc. |
+| Our fee | % of **realized** saving | Period follows the remaining benefit window (commercial 5-year story). % is commercial_terms, not this doc. **Leave months are not billable** (OD-4). |
 
 ---
 

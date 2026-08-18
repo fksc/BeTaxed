@@ -26,7 +26,7 @@ Identity **when** pass 1 runs is **OD-1** (open). Both shapes below are valid un
 
 **Teaser must not include:** 50% of 23.75%, named employees, remaining months, “convert this contract to sem termo”, year-by-year tables. That material belongs in a controlled sales PDF, not the result screen.
 
-Store `intake.teaser_amount` (and regime version) so we do not contradict ourselves if they continue. OD-2: exact teaser copy/number vs vague message.
+Store four teaser figures (and regime version) so we do not contradict ourselves if they continue. **OD-2 locked:** (1) **now** — already sem termo, unused benefit; (2) **potential** — convert to sem termo; each as **monthly** and **5-year**. Still no recipe, named people, remaining months per person, or convert-this-contract how-to.
 
 ---
 
