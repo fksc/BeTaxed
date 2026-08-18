@@ -55,6 +55,10 @@ echo "[start] Ensuring Redis on port ${REDIS_PORT}"
 if ! redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
   redis-server --port "${REDIS_PORT}" --daemonize yes --save '' --appendonly no
 fi
+for _ in $(seq 1 30); do
+  if redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then break; fi
+  sleep 1
+done
 if ! redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
   echo "[start] Redis did not become ready on port ${REDIS_PORT}." >&2
   exit 1
