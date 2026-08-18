@@ -56,4 +56,6 @@ npm run dev
 
 - `GET /api/health` — frontend liveness
 
+Cloud Agents: `.cursor/Dockerfile` provides Python 3.13, Node 24, PostgreSQL 18, and Redis 8. `scripts/cloud-agent-install.sh` / `scripts/cloud-agent-start.sh` bootstrap the repo after checkout.
+
 Do not commit `.KB/Samples/` (PII) or `.env` files. Git: `main` production, `dev` integration — `.KB/GIT_STRATEGY.md`.

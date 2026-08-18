@@ -2,14 +2,27 @@
 # Idempotent repository bootstrap for the BeTaxed Cloud Agent environment.
 # Refreshes backend (Python venv) and frontend (npm) dependencies after checkout.
 # Safe to run repeatedly. Does NOT require a running database.
+# System toolchains (Python 3.13, Node 24, PostgreSQL 18, Redis 8) come from
+# .cursor/Dockerfile — this script only installs repo packages.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Python 3.13 and Node 24 are provided by the base environment. Node 24 lives at
-# /usr/bin/node; keep it ahead of any nvm-managed Node on PATH for frontend work.
+# Node 24 lives at /usr/bin/node in the Cloud Agent image; keep it ahead of nvm.
 PY="${BETAXED_PYTHON:-python3.13}"
 NODE_BIN_DIR="${BETAXED_NODE_BIN_DIR:-/usr/bin}"
+export PATH="${NODE_BIN_DIR}:${PATH}"
+
+if ! command -v "$PY" >/dev/null 2>&1; then
+  echo "[install] ${PY} not found. Install Python 3.13 in .cursor/Dockerfile." >&2
+  exit 127
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "[install] node not found. Install Node 24 in .cursor/Dockerfile." >&2
+  exit 127
+fi
+
+echo "[install] Python: $($PY --version 2>&1)  Node: $(node --version)"
 
 echo "[install] Backend: virtualenv + pip install"
 cd "$REPO_ROOT/backend"
@@ -23,7 +36,6 @@ fi
 echo "[install] Frontend: npm ci"
 cd "$REPO_ROOT/frontend"
 [ -f .env.local ] || cp .env.example .env.local
-export PATH="$NODE_BIN_DIR:$PATH"
 npm ci --no-audit --no-fund
 
 echo "[install] Done"
