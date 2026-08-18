@@ -2,6 +2,7 @@
 # Per-boot service reconciliation for the BeTaxed Cloud Agent environment.
 # Starts PostgreSQL 18 and Redis 8, ensures the app role/database exist, and
 # applies Alembic migrations. Idempotent: tolerates already-running services.
+# Packages must already be present from .cursor/Dockerfile.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,8 +14,27 @@ DB_USER="${POSTGRES_USER:-betaxed}"
 DB_PASS="${POSTGRES_PASSWORD:-betaxed_dev}"
 REDIS_PORT="${REDIS_PORT:-6380}"
 
+require_cmd() {
+  local name="$1"
+  if ! command -v "$name" >/dev/null 2>&1; then
+    echo "[start] ${name} not found. Install it in .cursor/Dockerfile." >&2
+    exit 1
+  fi
+}
+
+require_cmd pg_ctlcluster
+require_cmd redis-server
+require_cmd redis-cli
+if [ ! -x "${PG_BIN}/pg_isready" ]; then
+  echo "[start] ${PG_BIN}/pg_isready not found. PostgreSQL ${PG_VER} is missing." >&2
+  exit 1
+fi
+
 echo "[start] Ensuring PostgreSQL ${PG_VER} is running"
 if ! sudo pg_ctlcluster "${PG_VER}" main status >/dev/null 2>&1; then
+  if [ ! -d "/etc/postgresql/${PG_VER}/main" ]; then
+    sudo pg_createcluster "${PG_VER}" main
+  fi
   sudo pg_ctlcluster "${PG_VER}" main start
 fi
 for _ in $(seq 1 30); do
@@ -35,11 +55,18 @@ echo "[start] Ensuring Redis on port ${REDIS_PORT}"
 if ! redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
   redis-server --port "${REDIS_PORT}" --daemonize yes --save '' --appendonly no
 fi
+for _ in $(seq 1 30); do
+  if redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+if ! redis-cli -p "${REDIS_PORT}" ping >/dev/null 2>&1; then
+  echo "[start] Redis did not become ready on port ${REDIS_PORT}." >&2
+  exit 1
+fi
 
 echo "[start] Applying Alembic migrations"
 cd "$REPO_ROOT/backend"
 if [ -x .venv/bin/alembic ]; then
-  # No revisions exist yet; this validates DB connectivity and is a no-op then.
   .venv/bin/alembic upgrade head
 fi
 
