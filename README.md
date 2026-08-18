@@ -32,7 +32,7 @@ Application repository for the Linear project **BeTaxed**. Spec: [`.KB/00_mother
 From the **repository root**:
 
 ```bash
-docker compose up -d postgres redis
+docker compose up -d postgres redis firebase-auth
 ```
 
 ```bash
@@ -55,5 +55,7 @@ npm run dev
 ```
 
 - `GET /api/health` — frontend liveness
+
+Firebase Auth is the **emulator** in local/DEV (`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, UI at http://127.0.0.1:4000). Cloud agents can run the same Compose stack. Unset the emulator host only for staging/prod.
 
 Do not commit `.KB/Samples/` (PII) or `.env` files. Git: `main` production, `dev` integration — `.KB/GIT_STRATEGY.md`.
