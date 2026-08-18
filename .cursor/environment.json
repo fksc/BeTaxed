@@ -1,0 +1,21 @@
+{
+  "name": "BeTaxed",
+  "install": "bash scripts/cloud-agent-install.sh",
+  "start": "bash scripts/cloud-agent-start.sh",
+  "terminals": [
+    {
+      "name": "backend",
+      "command": "cd backend && .venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8080",
+      "description": "FastAPI API (http://localhost:8080). /health, /ready (PostgreSQL)."
+    },
+    {
+      "name": "frontend",
+      "command": "cd frontend && PATH=\"/usr/bin:$PATH\" npm run dev",
+      "description": "Next.js dev server (http://localhost:3000). /api/health."
+    }
+  ],
+  "ports": [
+    { "name": "backend", "port": 8080 },
+    { "name": "frontend", "port": 3000 }
+  ]
+}
