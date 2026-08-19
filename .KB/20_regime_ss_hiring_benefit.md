@@ -28,10 +28,10 @@ These match the client deck and the locked call: age at hire/sem termo **≤ 30*
 | Reduction | 50% of employer rate | ≈ 11.875% of base (the ~11.9% in the analyst sheet). |
 | Duration | 60 months from **sem termo start** | Not from application date. |
 | Age | ≤ 30 at signing the **permanent** contract | **Locked (OD-4):** clock is age at **sem termo**, 60 months from that date. Conversion at 31 after a term hire at 29 → fail. |
-| First permanent job | Never signed another sem termo | SS extract of **this** employer cannot prove other employers. `first_permanent_elsewhere = UNKNOWN` until contract/confirmation. |
+| First permanent job | Never signed another sem termo (legal test) | SS extract of **this** employer cannot prove other employers. Companies sometimes tell us from onboarding. Store as `employee.first_permanent_elsewhere`. **Always file anyway** — SS history is incomplete; a prior sem termo may be missing. Monitor grant/reject vs the flag (`KB/02`, `KB/05`). |
 | Late application | Remaining time to 60 months; benefit from **next month** after apply | Apply within 10 days of sem termo start for the full window (deck). |
 | Contract | Permanent, full-time or part-time, including conversion from fixed-term | |
-| Company gates at application | Headcount this month **>** average of previous 12 months; SS + AT regularized; salaries not in arrears; duly registered | Headcount test is one-off at application (deck). |
+| Company gates at application | Headcount this month **>** average of previous 12 months; SS + AT regularized; salaries not in arrears; duly registered | Headcount test is one-off at application (deck). SS/AT no-debt certs: on demand, **4 months** from issue date (`company_certificate`, OD-4). |
 | Our fee | % of **realized** saving | Period follows the remaining benefit window (commercial 5-year story). % is commercial_terms, not this doc. **Leave months are not billable** (OD-4). |
 
 ---
@@ -50,7 +50,7 @@ Schema implication: `employment_event` on termination stores `initiator` + `reas
 
 **Gives:** employer NISS (in query metadata), employee NISS, DOB, vínculo dates, taxa %, workplace, contract modality, profession, rendimento periods and base pay.
 
-**Does not give:** first-job at another employer, AT no-debt, trailing-12 headcount if we have no history, who initiated a termination, parental-leave codes (those likely live on monthly remunerations declarations — ingest when we have that file type).
+**Does not give:** first-job at another employer (company onboarding / ops flag — still file), trailing-12 headcount if we have no history, who initiated a termination, parental-leave codes (those likely live on monthly remunerations declarations — ingest when we have that file type). AT/SS no-debt PDFs are **separate uploads**, not the extract.
 
 Analyst columns on the sample (idade, fee/ano, VLOOKUP) are **not** SS. Ignore on parse.
 

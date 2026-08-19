@@ -38,7 +38,7 @@ CREATE INDEX idx_user_base_email ON user_base(email);
 - `is_active = FALSE` soft-disables access; do not delete (audit).
 - One row per email.
 
-If OD-1 is upload-first, pass 1 has **no** `user_base` yet.
+Upload-first pass 1 has **no** `user_base` yet (`intake.user_id` null; `session_token_hash` binds the browser). Account-first sets `user_id` before the upload.
 
 ---
 
@@ -57,9 +57,9 @@ CREATE TABLE company (
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
         CHECK (status IN ('ACTIVE', 'SUSPENDED', 'CHURNED')),
     locale VARCHAR(10) NOT NULL DEFAULT 'pt',
-    ss_regularized BOOLEAN,                 -- current-cache only; yearly ledger TBD (DEV-838)
-    at_regularized BOOLEAN,
-    payroll_not_in_arrears BOOLEAN,
+    ss_regularized BOOLEAN,                 -- current-cache: a valid SS_NO_DEBT cert covers today
+    at_regularized BOOLEAN,                 -- current-cache: a valid AT_NO_DEBT cert covers today
+    payroll_not_in_arrears BOOLEAN,         -- current-cache only (no dated cert type yet)
     stripe_customer_id VARCHAR(128),
     invoicing_method VARCHAR(32)
         CHECK (invoicing_method IN ('STRIPE_SEPA', 'CERTIFIED_SOFTWARE')),
@@ -75,7 +75,7 @@ CREATE UNIQUE INDEX idx_company_employer_niss_hash
 
 **Rules:**
 - `employer_niss_hash` matches the SS export (Power Query name in the sample: `{niss}_vinculos_{date}`). After convert, later batches must match this hash.
-- Access-condition booleans (`ss_regularized`, `at_regularized`, `payroll_not_in_arrears`) are a **current checklist**, not a period ledger and not the recipe. Dated certificates (yearly **or quarterly** — pending confirm) live with `company_application` / files (`KB/05`, DEV-838).
+- Access-condition booleans (`ss_regularized`, `at_regularized`, `payroll_not_in_arrears`) are a **current checklist**, not the recipe. SS/AT no-debt **certificates** are dated (`issued_on` + `valid_until`, default 4 months) on `company_certificate` (`KB/05`, DEV-838). Snapshot gates onto `company_application` at submit so a later cert cannot rewrite history.
 - `invoicing_method` may be null until finance sets it. `certified_vendor_name` stays null until they pick the certified tool (DEV-841).
 - Soft-delete with `deleted_at`.
 
@@ -111,9 +111,9 @@ Pass 1 container. Either converted to a company or purged.
 ```sql
 CREATE TABLE intake (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES user_base(id),          -- null if OD-1 upload-first
+    user_id UUID REFERENCES user_base(id),          -- null until account exists (upload-first)
     email VARCHAR(255),                             -- optional contact
-    session_token_hash BYTEA,                       -- anonymous/browser bind if OD-1 B
+    session_token_hash BYTEA,                       -- anonymous/browser bind (upload-first)
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN'
         CHECK (status IN ('OPEN', 'CONVERTED', 'DECLINED', 'PURGED')),
     teaser_now_monthly NUMERIC(14, 2),              -- OD-2: already sem termo, unused benefit
@@ -133,7 +133,7 @@ CREATE INDEX idx_intake_status ON intake(status);
 ```
 
 **Rules:**
-- `user_id` nullable **on purpose** (OD-1 still open).
+- `user_id` nullable **on purpose** (OD-1 locked: both account-first and upload-first).
 - The four `teaser_*` amounts are what we **showed** (OD-2), not a live ledger. Do not use JSONB.
 - Convert: create `company`, set `converted_company_id`, `status = CONVERTED`, attach batches/employees (`KB/10_product_flow.md#pass-2--stay`).
 - Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed.

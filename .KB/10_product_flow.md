@@ -14,7 +14,7 @@ Pass 2 (stay)     Create/attach account + company workspace → contracts, month
 Pass 2 (leave)    Decline → hard-delete everything from pass 1
 ```
 
-Identity **when** pass 1 runs is **OD-1** (open). Both shapes below are valid until locked.
+Identity **when** pass 1 runs is **OD-1 locked (both):** the prospect may create an account first, or upload first and create an account later. Schema: `intake.user_id` nullable; anonymous pass 1 binds with `session_token_hash`.
 
 ---
 
@@ -34,7 +34,7 @@ Store four teaser figures (and regime version) so we do not contradict ourselves
 
 Promote the same intake:
 
-1. Ensure a `user_base` exists and is bound to the intake (`OD-1`).
+1. Ensure a `user_base` exists and is bound to the intake (account-first already has it; upload-first creates/links now).
 2. Create `company`, membership (uploader = `ADMIN`).
 3. Set `ss_batch.company_id`, `employee.company_id` on rows already parsed.
 4. Workspace: ask for employment contracts (and later monthly SS files, status, invoices).
@@ -51,7 +51,7 @@ If they do not continue:
 - Hard-delete `ss_raw_*`, unmatched staging, teaser run, hashes, `ss_batch`, then the intake row (or retain a tombstone with no PII: `id`, `purged_at`, `reason`).
 - This is not an archive. Pass 1 must not become a free calculator or a PII store for non-customers.
 
-If OD-1 is account-first and they already have a `user_base`, **wipe the intake data**; do not keep the 74 employees. Keeping an empty login is allowed.
+If they already have a `user_base` (account-first), **wipe the intake data**; do not keep the parsed employees. Keeping an empty login is allowed.
 
 ---
 

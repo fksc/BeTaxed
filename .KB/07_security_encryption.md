@@ -20,7 +20,7 @@
 | Employer NISS, company NIF | `*_enc` + employer `*_hash` for matching uploads |
 | Name, date of birth | `*_enc` |
 | SS export bytes, contract PDFs | GCS CMEK + optional app encrypt before put |
-| Session token for anonymous intake (OD-1 B) | store hash only |
+| Session token for anonymous intake (upload-first) | store hash only |
 
 **Do not** use NISS as a primary key or in URLs.
 

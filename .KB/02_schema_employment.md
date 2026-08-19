@@ -50,6 +50,8 @@ CREATE TABLE employee (
     dob_enc BYTEA,
     first_permanent_elsewhere VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN'
         CHECK (first_permanent_elsewhere IN ('UNKNOWN', 'NO', 'YES')),
+    first_permanent_source VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN'
+        CHECK (first_permanent_source IN ('UNKNOWN', 'COMPANY_ONBOARDING', 'OPS')),
     status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE'
         CHECK (status IN ('ACTIVE', 'ON_LEAVE', 'TERMINATED')),
     status_source VARCHAR(16) NOT NULL DEFAULT 'SS'
@@ -68,7 +70,10 @@ CREATE UNIQUE INDEX idx_employee_intake_niss
 **Rules:**
 - Never use NISS as PK. Join uploads with `niss_hash` (`KB/07_security_encryption.md`).
 - Rehire: **same** employee, new `employment`.
-- `first_permanent_elsewhere`: SS cannot prove other employers. Stays `UNKNOWN` until contract/ops confirmation.
+- `first_permanent_elsewhere`: **company-reported** (onboarding forms we receive) or ops. `YES` = they told us this person already had a sem termo (this employer or elsewhere). SS extract of **this** employer cannot prove other employers.
+- **Always file anyway.** SS history is incomplete; a prior sem termo may be missing from their database. Do not treat `YES` as `ineligibility_code` that blocks `benefit_case` submit.
+- Ops monitors `YES` vs `benefit_case.state` (`GRANTED` / `REJECTED`) after SS answers. Snapshot the flag on the case at submit (`KB/05`).
+- `first_permanent_source`: `COMPANY_ONBOARDING` | `OPS` | `UNKNOWN`.
 - HRMS later: `employee_external_id`, not a JSON map on this table.
 
 ---
