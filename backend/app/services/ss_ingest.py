@@ -99,6 +99,7 @@ async def ingest_ss_export(
 
     if parsed.employer_niss:
         batch.employer_niss_hash = crypto.niss_hash(parsed.employer_niss)
+        batch.employer_niss_enc = crypto.encrypt_niss(parsed.employer_niss)
     batch.export_label = parsed.export_label or files[0].filename
 
     vinculo_rows = [

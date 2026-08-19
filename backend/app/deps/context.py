@@ -13,7 +13,8 @@ from sqlalchemy.orm import selectinload
 from app.db import get_db
 from app.deps.auth import get_current_user
 from app.models import Company, CompanyMembership, Intake, UserBase
-from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_ID
+from app.security.session import session_token_matches
+from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_ID, HEADER_INTAKE_SESSION
 
 
 @dataclass(frozen=True)
@@ -83,6 +84,7 @@ async def get_intake_context(
     user: UserBase = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     x_intake_id: str | None = Header(default=None, alias=HEADER_INTAKE_ID),
+    x_intake_session: str | None = Header(default=None, alias=HEADER_INTAKE_SESSION),
 ) -> IntakeContext:
     intake_id = _parse_uuid(x_intake_id, HEADER_INTAKE_ID)
     if intake_id is None:
@@ -105,14 +107,24 @@ async def get_intake_context(
     if user.user_type == "BETAXED_STAFF":
         return IntakeContext(user=user, intake=intake)
 
+    if intake.user_id is not None and intake.user_id == user.id:
+        return IntakeContext(user=user, intake=intake)
+
+    if _session_ok(intake, x_intake_session):
+        return IntakeContext(user=user, intake=intake)
+
     if intake.user_id is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Intake is not bound to this account.",
         )
-    if intake.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not the owner of this intake.",
-        )
-    return IntakeContext(user=user, intake=intake)
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Not the owner of this intake.",
+    )
+
+
+def _session_ok(intake: Intake, token: str | None) -> bool:
+    if token is None or not token.strip() or intake.session_token_hash is None:
+        return False
+    return session_token_matches(token.strip(), intake.session_token_hash)

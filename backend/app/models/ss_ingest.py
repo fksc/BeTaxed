@@ -71,6 +71,7 @@ class SsBatch(Base):
         nullable=False,
     )
     employer_niss_hash: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    employer_niss_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     parse_status: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=text("'PENDING'")
     )

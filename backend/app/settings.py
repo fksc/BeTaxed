@@ -13,6 +13,7 @@ _DEFAULT_DATABASE_URL = (
 
 HEADER_COMPANY_ID = "X-Company-Id"
 HEADER_INTAKE_ID = "X-Intake-Id"
+HEADER_INTAKE_SESSION = "X-Intake-Session"
 
 
 @lru_cache

@@ -17,17 +17,8 @@ from app.models import UserBase
 _bearer = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: AsyncSession = Depends(get_db),
-) -> UserBase:
-    if creds is None or creds.scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization Bearer token required.",
-        )
-
-    identity = verify_id_token(creds.credentials)
+async def _upsert_user_from_token(db: AsyncSession, token: str) -> UserBase:
+    identity = verify_id_token(token)
     email = identity.email.strip().lower()
 
     result = await db.execute(
@@ -72,3 +63,24 @@ async def get_current_user(
         ) from exc
     await db.refresh(user)
     return user
+
+
+async def get_optional_current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> UserBase | None:
+    if creds is None or creds.scheme.lower() != "bearer":
+        return None
+    return await _upsert_user_from_token(db, creds.credentials)
+
+
+async def get_current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> UserBase:
+    if creds is None or creds.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authorization Bearer token required.",
+        )
+    return await _upsert_user_from_token(db, creds.credentials)
