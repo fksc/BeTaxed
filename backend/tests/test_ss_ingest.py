@@ -109,6 +109,9 @@ def test_ingest_combined_hashes_and_current_pay(db_session) -> None:
                 assert result.batch.employer_niss_hash == crypto.niss_hash(
                     EMPLOYER_NISS
                 )
+                assert crypto.decrypt_niss(result.batch.employer_niss_enc) == (
+                    EMPLOYER_NISS
+                )
 
                 vinculos = (
                     await session.execute(
