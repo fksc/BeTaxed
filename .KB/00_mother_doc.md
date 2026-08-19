@@ -124,10 +124,10 @@ Leave **open** rows unlocked. Do not implement a silent default in product copy 
 
 | ID | Topic | Status | Decision / remaining |
 |---|---|---|---|
-| OD-1 | **When identity happens** | **Open** — iterate | (A) Account → upload → teaser → continue or wipe. (B) Upload → teaser → account or wipe. Schema supports both (`intake.user_id` nullable). Ticket: DEV-840. |
+| OD-1 | **When identity happens** | **Locked** 2026-08-20 | **Both.** Account → upload → teaser, **or** upload → teaser → account; then continue or wipe. `intake.user_id` nullable; anonymous pass 1 binds with `session_token_hash`. Tickets: DEV-840, DEV-832. |
 | OD-2 | Teaser payload | **Locked** 2026-08-18 | **Two buckets**, each as **monthly** and **5-year** (four figures): (1) **Now** — already sem termo, company not using the benefit; (2) **Potential** — convert to sem termo. Still no recipe, names, remaining months per person. Persist on `intake` (`KB/01`). Ticket: DEV-833. |
 | OD-3 | Salary at rest | **Locked** 2026-08-18 | **NUMERIC + Cloud SQL CMEK.** Identifiers stay app-encrypted. Amounts + quasi-identifiers remain visible in SQL; company APIs still omit per-employee recipe. Ticket: DEV-830. |
-| OD-4 | Regime edge cases | **Locked** 2026-08-18 (period grain pending) | **Age:** at sem termo ≤ 30; 60 months from that date. **Leave:** not billable. **Fee:** platform default, per-client override on `commercial_terms` (each deal can differ). **Certified:** `company.certified_vendor_name` nullable; `invoice.atcud` nullable. **Still pending confirm:** SS/AT access-condition period (yearly vs quarterly) — DEV-838. |
+| OD-4 | Regime edge cases | **Locked** 2026-08-20 | **Age:** at sem termo ≤ 30; 60 months from that date. **Leave:** not billable. **Fee:** platform default, per-client override on `commercial_terms`. **Certified:** `company.certified_vendor_name` nullable; `invoice.atcud` nullable. **No-debt certificates (SS and AT):** requested on demand; default validity **4 months** from `issued_on`; auto-fill `valid_until`; ops may override (law change). Company booleans are current-cache only. Ticket: DEV-838. **First sem termo:** company-reported flag; **always file anyway**; monitor SS grant/reject vs the flag. Tickets: DEV-834, DEV-838. |
 
 ---
 

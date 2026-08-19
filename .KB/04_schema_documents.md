@@ -21,6 +21,7 @@ CREATE TABLE stored_file (
         'EMPLOYMENT_CONTRACT',
         'CONVERSION_DECLARATION',
         'AT_NO_DEBT',
+        'SS_NO_DEBT',
         'INVOICE_PDF',
         'PROFORMA',
         'OTHER'
@@ -59,5 +60,6 @@ CREATE TABLE employment_document (
 
 **Rules:**
 - `signed_on` for `SEM_TERMO` / `CONVERSION` is the date we use for age-at-contract and window start when it disagrees with SS `started_on` — ops resolve mismatch.
-- First-job confirmation is **not** proven by the file alone; ops set `employee.first_permanent_elsewhere`.
+- First-sem-termo **flag** is not proven by the contract file. Company/ops set `employee.first_permanent_elsewhere`; we still file (`KB/20`).
+- SS/AT no-debt PDFs are `kind` `SS_NO_DEBT` / `AT_NO_DEBT` and attach to `company_certificate` (`KB/05`), not to `employment_document`.
 - Company sees “please upload this person’s contract”, not “upload because they are 28 and on termo”.
