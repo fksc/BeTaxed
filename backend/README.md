@@ -10,7 +10,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.dev.example .env
-alembic upgrade head   # DEV-828 core spine; DEV-830 encryption + employee PII
+alembic upgrade head   # DEV-828 spine; DEV-830 encryption; DEV-831 SS raw ingest
 uvicorn app.main:app --reload --port 8080
 ```
 
