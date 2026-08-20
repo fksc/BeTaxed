@@ -146,6 +146,7 @@ Leave **open** rows unlocked. Do not implement a silent default in product copy 
 | `KB/06_schema_billing.md` | Invoices and payments. |
 | `KB/07_security_encryption.md` | Encryption and isolation. |
 | `KB/40_permissions.md` | Permission matrix. |
+| `KB/90_stub_or_later.md` | Append-only parked slices / stubs (Resolved-date). |
 | `KB/GIT_STRATEGY.md` | `main` / `dev`, Linear `DEV-`. |
 | `KB/kb_document_plan.md` | Doc plan. |
 | `.KB/Samples/` | Local PII samples — not in git. |

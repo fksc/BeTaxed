@@ -8,5 +8,6 @@ alwaysApply: true
 - **`.KB/`** is the canonical **BeTaxed** system spec: product flow, schemas, SS ingest, internal benefit ledger, billing, permissions.
 - **Linear issues** reference these docs by path and section anchor (e.g. `KB/02_schema_employment.md#table-employment_event`). Prefer citing `.KB/` paths when implementing or reviewing work.
 - **Mother doc:** Always load `KB/00_mother_doc.md` with task-specific KB files; it holds global rules, open decisions, and the doc index.
+- **Stub or later:** Skim `KB/90_stub_or_later.md` before starting a Linear issue (open entries only). Append-only; resolve in place with **Resolved-date**. See `stub-or-later.mdc`.
 - **`.KB/Samples/`** is local PII (gitignored). Do not commit, log, or paste NISS / DOB / pay from samples.
 - Open decisions in the mother doc (**OD-1** identity order, etc.) stay open until the user locks them.

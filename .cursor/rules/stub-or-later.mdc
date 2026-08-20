@@ -1,0 +1,19 @@
+---
+description: Skim and update the append-only stub-or-later list before Linear work
+alwaysApply: true
+---
+
+# Stub or later (`.KB/90_stub_or_later.md`)
+
+Append-only list of **parked slices**, incomplete code, and “do not invent this on the current ticket.” Linear remains the backlog.
+
+## Before taking an issue
+
+1. Skim **open** entries in `KB/90_stub_or_later.md` (index table is enough unless an ID matches this work).
+2. If an open item **belongs in this issue**, include it in the propose-first plan.
+3. If an open item was **explicitly parked from this issue**, do not silently implement it.
+4. After shipping, set **Status** `resolved`, **Resolved-date** (ISO), and a **Resolution** line. Never delete entries.
+
+## When parking new work
+
+Append a new `SL-NNN` block at the **bottom**, add a row to the index, and give enough **Context** that a later session can pick up without the original chat. Leave **Resolved-date** as `—` until resolved.
