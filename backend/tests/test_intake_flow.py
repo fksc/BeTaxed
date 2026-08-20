@@ -28,6 +28,10 @@ from app.models import (
 )
 from app.security.dek_store import get_or_create_pii_crypto
 from app.security.session import hash_session_token, session_token_matches
+from app.services.ss_apply import (
+    delete_company_employment_spine,
+    delete_intake_employment_spine,
+)
 from app.settings import HEADER_INTAKE_ID, HEADER_INTAKE_SESSION
 from tests.ss_xlsx_fixtures import EMPLOYER_NISS, PERSON_A, PERSON_B, combined_workbook
 
@@ -124,7 +128,7 @@ def test_upload_first_convert_and_session_me(
                 )
                 assert uploaded.status_code == 201, uploaded.text
                 latest = uploaded.json()["latest_batch"]
-                assert latest["parse_status"] == "PARSED"
+                assert latest["parse_status"] == "APPLIED"
                 assert latest["vinculo_count"] == 2
                 assert latest["contrato_count"] == 3
                 assert uploaded.json()["teaser_potential_window"] is None
@@ -308,7 +312,7 @@ def test_account_first_upload_and_purge(
                     },
                 )
                 assert uploaded.status_code == 201, uploaded.text
-                assert uploaded.json()["latest_batch"]["parse_status"] == "PARSED"
+                assert uploaded.json()["latest_batch"]["parse_status"] == "APPLIED"
 
                 async with AsyncSessionLocal() as session:
                     stored = (
@@ -451,6 +455,9 @@ async def _cleanup_converted(
                 CompanyMembership.company_id == company_id
             )
         )
+        await delete_company_employment_spine(session, company_id)
+    if intake_id is not None:
+        await delete_intake_employment_spine(session, intake_id)
     clauses = []
     if intake_id is not None:
         clauses.append(SsBatch.intake_id == intake_id)

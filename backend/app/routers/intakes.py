@@ -37,6 +37,7 @@ from app.services.intake import (
     require_intake_access,
     require_open,
 )
+from app.services.ss_apply import apply_ss_batch
 from app.services.ss_ingest import ingest_ss_export
 from app.services.ss_parser import SsSourceFile
 from app.settings import HEADER_INTAKE_SESSION
@@ -92,13 +93,15 @@ async def post_intake_upload(
     require_open(intake)
     sources = await _read_sources(files)
     period = _parse_period(period_year_month)
-    await ingest_ss_export(
+    result = await ingest_ss_export(
         db,
         files=sources,
         period_year_month=period,
         intake_id=intake.id,
         uploaded_by=user.id if user is not None else None,
     )
+    if result.batch.parse_status == "PARSED":
+        await apply_ss_batch(db, result.batch.id)
     await db.commit()
     await db.refresh(intake)
     latest = await latest_batch_summary(db, intake.id)

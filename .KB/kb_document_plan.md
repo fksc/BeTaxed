@@ -30,6 +30,11 @@
 |---|---|
 | `40_permissions.md` | Who can see/do what. Company APIs never expose the recipe. |
 
+### Working notes
+| Doc | Contents |
+|---|---|
+| `90_stub_or_later.md` | Append-only parked slices and code stubs; resolve in place with a date |
+
 ---
 
 ## Rules for later docs

@@ -10,6 +10,7 @@ When the user asks to **start**, **work on**, or **implement** a **Linear issue*
 ## 1. Load the issue
 
 - Call Linear `get_issue` for the issue key.
+- Skim **open** entries in `KB/90_stub_or_later.md`.
 - Read **`gitBranchName`**. Use it **as-is** for `git checkout -b`.
 
 If `gitBranchName` is missing, derive a kebab slug from the title: `{issue-key-lowercase}-{slug}`.

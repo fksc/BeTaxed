@@ -31,6 +31,11 @@ from app.security.session import (
     new_session_token,
     session_token_matches,
 )
+from app.services.ss_apply import (
+    apply_ss_batch,
+    attach_employment_company,
+    delete_intake_employment_spine,
+)
 from app.storage import get_object_storage
 
 
@@ -152,6 +157,8 @@ async def convert_intake(
         await session.execute(select(SsBatch).where(SsBatch.intake_id == intake.id))
     ).scalars().all()
     for batch in batches:
+        if batch.parse_status == "PARSED":
+            await apply_ss_batch(session, batch.id)
         batch.company_id = company.id
 
     files = (
@@ -162,13 +169,7 @@ async def convert_intake(
     for stored in files:
         stored.company_id = company.id
 
-    employees = (
-        await session.execute(
-            select(Employee).where(Employee.intake_id == intake.id)
-        )
-    ).scalars().all()
-    for employee in employees:
-        employee.company_id = company.id
+    await attach_employment_company(session, intake.id, company.id)
 
     await _rekey_intake_to_company(session, intake.id, company)
 
@@ -334,9 +335,9 @@ async def purge_intake(session: AsyncSession, intake: Intake) -> Intake:
     for stored in stored_files:
         storage.delete(stored.gcs_path)
 
+    await delete_intake_employment_spine(session, intake.id)
     await session.execute(delete(SsBatch).where(SsBatch.intake_id == intake.id))
     await session.execute(delete(StoredFile).where(StoredFile.intake_id == intake.id))
-    await session.execute(delete(Employee).where(Employee.intake_id == intake.id))
     await session.execute(
         delete(TenantCryptoKey).where(TenantCryptoKey.intake_id == intake.id)
     )
