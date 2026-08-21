@@ -40,6 +40,7 @@ from app.services.intake import (
 from app.services.ss_apply import apply_ss_batch
 from app.services.ss_ingest import ingest_ss_export
 from app.services.ss_parser import SsSourceFile
+from app.services.teaser import persist_intake_teaser
 from app.settings import HEADER_INTAKE_SESSION
 
 router = APIRouter(prefix="/v1", tags=["intake"])
@@ -102,6 +103,9 @@ async def post_intake_upload(
     )
     if result.batch.parse_status == "PARSED":
         await apply_ss_batch(db, result.batch.id)
+        await persist_intake_teaser(
+            db, intake.id, result.batch.period_year_month
+        )
     await db.commit()
     await db.refresh(intake)
     latest = await latest_batch_summary(db, intake.id)

@@ -35,7 +35,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-004 | 2026-08-20 | open | — | Leave events from monthly remunerations files |
 | SL-005 | 2026-08-20 | open | — | Public employee status override (`PATCH`) |
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
-| SL-007 | 2026-08-20 | open | — | Pass 1 teaser figures stay null (engine) |
+| SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
 
 ---
 
@@ -107,9 +107,10 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 ### SL-007 — Pass 1 teaser figures stay null (engine)
 - **Opened:** 2026-08-20
-- **Status:** open
-- **Resolved-date:** —
+- **Status:** resolved
+- **Resolved-date:** 2026-08-21
 - **Related:** DEV-832, DEV-833, OD-2, `KB/10_product_flow.md`, `intake.teaser_*` columns (`KB/01_schema_core.md`)
 - **Context:** GET/convert already expose four teaser amounts + currency. 832 leaves them **null**. Inventing 50% of 23.75% or per-person remaining months in 832/834 would leak the recipe. Canonical employment (834) is an input to the engine, not the engine itself.
 - **Why later:** Teaser math is DEV-833. Persist what we **showed**; do not live-recompute a DIY calculator.
 - **Pickup:** After apply/diff can describe current sem-termo vs term people, compute the four aggregates only. Never return names, rates, remaining months, or “convert this contract”.
+- **Resolution:** DEV-833 `app/services/teaser.py` persists the four OD-2 aggregates after successful apply (and on convert if still null). API still omits names, rates, remaining months, and convert-this-contract. `teaser_regime_id` stays null until `incentive_regime` (DEV-838).
