@@ -1,12 +1,13 @@
-"""Parse Segurança Social Vínculos + Contratos workbooks (DEV-831)."""
+"""Parse Segurança Social Vínculos + Contratos extracts (xlsx or csv, DEV-831)."""
 
 from __future__ import annotations
 
+import csv
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from io import BytesIO
+from io import BytesIO, StringIO
 from typing import Any, Literal
 
 from openpyxl import load_workbook
@@ -112,7 +113,7 @@ def parse_ss_files(files: list[SsSourceFile]) -> ParsedSsExport:
     if not files:
         raise SsParseError("At least one SS export file is required.")
     if len(files) > 2:
-        raise SsParseError("Expected one combined workbook or two sheet files.")
+        raise SsParseError("Expected one combined workbook or two files (xlsx or csv).")
 
     parsed_files = [parse_ss_workbook(item) for item in files]
     vinculos: list[ParsedVinculo] = []
@@ -161,39 +162,31 @@ def parse_ss_files(files: list[SsSourceFile]) -> ParsedSsExport:
 
 
 def parse_ss_workbook(source: SsSourceFile) -> ParsedWorkbook:
-    if not source.content.startswith(b"PK"):
-        raise SsParseError(f"{source.filename} is not an xlsx workbook.")
-
-    try:
-        workbook = load_workbook(BytesIO(source.content), data_only=False)
-    except Exception as exc:
-        raise SsParseError(f"{source.filename} could not be opened as xlsx.") from exc
-
-    try:
-        classified: dict[SheetKind, Any] = {}
-        for sheet in workbook.worksheets:
-            kind = _sheet_kind(sheet.title) or _sheet_kind_from_headers(sheet)
-            if kind is None:
-                continue
-            if kind in classified:
-                raise SsParseError(
-                    f"{source.filename} has more than one {kind} sheet."
-                )
-            classified[kind] = sheet
-
-        if not classified:
+    if source.content.startswith(b"PK"):
+        try:
+            workbook = load_workbook(BytesIO(source.content), data_only=False)
+        except Exception as exc:
             raise SsParseError(
-                f"{source.filename} has no Vínculos or Contratos sheet."
-            )
+                f"{source.filename} could not be opened as xlsx."
+            ) from exc
+        try:
+            classified = _classify_sheets(source.filename, list(workbook.worksheets))
+            return _parsed_workbook(source, classified)
+        finally:
+            workbook.close()
+    classified = _classify_csv(source)
+    return _parsed_workbook(source, classified)
 
-        vinculos: list[ParsedVinculo] = []
-        contratos: list[ParsedContrato] = []
-        if "vinculos" in classified:
-            vinculos = _parse_vinculo_sheet(classified["vinculos"])
-        if "contratos" in classified:
-            contratos = _parse_contrato_sheet(classified["contratos"])
-    finally:
-        workbook.close()
+
+def _parsed_workbook(
+    source: SsSourceFile, classified: dict[SheetKind, Any]
+) -> ParsedWorkbook:
+    vinculos: list[ParsedVinculo] = []
+    contratos: list[ParsedContrato] = []
+    if "vinculos" in classified:
+        vinculos = _parse_vinculo_sheet(classified["vinculos"])
+    if "contratos" in classified:
+        contratos = _parse_contrato_sheet(classified["contratos"])
 
     if "vinculos" in classified and "contratos" in classified:
         kind: FileKind = "COMBINED_XLSX"
@@ -210,6 +203,70 @@ def parse_ss_workbook(source: SsSourceFile) -> ParsedWorkbook:
         employer_niss=employer_niss,
         export_label=export_label,
     )
+
+
+def _classify_csv(source: SsSourceFile) -> dict[SheetKind, Any]:
+    rows = _csv_rows(source)
+    sheet = _RowSheet("csv", rows)
+    return _classify_sheets(source.filename, [sheet])
+
+
+def _classify_sheets(filename: str, sheets: list[Any]) -> dict[SheetKind, Any]:
+    classified: dict[SheetKind, Any] = {}
+    for sheet in sheets:
+        kind = _sheet_kind(sheet.title) or _sheet_kind_from_headers(sheet)
+        if kind is None:
+            continue
+        if kind in classified:
+            raise SsParseError(f"{filename} has more than one {kind} sheet.")
+        classified[kind] = sheet
+    if not classified:
+        raise SsParseError(
+            f"{filename} has no Vínculos or Contratos sheet (xlsx or csv)."
+        )
+    return classified
+
+
+class _RowSheet:
+    """Minimal sheet so CSV rows reuse the xlsx header/row parsers."""
+
+    def __init__(self, title: str, rows: list[list[Any]]) -> None:
+        self.title = title
+        self._rows = rows
+
+    def iter_rows(self, values_only: bool = True):
+        _ = values_only
+        for row in self._rows:
+            yield tuple(row)
+
+
+def _csv_rows(source: SsSourceFile) -> list[list[Any]]:
+    text = _decode_csv(source)
+    sample = text[:4096]
+    try:
+        dialect = csv.Sniffer().sniff(sample, delimiters=";,|\t")
+        reader = csv.reader(StringIO(text), dialect)
+    except csv.Error:
+        delimiter = ";" if sample.count(";") >= sample.count(",") else ","
+        reader = csv.reader(StringIO(text), delimiter=delimiter)
+    rows = [list(row) for row in reader]
+    if not rows:
+        raise SsParseError(f"{source.filename} is empty.")
+    return rows
+
+
+def _decode_csv(source: SsSourceFile) -> str:
+    for encoding in ("utf-8-sig", "utf-8", "cp1252"):
+        try:
+            text = source.content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+        if "\x00" in text[:4096]:
+            raise SsParseError(
+                f"{source.filename} is not an xlsx workbook or csv extract."
+            )
+        return text
+    raise SsParseError(f"{source.filename} could not be read as csv text.")
 
 
 def _sheet_kind(title: str) -> SheetKind | None:
@@ -419,8 +476,17 @@ def _optional_decimal(raw: Any) -> Decimal | None:
         return None
     if isinstance(raw, Decimal):
         return raw
-    try:
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
         return Decimal(str(raw))
+    text = str(raw).strip().replace(" ", "").replace("%", "")
+    if not text:
+        return None
+    if "," in text and "." in text:
+        text = text.replace(".", "").replace(",", ".")
+    elif "," in text:
+        text = text.replace(",", ".")
+    try:
+        return Decimal(text)
     except (InvalidOperation, ValueError):
         return None
 

@@ -39,6 +39,23 @@ class TeaserFigures:
     potential_window: Decimal
 
 
+@dataclass(frozen=True)
+class VerbosePerson:
+    """DEV+VERBOSE row. Not stored; not returned unless flags are on."""
+
+    name: str | None
+    age: int | None
+    contract: str
+    contract_label: str | None
+    started_on: date | None
+    salary: Decimal | None
+    bucket: str
+    how_code: str
+    remaining_months: int | None
+    monthly_eur: Decimal | None
+    window_eur: Decimal | None
+
+
 def age_on(dob: date, on: date) -> int:
     years = on.year - dob.year
     if (on.month, on.day) < (dob.month, dob.day):
@@ -194,6 +211,125 @@ async def compute_intake_teaser(
     )
 
 
+async def compute_verbose_people(
+    session: AsyncSession,
+    intake_id: uuid.UUID,
+    as_of: date,
+) -> list[VerbosePerson]:
+    """Per-person extract rows for local DEV. Never include NISS."""
+    rows = (
+        await session.execute(
+            select(Employment, Employee, CompensationPeriod)
+            .join(Employee, Employee.id == Employment.employee_id)
+            .outerjoin(
+                CompensationPeriod,
+                and_(
+                    CompensationPeriod.employment_id == Employment.id,
+                    CompensationPeriod.period_to.is_(None),
+                ),
+            )
+            .where(
+                Employment.intake_id == intake_id,
+                Employment.ended_on.is_(None),
+                Employee.deleted_at.is_(None),
+                Employee.status == "ACTIVE",
+            )
+        )
+    ).all()
+    if not rows:
+        return []
+
+    crypto = await get_or_create_pii_crypto(session, intake_id=intake_id)
+    people: list[VerbosePerson] = []
+    for employment, employee, pay in rows:
+        dob = _decrypt_dob(crypto, employee.dob_enc)
+        name = _decrypt_name(crypto, employee.name_enc)
+        salary = Decimal(pay.base_salary) if pay is not None else None
+        age = age_on(dob, as_of) if dob is not None else None
+        classified = _classify_person(
+            dob=dob,
+            salary=salary,
+            modality=employment.contract_modality,
+            started_on=employment.started_on,
+            tsu_rate_pct=employment.tsu_rate_pct,
+            as_of=as_of,
+        )
+        people.append(
+            VerbosePerson(
+                name=name,
+                age=age,
+                contract=employment.contract_modality,
+                contract_label=employment.contract_modality_raw,
+                started_on=employment.started_on,
+                salary=_money(salary) if salary is not None else None,
+                bucket=classified["bucket"],
+                how_code=classified["how_code"],
+                remaining_months=classified["remaining_months"],
+                monthly_eur=classified["monthly_eur"],
+                window_eur=classified["window_eur"],
+            )
+        )
+    people.sort(key=lambda row: ((row.name or "").casefold(), row.contract))
+    return people
+
+
+def _classify_person(
+    *,
+    dob: date | None,
+    salary: Decimal | None,
+    modality: str,
+    started_on: date,
+    tsu_rate_pct: Decimal | None,
+    as_of: date,
+) -> dict:
+    empty = {
+        "bucket": "none",
+        "how_code": "SKIP_NO_PAY",
+        "remaining_months": None,
+        "monthly_eur": None,
+        "window_eur": None,
+    }
+    if salary is None or salary <= 0:
+        empty["how_code"] = "SKIP_NO_PAY"
+        return empty
+    if dob is None:
+        empty["how_code"] = "SKIP_NO_DOB"
+        return empty
+
+    person_monthly = _money(monthly_saving(salary))
+    if modality == "SEM_TERMO":
+        if not _eligible_age(dob, started_on):
+            empty["how_code"] = "SKIP_AGE"
+            return empty
+        if not _tsu_looks_unused(tsu_rate_pct):
+            empty["how_code"] = "SKIP_TSU_REDUCED"
+            return empty
+        remaining = remaining_benefit_months(started_on, as_of)
+        if remaining == 0:
+            empty["how_code"] = "SKIP_WINDOW"
+            return empty
+        return {
+            "bucket": "now",
+            "how_code": "NOW_UNUSED",
+            "remaining_months": remaining,
+            "monthly_eur": person_monthly,
+            "window_eur": _money(person_monthly * remaining),
+        }
+    if modality in _TERM_MODALITIES:
+        if not _eligible_age(dob, as_of):
+            empty["how_code"] = "SKIP_AGE"
+            return empty
+        return {
+            "bucket": "potential",
+            "how_code": "POTENTIAL_CONVERT",
+            "remaining_months": _WINDOW_MONTHS,
+            "monthly_eur": person_monthly,
+            "window_eur": _money(person_monthly * _WINDOW_MONTHS),
+        }
+    empty["how_code"] = "SKIP_CONTRACT"
+    return empty
+
+
 def _decrypt_dob(crypto, dob_enc: bytes | None) -> date | None:
     if dob_enc is None:
         return None
@@ -201,3 +337,13 @@ def _decrypt_dob(crypto, dob_enc: bytes | None) -> date | None:
         return crypto.decrypt_dob(dob_enc)
     except (ValueError, UnicodeDecodeError, InvalidTag):
         return None
+
+
+def _decrypt_name(crypto, name_enc: bytes | None) -> str | None:
+    if name_enc is None:
+        return None
+    try:
+        text = crypto.decrypt_name(name_enc).strip()
+    except (ValueError, UnicodeDecodeError, InvalidTag):
+        return None
+    return text or None

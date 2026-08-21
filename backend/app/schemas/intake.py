@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,8 +17,24 @@ class IntakeBatchSummary(BaseModel):
     period_year_month: date
 
 
+class VerbosePersonOut(BaseModel):
+    """Present only when ENV=DEV and VERBOSE is true. Never includes NISS."""
+
+    name: str | None
+    age: int | None
+    contract: str
+    contract_label: str | None
+    started_on: date | None
+    salary: Decimal | None
+    bucket: Literal["now", "potential", "none"]
+    how_code: str
+    remaining_months: int | None
+    monthly_eur: Decimal | None
+    window_eur: Decimal | None
+
+
 class IntakeOut(BaseModel):
-    """Pass 1 teaser surface. Never include names, rates, or remaining months."""
+    """Pass 1 teaser surface. Recipe rows only when verbose_people is set."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,6 +48,7 @@ class IntakeOut(BaseModel):
     teaser_currency: str
     converted_company_id: uuid.UUID | None
     latest_batch: IntakeBatchSummary | None = None
+    verbose_people: list[VerbosePersonOut] | None = None
 
 
 class IntakeCreatedOut(IntakeOut):

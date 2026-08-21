@@ -27,6 +27,7 @@ from app.schemas.intake import (
     IntakeBatchSummary,
     IntakeCreatedOut,
     IntakeOut,
+    VerbosePersonOut,
 )
 from app.services.intake import (
     convert_intake,
@@ -40,8 +41,8 @@ from app.services.intake import (
 from app.services.ss_apply import apply_ss_batch
 from app.services.ss_ingest import ingest_ss_export
 from app.services.ss_parser import SsSourceFile
-from app.services.teaser import persist_intake_teaser
-from app.settings import HEADER_INTAKE_SESSION
+from app.services.teaser import compute_verbose_people, persist_intake_teaser
+from app.settings import HEADER_INTAKE_SESSION, verbose_people_enabled
 
 router = APIRouter(prefix="/v1", tags=["intake"])
 
@@ -60,7 +61,7 @@ async def post_intake(
     intake, plaintext = await create_intake(db, user)
     await db.commit()
     await db.refresh(intake)
-    return _created_out(intake, plaintext, latest=None)
+    return await _created_out(db, intake, plaintext, latest=None)
 
 
 @router.get("/intakes/{intake_id}", response_model=IntakeOut)
@@ -73,7 +74,7 @@ async def get_intake(
     intake = await load_intake_or_404(db, intake_id)
     require_intake_access(intake, user, session_token)
     latest = await latest_batch_summary(db, intake.id)
-    return _intake_out(intake, latest)
+    return await _intake_out(db, intake, latest)
 
 
 @router.post(
@@ -109,7 +110,7 @@ async def post_intake_upload(
     await db.commit()
     await db.refresh(intake)
     latest = await latest_batch_summary(db, intake.id)
-    return _intake_out(intake, latest)
+    return await _intake_out(db, intake, latest)
 
 
 @router.post("/intakes/{intake_id}/convert", response_model=ConvertIntakeOut)
@@ -139,7 +140,7 @@ async def post_intake_convert(
         ) from exc
     await db.refresh(intake)
     latest = await latest_batch_summary(db, intake.id)
-    out = _intake_out(intake, latest)
+    out = await _intake_out(db, intake, latest)
     return ConvertIntakeOut(
         **out.model_dump(),
         company_id=company.id,
@@ -159,10 +160,11 @@ async def post_intake_decline(
     await purge_intake(db, intake)
     await db.commit()
     await db.refresh(intake)
-    return _intake_out(intake, None)
+    return await _intake_out(db, intake, None)
 
 
-def _intake_out(
+async def _intake_out(
+    db: AsyncSession,
     intake: Intake,
     latest: tuple | None,
 ) -> IntakeOut:
@@ -177,6 +179,11 @@ def _intake_out(
             contrato_count=contrato_count,
             period_year_month=batch.period_year_month,
         )
+    people = None
+    if verbose_people_enabled() and intake.status != "PURGED":
+        as_of = summary.period_year_month if summary is not None else date.today()
+        rows = await compute_verbose_people(db, intake.id, as_of)
+        people = [VerbosePersonOut.model_validate(row, from_attributes=True) for row in rows]
     return IntakeOut(
         id=intake.id,
         status=intake.status,
@@ -188,13 +195,17 @@ def _intake_out(
         teaser_currency=intake.teaser_currency,
         converted_company_id=intake.converted_company_id,
         latest_batch=summary,
+        verbose_people=people,
     )
 
 
-def _created_out(
-    intake: Intake, plaintext: str | None, latest: tuple | None
+async def _created_out(
+    db: AsyncSession,
+    intake: Intake,
+    plaintext: str | None,
+    latest: tuple | None,
 ) -> IntakeCreatedOut:
-    base = _intake_out(intake, latest)
+    base = await _intake_out(db, intake, latest)
     return IntakeCreatedOut(**base.model_dump(), session_token=plaintext)
 
 
