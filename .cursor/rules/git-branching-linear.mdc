@@ -36,8 +36,8 @@ Examples: `Feature/DEV-12-ss-parser`, `Bug/DEV-5-niss-hash`.
 
 ## Commits and PRs (Linear + GitHub)
 
-- Include the **issue id** in branch names, commit messages, and/or PR title/body.
-- Use Linear **magic words**: `Fixes DEV-12`, `Closes DEV-12`, `Resolves DEV-12`, `Refs DEV-12`, `Addresses DEV-12`.
+- Include the **issue id** in branch names, commit messages, and PR title/body.
+- Use Linear **magic words immediately before** the issue id, on their own line: `Fixes DEV-12`, `Closes DEV-12`, `Resolves DEV-12`, `Refs DEV-12`. See **`linear-github-magic-words.mdc`**. `Addresses` is not a Linear magic word.
 
 ## Linear issue fields (when creating issues)
 

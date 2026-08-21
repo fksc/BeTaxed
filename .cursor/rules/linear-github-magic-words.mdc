@@ -1,0 +1,47 @@
+---
+description: Linear GitHub magic words in every commit and PR (BeTaxed)
+alwaysApply: true
+---
+
+# Linear GitHub magic words
+
+Docs: [linear.app/docs/github#magic-words](https://linear.app/docs/github#magic-words)
+
+A Linear key in parentheses (`(DEV-833)`), in the branch name, or late in a paragraph is **not** enough for commit linking. Linear needs a **magic word immediately before** `DEV-###`.
+
+Put this on **its own line** (not buried in a sentence) in **both**:
+
+1. The **commit subject or body**
+2. The **PR title and/or description** (PR comments are ignored)
+
+## Closing — this change fully resolves the issue
+
+`close` `closes` `fix` `fixes` `resolve` `resolves` `complete` `completes` `implement` `implements` (and tense variants)
+
+BeTaxed default when the PR should close the issue on merge:
+
+```
+Fixes DEV-833
+```
+
+Also valid: `Closes DEV-833`, `Resolves DEV-833`.
+
+## Non-closing — partial / stacked work
+
+`ref` `refs` `references` `part of` `contributes to` `toward` `towards`
+
+```
+Refs DEV-833
+```
+
+## Relation only
+
+`relates to` `related to`
+
+## Do not use
+
+- **`Addresses DEV-###`** — not a Linear magic word
+- Magic words only in a PR **comment**
+- `skip DEV-###` / `ignore DEV-###` unless you intend to unlink
+
+This is GitHub↔Linear automation. Do **not** set Linear workflow status via MCP (`linear-no-status-changes.mdc`).
