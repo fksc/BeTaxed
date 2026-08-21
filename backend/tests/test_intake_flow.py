@@ -131,7 +131,17 @@ def test_upload_first_convert_and_session_me(
                 assert latest["parse_status"] == "APPLIED"
                 assert latest["vinculo_count"] == 2
                 assert latest["contrato_count"] == 3
-                assert uploaded.json()["teaser_potential_window"] is None
+                teaser = uploaded.json()
+                assert teaser["teaser_now_monthly"] is not None
+                assert teaser["teaser_now_window"] is not None
+                assert teaser["teaser_potential_monthly"] is not None
+                assert teaser["teaser_potential_window"] is not None
+                shown = json.dumps(teaser)
+                assert "Alice" not in shown
+                assert "Bruno" not in shown
+                assert PERSON_A not in shown
+                assert "23.75" not in shown
+                assert "50%" not in shown
 
                 me_unbound = await client.get(
                     "/v1/me/intake",
@@ -178,6 +188,14 @@ def test_upload_first_convert_and_session_me(
                 assert out["membership_role"] == "ADMIN"
                 assert out["user_id"] == str(user_id)
                 assert out["converted_company_id"] == str(company_id)
+                assert out["teaser_now_monthly"] == teaser["teaser_now_monthly"]
+                assert out["teaser_now_window"] == teaser["teaser_now_window"]
+                assert out["teaser_potential_monthly"] == teaser[
+                    "teaser_potential_monthly"
+                ]
+                assert out["teaser_potential_window"] == teaser[
+                    "teaser_potential_window"
+                ]
 
                 stale_session = await client.get(
                     f"/v1/intakes/{intake_id}",

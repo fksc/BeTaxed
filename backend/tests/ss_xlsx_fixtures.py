@@ -56,7 +56,7 @@ def vinculo_row(
     niss: str,
     *,
     name: str = "Test Person",
-    dob: date = date(1998, 3, 15),
+    dob: date | None = date(1998, 3, 15),
     started: date = date(2024, 1, 2),
     ended: date | None = None,
     taxa: float = 34.75,
