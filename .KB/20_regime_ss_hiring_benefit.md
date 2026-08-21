@@ -52,7 +52,9 @@ Schema implication: `employment_event` on termination stores `initiator` + `reas
 
 **Does not give:** first-job at another employer (company onboarding / ops flag — still file), trailing-12 headcount if we have no history, who initiated a termination, parental-leave codes (those likely live on monthly remunerations declarations — ingest when we have that file type). AT/SS no-debt PDFs are **separate uploads**, not the extract.
 
-Analyst columns on the sample (idade, fee/ano, VLOOKUP) are **not** SS. Ignore on parse.
+**Can be wrong:** modality and dates on Direct are what the employer (or a previous declaration) sent. Worked example (Aug 2026 extract, no names in this doc): two people coded **sem termo** from early 2021 → engine remaining months = 0. Paper contracts were **termo certo** starting Feb 2022 and May 2022 → clock from those dates still has months left. Pass 1 cannot see that. After workspace, check each contract vs the CSV (`KB/10`, `KB/04`). `source = CONTRACT` wins on modality/`signed_on` when ops mark `MISMATCH`.
+
+Analyst columns on the sample (idade, fee/ano, VLOOKUP) are **not** SS. Ignore on parse. 14× monthly on a sales sheet is often **14 pays/year** (holiday + Christmas), not remaining benefit months.
 
 ---
 
