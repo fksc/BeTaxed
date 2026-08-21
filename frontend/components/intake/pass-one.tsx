@@ -18,12 +18,14 @@ import {
   uploadSsFiles,
 } from "@/lib/api/intakes";
 import { ApiError, type IntakeOut } from "@/lib/api/types";
+import { useRouter } from "@/i18n/navigation";
 import { isVerboseUi } from "@/lib/dev-verbose";
 import { currentIdToken, ensureEmailUser } from "@/lib/firebase";
 import {
   clearIntakeSession,
   loadIntakeSession,
   saveIntakeSession,
+  saveWorkspaceName,
 } from "@/lib/intake-session";
 
 type Path = "upload" | "account";
@@ -36,6 +38,7 @@ function currentYearMonth(): string {
 
 export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
   const t = useTranslations();
+  const router = useRouter();
   const showVerboseTable = verboseUi || isVerboseUi();
   const workingLines = t.raw("working.lines") as string[];
   const [path, setPath] = useState<Path>("upload");
@@ -90,7 +93,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         setIntake(loaded);
         setSessionToken(stored.sessionToken);
         if (loaded.status === "CONVERTED") {
-          setPhase("converted");
+          router.replace("/workspace");
         } else if (loaded.teaser_now_monthly != null) {
           setPhase("result");
         }
@@ -98,7 +101,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         clearIntakeSession();
       }
     })();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     if (!busy || phase !== "working") {
@@ -199,9 +202,10 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         { sessionToken, idToken },
       );
       setIntake(converted);
+      saveWorkspaceName(legalName.trim());
       saveIntakeSession(converted.id, null);
       setSessionToken(null);
-      setPhase("converted");
+      router.replace("/workspace");
     } catch (err) {
       setError(fail(err));
     } finally {

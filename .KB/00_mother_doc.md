@@ -116,6 +116,9 @@ Invoiced `saving_month` rows are locked. Corrections are new months or credit no
 **10. HRMS-ready spine.**
 Employee / employment / compensation / events have `source` (`SS` \| `USER` \| `HRMS` \| `CONTRACT` \| `ADMIN`). Do not design vendor-specific HRMS tables now.
 
+**11. Pass-1 teaser is an SS-only guess.**
+The extract can be wrong on modality and dates (e.g. website says sem termo, the signed file is termo). The four figures are an educated range — can be higher or lower. Ground truth is **after** they are a client: upload each employment contract and check it against the SS rows (`KB/10`, `KB/04`, `KB/20`). Do not treat the teaser as a filing total.
+
 ---
 
 ## Open Decisions

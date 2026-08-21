@@ -5,6 +5,7 @@ import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { notFound } from "next/navigation";
 
 import { routing } from "@/i18n/routing";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -56,7 +57,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     >
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <NextIntlClientProvider messages={messages}>
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </NextIntlClientProvider>
       </body>
     </html>

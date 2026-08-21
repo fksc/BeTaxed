@@ -102,5 +102,43 @@
       "SKIP_NO_PAY": "Sem período de remuneração aberto no extrato.",
       "SKIP_CONTRACT": "Tipo de contrato fora do conjunto do regime."
     }
+  },
+  "workspace": {
+    "brand": "BeTaxed",
+    "brandHint": "Portugal",
+    "navGroup": "Espaço",
+    "soon": "Em breve",
+    "breadcrumb": "Painel",
+    "overview": "Visão geral",
+    "fallbackName": "A sua empresa",
+    "needSession": "Não foi possível abrir este espaço.",
+    "backToStart": "Recomeçar",
+    "nav": {
+      "overview": "Visão geral",
+      "people": "Pessoas",
+      "declarations": "Declarações",
+      "billing": "Faturação"
+    },
+    "kpi": {
+      "nowMonthly": "Agora · mês",
+      "nowMonthlyHint": "Poupança por realizar neste momento",
+      "nowWindow": "Agora · ~5 anos",
+      "nowWindowHint": "O mesmo conjunto, janela restante",
+      "potentialMonthly": "Potencial · mês",
+      "potentialMonthlyHint": "Se ficar connosco a acompanhar o processo",
+      "potentialWindow": "Potencial · ~5 anos",
+      "potentialWindowHint": "Se ficar connosco a acompanhar o processo"
+    },
+    "next": {
+      "title": "A seguir no espaço",
+      "lead": "Os mesmos totais da leitura. O resto do ciclo vem em tickets posteriores.",
+      "people": "Pessoas e contratos — ainda não neste ecrã.",
+      "declarations": "Ficheiros mensais da Segurança Social — ainda não neste ecrã.",
+      "billing": "Faturas — ainda não neste ecrã."
+    },
+    "activity": {
+      "title": "Atividade recente",
+      "empty": "Ainda sem atividade."
+    }
   }
 }

@@ -59,7 +59,8 @@ CREATE TABLE employment_document (
 ```
 
 **Rules:**
-- `signed_on` for `SEM_TERMO` / `CONVERSION` is the date we use for age-at-contract and window start when it disagrees with SS `started_on` — ops resolve mismatch.
+- `signed_on` for `SEM_TERMO` / `CONVERSION` is the date we use for age-at-contract and window start when it disagrees with SS `started_on` — ops resolve mismatch. Term files use `doc_kind = TERMO`; that can **remove** someone from the NOW bucket the extract put them in.
 - First-sem-termo **flag** is not proven by the contract file. Company/ops set `employee.first_permanent_elsewhere`; we still file (`KB/20`).
 - SS/AT no-debt PDFs are `kind` `SS_NO_DEBT` / `AT_NO_DEBT` and attach to `company_certificate` (`KB/05`), not to `employment_document`.
 - Company sees “please upload this person’s contract”, not “upload because they are 28 and on termo”.
+- **Flow (locked as product, not as Pass-1 math):** teaser from SS only → client uploads contracts → **one-by-one** vs the extract → `MATCH` / `MISMATCH`. Do not auto-rewrite the public teaser from PDFs until a ticket builds that loop (`KB/90` SL-008).

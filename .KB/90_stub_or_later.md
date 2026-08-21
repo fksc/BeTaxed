@@ -36,6 +36,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-005 | 2026-08-20 | open | — | Public employee status override (`PATCH`) |
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
 | SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
+| SL-008 | 2026-08-21 | open | — | Contract PDF vs SS row (override after teaser) |
 
 ---
 
@@ -114,3 +115,14 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 - **Why later:** Teaser math is DEV-833. Persist what we **showed**; do not live-recompute a DIY calculator.
 - **Pickup:** After apply/diff can describe current sem-termo vs term people, compute the four aggregates only. Never return names, rates, remaining months, or “convert this contract”.
 - **Resolution:** DEV-833 `app/services/teaser.py` persists the four OD-2 aggregates after successful apply (and on convert if still null). API still omits names, rates, remaining months, and convert-this-contract. `teaser_regime_id` stays null until `incentive_regime` (DEV-838).
+
+---
+
+### SL-008 — Contract PDF vs SS row (override after teaser)
+- **Opened:** 2026-08-21
+- **Status:** open
+- **Resolved-date:** —
+- **Related:** `KB/10_product_flow.md` (educated guess), `KB/04_schema_documents.md` (`employment_document.matches_ss`), `KB/20_regime_ss_hiring_benefit.md` (extract can be wrong), mother rule 11
+- **Context:** Pass 1 teaser uses SS modality + vínculo `started_on` only. Direct can code **sem termo** with an early start when the signed file is **termo** (or the other way around). Worked example Aug 2026: two people SS-start 2021 → remaining 0; paper starts Feb/May 2022 → 6 and 9 months left if the 60-month clock uses `signed_on`. Schema already has `employment_document` and `source = CONTRACT`. There is **no** upload UI, mismatch workflow, or engine re-run from contracts. Do not auto-change the public four figures from PDFs in Pass 1.
+- **Why later:** Teaser must stay SS-only (OD-2, no recipe). Contract loop is workspace / ops (after convert). No ticket yet for the check UI.
+- **Pickup:** After convert, collect `EMPLOYMENT_CONTRACT` files, set `matches_ss`, let ops set employment modality/`started_on` from `signed_on` (`source = CONTRACT`). Recompute **internal** benefit cases. Public teaser stays the guess they already saw unless a later ticket defines a “revised reading” screen without teaching the recipe.

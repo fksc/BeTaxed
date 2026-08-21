@@ -4,6 +4,7 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  onAuthStateChanged,
   type Auth,
   type User,
 } from "firebase/auth";
@@ -54,9 +55,21 @@ export async function ensureEmailUser(
   }
 }
 
-export async function currentIdToken(): Promise<string | null> {
+export async function waitForAuthUser(): Promise<User | null> {
   const auth = getFirebaseAuth();
-  const user = auth.currentUser;
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+  return new Promise((resolve) => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub();
+      resolve(user);
+    });
+  });
+}
+
+export async function currentIdToken(): Promise<string | null> {
+  const user = await waitForAuthUser();
   if (!user) {
     return null;
   }

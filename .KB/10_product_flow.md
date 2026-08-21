@@ -28,6 +28,8 @@ Identity **when** pass 1 runs is **OD-1 locked (both):** the prospect may create
 
 Store four teaser figures (and regime version) so we do not contradict ourselves if they continue. **OD-2 locked:** (1) **now** — already sem termo, unused benefit; (2) **potential** — convert to sem termo; each as **monthly** and **5-year**. Still no recipe, named people, remaining months per person, or convert-this-contract how-to.
 
+**Educated guess, not a filing number.** Pass 1 runs **only** on the SS extract. Segurança Social Direct can list the wrong modality or start date. The teaser is a rough amount — it can go up or down. We only tighten it **after** convert, when the company uploads employment contracts and ops (or a later tool) checks **each person** against the CSV. Until then, do not promise the four figures as the realized saving. Product copy may say the reading can change once contracts are in. Still no recipe on that screen.
+
 ---
 
 ## Pass 2 — stay
@@ -38,7 +40,8 @@ Promote the same intake:
 2. Create `company`, membership (uploader = `ADMIN`).
 3. Set `ss_batch.company_id`, `employee.company_id` on rows already parsed.
 4. Workspace: ask for employment contracts (and later monthly SS files, status, invoices).
-5. Still no methodology dump. They see **work to do** and **money** (invoices), not a DIY calculator.
+5. **Contract vs SS:** for each employee, compare the signed contract (modality + `signed_on`) to the extract. `employment_document.matches_ss` is `MATCH` / `MISMATCH` (`KB/04`). A mismatch can move someone between now / potential / skip (wrong “sem termo”, wrong start → remaining months). The teaser is not re-shown as a DIY calculator; ops/internal figures update from `CONTRACT` source.
+6. Still no methodology dump. They see **work to do** and **money** (invoices), not a DIY calculator.
 
 ---
 
