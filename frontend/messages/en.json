@@ -102,5 +102,43 @@
       "SKIP_NO_PAY": "No open pay period in the extract.",
       "SKIP_CONTRACT": "Contract type is outside the hiring-benefit set."
     }
+  },
+  "workspace": {
+    "brand": "BeTaxed",
+    "brandHint": "Portugal",
+    "navGroup": "Workspace",
+    "soon": "Soon",
+    "breadcrumb": "Dashboard",
+    "overview": "Portfolio overview",
+    "fallbackName": "Your company",
+    "needSession": "We could not open this workspace.",
+    "backToStart": "Start again",
+    "nav": {
+      "overview": "Overview",
+      "people": "People",
+      "declarations": "Declarations",
+      "billing": "Billing"
+    },
+    "kpi": {
+      "nowMonthly": "Now · month",
+      "nowMonthlyHint": "Unrealized saving available today",
+      "nowWindow": "Now · ~5 years",
+      "nowWindowHint": "Same bucket, remaining window",
+      "potentialMonthly": "Potential · month",
+      "potentialMonthlyHint": "If you stay with us through the process",
+      "potentialWindow": "Potential · ~5 years",
+      "potentialWindowHint": "If you stay with us through the process"
+    },
+    "next": {
+      "title": "Next in the workspace",
+      "lead": "Same totals as the reading. The rest of the loop comes in later tickets.",
+      "people": "People and contracts — not in this screen yet.",
+      "declarations": "Monthly Segurança Social files — not in this screen yet.",
+      "billing": "Invoices — not in this screen yet."
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No activity yet."
+    }
   }
 }
