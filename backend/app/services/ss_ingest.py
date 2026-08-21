@@ -29,6 +29,7 @@ from app.storage import build_object_name, get_object_storage, sha256_hex
 _XLSX_MIME = (
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
+_CSV_MIME = "text/csv"
 _NISS_RE = re.compile(r"\d{9,11}")
 
 
@@ -168,7 +169,7 @@ def _store_files(
         path = storage.put_bytes(
             item.content,
             object_name=object_name,
-            content_type=_XLSX_MIME,
+            content_type=_mime_for(item.filename),
         )
         stored.append(
             StoredFile(
@@ -176,13 +177,19 @@ def _store_files(
                 intake_id=intake_id,
                 gcs_path=path,
                 sha256=sha256_hex(item.content),
-                mime_type=_XLSX_MIME,
+                mime_type=_mime_for(item.filename),
                 original_filename=item.filename,
                 kind="SS_EXPORT",
                 uploaded_by=uploaded_by,
             )
         )
     return stored
+
+
+def _mime_for(filename: str) -> str:
+    if filename.lower().endswith(".csv"):
+        return _CSV_MIME
+    return _XLSX_MIME
 
 
 def _to_raw_vinculo(

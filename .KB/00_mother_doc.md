@@ -40,7 +40,7 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 | Employment | One vínculo. Rehire = new row, same employee. |
 | CompensationPeriod | Salary / rendimento period on an employment. |
 | EmploymentEvent | Hire, fire, leave, raise, conversion, rate change, user override. |
-| SsBatch | One SS declaration upload (one xlsx or two files). |
+| SsBatch | One SS declaration upload (one xlsx or two files, xlsx or csv). |
 | StoredFile | GCS object (SS export, contract, certificate, proforma). |
 | IncentiveRegime | Versioned legal/commercial parameters (internal). |
 | BenefitCase | Per-employee 5-year file for a regime (**internal**). |
@@ -58,8 +58,8 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 | Backend | FastAPI 0.136.1 (Python 3.13) |
 | Auth | Firebase Auth |
 | Frontend | Next.js 16 App Router + shadcn/ui (Node 24) |
-| Database | PostgreSQL 18 (local compose / Cloud SQL) |
-| Cache | Redis 8 (local compose, host 6380) |
+| Database | PostgreSQL 18 (local compose host **5434** / Cloud SQL) |
+| Cache | Redis 8 (local compose, host **6381**) |
 | File storage | GCS (paths in DB, never blobs; signed URLs on demand) |
 | Deployment | Google Cloud Run (backend + frontend, independent) |
 | Payments | Stripe (SEPA Direct Debit intended); certified PT invoicing software as alternate path |

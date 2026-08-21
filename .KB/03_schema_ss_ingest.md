@@ -6,7 +6,7 @@
 
 ## Overview
 
-Companies declare to Segurança Social every month (two files). They upload the same (or the combined Excel export) here.
+Companies declare to Segurança Social every month (two files, usually csv). They upload the same (or the combined Excel export) here.
 
 ```
 ss_batch (one upload / one month)
@@ -60,7 +60,7 @@ CREATE TABLE ss_batch_file (
 );
 ```
 
-One combined xlsx (sample) or two files — same batch.
+One combined xlsx (sample) or two files (xlsx or csv) — same batch.
 
 ---
 

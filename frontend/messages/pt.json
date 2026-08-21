@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "BeTaxed — poupança de Segurança Social",
+    "description": "Descubra poupança por realizar na Segurança Social da sua empresa. Sem receita."
+  },
+  "brand": {
+    "name": "BeTaxed",
+    "market": "Portugal"
+  },
+  "locale": {
+    "pt": "PT",
+    "en": "EN",
+    "switchTo": "Idioma"
+  },
+  "start": {
+    "kicker": "Leitura do extrato",
+    "headline": "Há poupança por realizar na Segurança Social da sua empresa.",
+    "lead": "Carregue o extrato que gera na Segurança Social. Mostramos dois totais — o que já está ao alcance, e o que pode vir a ser. Não ensinamos o método.",
+    "needAccount": "Não precisa de conta para ver os totais.",
+    "haveAccount": "Já tenho conta",
+    "preferUpload": "Prefiro carregar o ficheiro primeiro",
+    "period": "Mês da declaração",
+    "submit": "Ver os totais",
+    "working": "A trabalhar…"
+  },
+  "dropzone": {
+    "title": "Largue o extrato da Segurança Social",
+    "hint": "CSV ou Excel. Um livro, ou os dois ficheiros (vínculos e contratos)."
+  },
+  "working": {
+    "lines": [
+      "A enviar o extrato…",
+      "A ler vínculos e contratos…",
+      "A calcular os totais…"
+    ]
+  },
+  "result": {
+    "kicker": "Oportunidade",
+    "headline": "Há valor por realizar. Sem o mapa de como o obter.",
+    "lead": "Se continuar, tratamos do processo consigo. Se recusar, apagamos o extrato e estes números.",
+    "continueTitle": "Continuar com a BeTaxed",
+    "legalName": "Denominação legal",
+    "tradingName": "Nome comercial",
+    "optional": "Opcional",
+    "createWorkspace": "Criar espaço de trabalho",
+    "opening": "A abrir o espaço…",
+    "decline": "Não, eliminar tudo",
+    "declineConfirm": "Isto apaga o ficheiro e os totais de forma permanente.",
+    "declineYes": "Sim, eliminar",
+    "cancel": "Cancelar"
+  },
+  "teaser": {
+    "now": "Agora",
+    "nowNote": "Poupança por realizar neste momento.",
+    "potential": "Potencial",
+    "potentialNote": "Se ficar connosco a acompanhar o processo.",
+    "monthly": "por mês",
+    "window": "em cerca de 5 anos"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Palavra-passe"
+  },
+  "converted": {
+    "kicker": "Espaço criado",
+    "headline": "{name} está connosco.",
+    "fallbackName": "A sua empresa",
+    "lead": "Os mesmos totais ficam guardados. A seguir: contratos, declarações mensais e o acompanhamento — no espaço de trabalho."
+  },
+  "declined": {
+    "headline": "Extrato e totais foram eliminados.",
+    "lead": "Nada fica connosco. Pode recomeçar quando quiser.",
+    "again": "Nova leitura"
+  },
+  "errors": {
+    "generic": "Algo correu mal. Tente de novo.",
+    "needFile": "Escolha o extrato da Segurança Social (CSV ou Excel).",
+    "needAuthStart": "Para entrar primeiro, indique email e palavra-passe.",
+    "needAuthContinue": "Crie uma conta (ou entre) para continuar.",
+    "needLegalName": "Indique a denominação legal da empresa.",
+    "parseFailed": "Não foi possível ler este ficheiro. Use o extrato oficial de vínculos e contratos.",
+    "authInvalid": "Email ou palavra-passe incorrectos.",
+    "authWeak": "A palavra-passe deve ter pelo menos 6 caracteres.",
+    "authEmail": "Indique um email válido."
+  },
+  "verbose": {
+    "kicker": "DEV",
+    "lead": "Pessoas no extrato, com idade e posição face ao regime. Só em modo verbose local.",
+    "name": "Nome",
+    "age": "Idade",
+    "contract": "Contrato",
+    "how": "Regime",
+    "monthly": "Mensal",
+    "unknown": "Sem nome",
+    "howCodes": {
+      "NOW_UNUSED": "Já tem contrato sem termo. Redução por usar. Faltam {months} meses dos 60.",
+      "POTENTIAL_CONVERT": "Contrato a termo e na faixa etária. Converter para sem termo abre o regime.",
+      "SKIP_AGE": "Mais de 30 anos no relógio do sem termo. O regime não se aplica.",
+      "SKIP_TSU_REDUCED": "A TSU já parece reduzida. Nada por usar aqui.",
+      "SKIP_WINDOW": "A janela de 60 meses desde o sem termo já foi esgotada.",
+      "SKIP_NO_DOB": "Sem data de nascimento no extrato; não dá para ver a idade.",
+      "SKIP_NO_PAY": "Sem período de remuneração aberto no extrato.",
+      "SKIP_CONTRACT": "Tipo de contrato fora do conjunto do regime."
+    }
+  }
+}

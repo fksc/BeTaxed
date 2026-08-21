@@ -1,4 +1,5 @@
 # Local PostgreSQL 18 + Redis 8 + Firebase Auth emulator.
+# Host ports avoid Talent Journey (Postgres 5432, Redis 6380) and betaxed-pg-test (5433).
 # Do not use these credentials in production.
 services:
   postgres:
@@ -9,7 +10,8 @@ services:
       POSTGRES_PASSWORD: betaxed_dev
       POSTGRES_DB: betaxed
     ports:
-      - "5432:5432"
+      # Host 5432 is Talent Journey. Host 5433 is betaxed-pg-test.
+      - "5434:5432"
     volumes:
       - betaxed_pg_data:/var/lib/postgresql
     healthcheck:
@@ -22,7 +24,8 @@ services:
     image: redis:8-alpine
     container_name: betaxed-redis
     ports:
-      - "6380:6379"
+      # Host 6380 is Talent Journey Redis.
+      - "6381:6379"
     command:
       [
         "redis-server",

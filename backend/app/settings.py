@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 _DEFAULT_DATABASE_URL = (
-    "postgresql+asyncpg://betaxed:betaxed_dev@localhost:5432/betaxed"
+    "postgresql+asyncpg://betaxed:betaxed_dev@localhost:5434/betaxed"
 )
 
 HEADER_COMPANY_ID = "X-Company-Id"
@@ -124,3 +124,18 @@ def get_local_storage_dir() -> Path:
     if raw:
         return Path(raw)
     return Path(__file__).resolve().parent.parent / ".local_storage"
+
+
+def _truthy(raw: str) -> bool:
+    return raw.strip().upper() in {"TRUE", "1", "YES", "ON"}
+
+
+def get_env_name() -> str:
+    """ENV takes precedence; ENVIRONMENT is the older local alias."""
+    return (os.environ.get("ENV") or os.environ.get("ENVIRONMENT") or "").strip()
+
+
+def verbose_people_enabled() -> bool:
+    """DEV + VERBOSE only. Never cache — tests toggle the flag."""
+    env = get_env_name().upper()
+    return env == "DEV" and _truthy(os.environ.get("VERBOSE", ""))

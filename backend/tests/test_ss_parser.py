@@ -18,8 +18,10 @@ from tests.ss_xlsx_fixtures import (
     PERSON_B,
     SUBSTITUTE_NISS,
     combined_workbook,
+    contratos_only_csv,
     contratos_only_workbook,
     unnamed_sheet_workbooks,
+    vinculos_only_csv,
     vinculos_only_workbook,
 )
 
@@ -142,3 +144,36 @@ def test_same_person_present_on_both_sheets() -> None:
     assert {row.niss for row in parsed.vinculos} == {
         row.niss for row in parsed.contratos
     }
+
+
+def test_two_csv_files_semicolon_and_decimal_comma() -> None:
+    parsed = parse_ss_files(
+        [
+            SsSourceFile("vinculos.csv", vinculos_only_csv()),
+            SsSourceFile("contratos.csv", contratos_only_csv()),
+        ]
+    )
+    assert set(parsed.file_kinds) == {"VINCULOS", "CONTRATOS"}
+    alice = next(row for row in parsed.vinculos if row.niss == PERSON_A)
+    assert alice.started_on == date(2024, 1, 2)
+    assert alice.taxa_pct is not None
+    assert float(alice.taxa_pct) == 34.75
+    current = current_contratos(parsed.contratos)
+    assert {row.niss for row in current} == {PERSON_A, PERSON_B}
+
+
+def test_csv_cp1252_headers() -> None:
+    from tests.ss_xlsx_fixtures import VINCULO_HEADERS, build_csv, vinculo_row
+
+    content = build_csv(
+        VINCULO_HEADERS,
+        [vinculo_row(PERSON_A, name="Alice", workplace="Sede")],
+        encoding="cp1252",
+    )
+    parsed = parse_ss_files(
+        [
+            SsSourceFile("vinculos.csv", content),
+            SsSourceFile("contratos.csv", contratos_only_csv()),
+        ]
+    )
+    assert parsed.vinculos[0].workplace_ss_label == "Sede"

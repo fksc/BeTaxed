@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import pytest
 
 _DEFAULT_DATABASE_URL = (
-    "postgresql+asyncpg://betaxed:betaxed_dev@localhost:5432/betaxed"
+    "postgresql+asyncpg://betaxed:betaxed_dev@localhost:5433/betaxed"
 )
 
 
@@ -40,3 +40,9 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "db_session" in getattr(item, "fixturenames", []):
             item.add_marker(skip)
+
+
+@pytest.fixture(autouse=True)
+def _quiet_verbose(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Public teaser tests must not inherit VERBOSE=TRUE from a local .env."""
+    monkeypatch.setenv("VERBOSE", "FALSE")

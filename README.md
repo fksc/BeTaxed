@@ -24,8 +24,8 @@ Application repository for the Linear project **BeTaxed**. Spec: [`.KB/00_mother
 | **Node.js** | 24.x (Active LTS) | Frontend `engines` + Docker: `node:24-alpine` |
 | **Next.js** | 16.3.x | App Router; `output: "standalone"` for Cloud Run |
 | **React** | 19.2.x | As resolved with Next 16 |
-| **PostgreSQL** | 18.x | Root `docker-compose.yml` / Cloud SQL later |
-| **Redis** | 8.x | Host port **6380** (container 6379) |
+| **PostgreSQL** | 18.x | Host port **5434** (Talent Journey uses 5432; tests use 5433) |
+| **Redis** | 8.x | Host port **6381** (container 6379; Talent Journey uses 6380) |
 
 ## Local development
 
@@ -55,6 +55,7 @@ npm run dev
 ```
 
 - `GET /api/health` — frontend liveness
+- `/` — pass 1 teaser (upload SS, four figures, continue or decline)
 
 Firebase Auth is the **emulator** in local/DEV (`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, UI at http://127.0.0.1:4000). Cloud agents can run the same Compose stack. Unset the emulator host only for staging/prod.
 

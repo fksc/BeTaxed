@@ -266,6 +266,7 @@ def test_teaser_http_hides_recipe_and_names(db_session) -> None:
                 )
                 assert uploaded.status_code == 201, uploaded.text
                 payload = uploaded.json()
+                assert payload.get("verbose_people") is None
                 shown = json.dumps(payload)
                 assert Decimal(str(payload["teaser_now_monthly"])) == Decimal(
                     "178.13"
@@ -293,6 +294,72 @@ def test_teaser_http_hides_recipe_and_names(db_session) -> None:
                     "convert this",
                 ):
                     assert leak not in shown
+                async with AsyncSessionLocal() as session:
+                    stored = (
+                        await session.execute(
+                            select(StoredFile).where(
+                                StoredFile.intake_id == intake_id
+                            )
+                        )
+                    ).scalars().all()
+                    storage_paths.extend(row.gcs_path for row in stored)
+        finally:
+            async with AsyncSessionLocal() as session:
+                if intake_id is not None:
+                    await _cleanup(session, intake_id)
+            storage = get_object_storage()
+            for path in storage_paths:
+                storage.delete(path)
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
+def test_teaser_http_verbose_people_when_dev(db_session, monkeypatch) -> None:
+    monkeypatch.setenv("ENV", "DEV")
+    monkeypatch.setenv("VERBOSE", "TRUE")
+
+    async def body() -> None:
+        storage_paths: list[str] = []
+        intake_id = None
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                intake_id = UUID(created.json()["id"])
+                session_token = created.json()["session_token"]
+                uploaded = await client.post(
+                    f"/v1/intakes/{intake_id}/uploads",
+                    headers={HEADER_INTAKE_SESSION: session_token},
+                    data={"period_year_month": "2026-08"},
+                    files={
+                        "files": (
+                            "ss.xlsx",
+                            _mixed_teaser_xlsx(),
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        )
+                    },
+                )
+                assert uploaded.status_code == 201, uploaded.text
+                people = uploaded.json()["verbose_people"]
+                assert people is not None
+                by_name = {row["name"]: row for row in people}
+                assert by_name["Alice"]["age"] == 28
+                assert by_name["Alice"]["bucket"] == "now"
+                assert by_name["Alice"]["how_code"] == "NOW_UNUSED"
+                assert by_name["Alice"]["remaining_months"] == 29
+                assert by_name["Carla"]["bucket"] == "potential"
+                assert by_name["Carla"]["how_code"] == "POTENTIAL_CONVERT"
+                assert by_name["Diego"]["how_code"] == "SKIP_AGE"
+                assert by_name["Eva"]["how_code"] == "SKIP_TSU_REDUCED"
+                assert by_name["Fabio"]["how_code"] == "SKIP_AGE"
+                assert by_name["Gina"]["how_code"] == "SKIP_NO_DOB"
+                assert by_name["Hugo"]["how_code"] == "SKIP_WINDOW"
+                shown = json.dumps(people)
+                assert PERSON_A not in shown
+                assert PERSON_B not in shown
                 async with AsyncSessionLocal() as session:
                     stored = (
                         await session.execute(

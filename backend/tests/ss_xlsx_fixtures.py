@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 from datetime import date
-from io import BytesIO
+from io import BytesIO, StringIO
 from typing import Any
 
 from openpyxl import Workbook
@@ -233,3 +234,60 @@ def unnamed_sheet_workbooks() -> tuple[bytes, bytes]:
         }
     )
     return vinculos, contratos
+
+
+def _csv_cell(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, date):
+        return value.strftime("%d/%m/%Y")
+    if isinstance(value, float):
+        return str(value).replace(".", ",")
+    return str(value)
+
+
+def build_csv(
+    headers: list[str],
+    rows: list[list[Any]],
+    *,
+    delimiter: str = ";",
+    encoding: str = "utf-8",
+) -> bytes:
+    buffer = StringIO()
+    writer = csv.writer(buffer, delimiter=delimiter, lineterminator="\n")
+    writer.writerow(headers)
+    for row in rows:
+        writer.writerow([_csv_cell(cell) for cell in row])
+    return buffer.getvalue().encode(encoding)
+
+
+def vinculos_only_csv() -> bytes:
+    return build_csv(
+        VINCULO_HEADERS,
+        [
+            vinculo_row(PERSON_A, name="Alice"),
+            vinculo_row(PERSON_B, name="Bruno"),
+        ],
+    )
+
+
+def contratos_only_csv() -> bytes:
+    return build_csv(
+        CONTRATO_HEADERS,
+        [
+            contrato_row(
+                PERSON_A,
+                name="Alice",
+                rendimento_from=date(2024, 1, 2),
+                rendimento_to=date(2024, 12, 31),
+                salary=1000,
+            ),
+            contrato_row(
+                PERSON_A,
+                name="Alice",
+                rendimento_from=date(2025, 1, 1),
+                salary=1500,
+            ),
+            contrato_row(PERSON_B, name="Bruno", salary=2000),
+        ],
+    )

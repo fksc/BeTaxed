@@ -1,0 +1,106 @@
+{
+  "meta": {
+    "title": "BeTaxed — Social Security savings",
+    "description": "Find unrealized Social Security savings for your company. No recipe."
+  },
+  "brand": {
+    "name": "BeTaxed",
+    "market": "Portugal"
+  },
+  "locale": {
+    "pt": "PT",
+    "en": "EN",
+    "switchTo": "Language"
+  },
+  "start": {
+    "kicker": "Read the extract",
+    "headline": "There is unrealized Social Security saving in your company.",
+    "lead": "Upload the extract you generate from Segurança Social. We show two totals — what is already within reach, and what could follow. We do not teach the method.",
+    "needAccount": "You do not need an account to see the totals.",
+    "haveAccount": "I already have an account",
+    "preferUpload": "I would rather upload the file first",
+    "period": "Declaration month",
+    "submit": "See the totals",
+    "working": "Working…"
+  },
+  "dropzone": {
+    "title": "Drop the Segurança Social extract",
+    "hint": "CSV or Excel. One workbook, or both files (employment and contracts)."
+  },
+  "working": {
+    "lines": [
+      "Sending the extract…",
+      "Reading employment and contracts…",
+      "Calculating the totals…"
+    ]
+  },
+  "result": {
+    "kicker": "Opportunity",
+    "headline": "There is value left on the table. Not a map of how to take it.",
+    "lead": "If you continue, we run the process with you. If you decline, we delete the extract and these figures.",
+    "continueTitle": "Continue with BeTaxed",
+    "legalName": "Legal name",
+    "tradingName": "Trading name",
+    "optional": "Optional",
+    "createWorkspace": "Create workspace",
+    "opening": "Opening the workspace…",
+    "decline": "No, delete everything",
+    "declineConfirm": "This permanently deletes the file and the totals.",
+    "declineYes": "Yes, delete",
+    "cancel": "Cancel"
+  },
+  "teaser": {
+    "now": "Now",
+    "nowNote": "Unrealized saving available today.",
+    "potential": "Potential",
+    "potentialNote": "If you stay with us through the process.",
+    "monthly": "per month",
+    "window": "over about 5 years"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password"
+  },
+  "converted": {
+    "kicker": "Workspace created",
+    "headline": "{name} is with us.",
+    "fallbackName": "Your company",
+    "lead": "The same totals are stored. Next: contracts, monthly declarations, and the work — in the workspace."
+  },
+  "declined": {
+    "headline": "The extract and totals were deleted.",
+    "lead": "Nothing stays with us. You can start again whenever you like.",
+    "again": "New reading"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "needFile": "Choose the Segurança Social extract (CSV or Excel).",
+    "needAuthStart": "To sign in first, enter email and password.",
+    "needAuthContinue": "Create an account (or sign in) to continue.",
+    "needLegalName": "Enter the company’s legal name.",
+    "parseFailed": "This file could not be read. Use the official employment and contracts extract.",
+    "authInvalid": "Incorrect email or password.",
+    "authWeak": "Password must be at least 6 characters.",
+    "authEmail": "Enter a valid email address."
+  },
+  "verbose": {
+    "kicker": "DEV",
+    "lead": "People in the extract, with age and how they sit against the hiring-benefit regime. Local verbose only.",
+    "name": "Name",
+    "age": "Age",
+    "contract": "Contract",
+    "how": "Regime",
+    "monthly": "Monthly",
+    "unknown": "Unnamed",
+    "howCodes": {
+      "NOW_UNUSED": "Already on a permanent contract. Unused reduction. {months} months left of 60.",
+      "POTENTIAL_CONVERT": "On a term contract and in the age band. Convert to permanent to open the regime.",
+      "SKIP_AGE": "Older than 30 at the permanent-contract clock. The regime does not apply.",
+      "SKIP_TSU_REDUCED": "TSU already looks reduced. Nothing unused here.",
+      "SKIP_WINDOW": "The 60-month window from the permanent start is used up.",
+      "SKIP_NO_DOB": "No date of birth in the extract, so age cannot be checked.",
+      "SKIP_NO_PAY": "No open pay period in the extract.",
+      "SKIP_CONTRACT": "Contract type is outside the hiring-benefit set."
+    }
+  }
+}
