@@ -1,17 +1,9 @@
 "use client";
 
+import { Building2, FileInput, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  CreditCard,
-  FileSpreadsheet,
-  LayoutDashboard,
-  Users,
-} from "lucide-react";
 
 import { NavUser } from "@/components/shell/nav-user";
-import { CompanySidebarBrand } from "@/components/workspace/company-sidebar-brand";
-import { Link, usePathname } from "@/i18n/navigation";
-import { paths } from "@/lib/app-paths";
 import {
   Sidebar,
   SidebarContent,
@@ -25,42 +17,39 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { Link, usePathname } from "@/i18n/navigation";
+import { paths } from "@/lib/app-paths";
 
-export function WorkspaceSidebar() {
-  const t = useTranslations("workspace");
+export function AdminsSidebar() {
+  const t = useTranslations("admins");
   const pathname = usePathname();
 
   const items = [
     {
-      href: paths.companiesDashboard,
+      href: paths.adminsDashboard,
       label: t("nav.overview"),
       icon: LayoutDashboard,
       soon: false,
     },
     {
-      href: paths.companiesDashboard,
-      label: t("nav.people"),
-      icon: Users,
+      href: paths.adminsDashboard,
+      label: t("nav.companies"),
+      icon: Building2,
       soon: true,
     },
     {
-      href: paths.companiesDashboard,
-      label: t("nav.declarations"),
-      icon: FileSpreadsheet,
-      soon: true,
-    },
-    {
-      href: paths.companiesDashboard,
-      label: t("nav.billing"),
-      icon: CreditCard,
+      href: paths.adminsDashboard,
+      label: t("nav.intakes"),
+      icon: FileInput,
       soon: true,
     },
   ];
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-2 py-3">
-        <CompanySidebarBrand />
+      <SidebarHeader className="px-3 py-4">
+        <p className="font-heading truncate text-lg tracking-tight">{t("brand")}</p>
+        <p className="truncate text-xs text-sidebar-foreground/70">{t("brandHint")}</p>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -89,7 +78,7 @@ export function WorkspaceSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-2">
-        <NavUser settingsHref={paths.companiesSettings} />
+        <NavUser settingsHref={paths.adminsSettings} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
