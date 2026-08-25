@@ -20,6 +20,7 @@ import { ApiError, type IntakeOut } from "@/lib/api/types";
 import { useRouter } from "@/i18n/navigation";
 import { isVerboseUi } from "@/lib/dev-verbose";
 import { currentIdToken, ensureEmailUser } from "@/lib/firebase";
+import { saveCompanyId } from "@/lib/company-session";
 import {
   clearIntakeSession,
   loadIntakeSession,
@@ -202,6 +203,9 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       );
       setIntake(converted);
       saveWorkspaceName(legalName.trim());
+      if (converted.company_id) {
+        saveCompanyId(converted.company_id);
+      }
       saveIntakeSession(converted.id, null);
       setSessionToken(null);
       router.replace("/companies/dashboard");

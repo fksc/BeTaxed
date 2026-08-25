@@ -9,6 +9,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { NotificationBell } from "@/components/shell/notification-bell";
 
 export function ShellAppBar({ crumb }: { crumb: string }) {
   return (
@@ -26,7 +27,8 @@ export function ShellAppBar({ crumb }: { crumb: string }) {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <NotificationBell />
           <LocaleSwitcher />
         </div>
       </div>

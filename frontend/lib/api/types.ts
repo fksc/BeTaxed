@@ -1,4 +1,5 @@
 export const HEADER_INTAKE_SESSION = "X-Intake-Session";
+export const HEADER_COMPANY_ID = "X-Company-Id";
 
 export type IntakeBatchSummary = {
   id: string;

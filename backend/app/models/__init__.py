@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.communications import DomainEvent, Notification
 from app.models.core import Company, CompanyMembership, Intake, UserBase
 from app.models.crypto import TenantCryptoKey
 from app.models.employment import (
@@ -6,6 +7,7 @@ from app.models.employment import (
     Employee,
     EmployeeExternalId,
     Employment,
+    EmploymentDocument,
     EmploymentEvent,
     StoredFile,
     Workplace,
@@ -17,11 +19,14 @@ __all__ = [
     "Company",
     "CompanyMembership",
     "CompensationPeriod",
+    "DomainEvent",
     "Employee",
     "EmployeeExternalId",
     "Employment",
+    "EmploymentDocument",
     "EmploymentEvent",
     "Intake",
+    "Notification",
     "SsBatch",
     "SsBatchFile",
     "SsRawContrato",

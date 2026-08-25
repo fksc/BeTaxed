@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { StatCard } from "@/components/workspace/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { Link } from "@/i18n/navigation";
+import { paths } from "@/lib/app-paths";
 
 export function AdminsDashboard() {
   const t = useTranslations("admins");
@@ -51,6 +53,9 @@ export function AdminsDashboard() {
           <CardContent className="space-y-2 pt-1 text-sm text-muted-foreground">
             <p>{t("next.companies")}</p>
             <p>{t("next.intakes")}</p>
+            <Link href={paths.adminsFlags} className="text-primary underline">
+              {t("nav.flags")}
+            </Link>
           </CardContent>
         </Card>
       </div>

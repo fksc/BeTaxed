@@ -23,7 +23,12 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 ```
 
 - `GET /health` — process liveness (no DB)
-- `GET /ready` — PostgreSQL `SELECT 1`
+- `GET /ready` — PostgreSQL `SELECT 1`; Redis ping when `REDIS_URL` is set
+- `GET /v1/people` — company people (Admin/HR/staff). `X-Company-Id` required. No NISS, no recipe.
+- `POST /v1/people/{employee_id}/contracts` — PDF upload; emits `CONTRACT_UPLOADED` then stub/Gemini review (`CONTRACT_LLM`).
+- `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
+- `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.
+- `POST /v1/ops/employment-documents/{id}/apply` — staff copies paper fields onto employment (`source = CONTRACT`).
 - `GET /v1/me` — Firebase Bearer token; upserts `user_base` (`COMPANY_STAFF` on first login; `BETAXED_STAFF` is a DB promotion)
 - `GET /v1/me/company` — requires `X-Company-Id` (never inferred). Staff: any company, no membership. Company users: active member.
 - `GET /v1/me/intake` — requires `X-Intake-Id`. Owner, staff, or matching `X-Intake-Session` (upload-first, OD-1). Unbound intake without a session is staff-only.

@@ -20,6 +20,7 @@ from app.models import (
     Employee,
     EmployeeExternalId,
     Employment,
+    EmploymentDocument,
     EmploymentEvent,
     SsBatch,
     SsRawContrato,
@@ -100,6 +101,9 @@ async def delete_intake_employment_spine(
     emp_ids = select(Employee.id).where(Employee.intake_id == intake_id)
     empl_ids = select(Employment.id).where(Employment.intake_id == intake_id)
     await session.execute(
+        delete(EmploymentDocument).where(EmploymentDocument.employee_id.in_(emp_ids))
+    )
+    await session.execute(
         delete(EmploymentEvent).where(EmploymentEvent.intake_id == intake_id)
     )
     await session.execute(
@@ -118,6 +122,9 @@ async def delete_company_employment_spine(
 ) -> None:
     emp_ids = select(Employee.id).where(Employee.company_id == company_id)
     empl_ids = select(Employment.id).where(Employment.company_id == company_id)
+    await session.execute(
+        delete(EmploymentDocument).where(EmploymentDocument.employee_id.in_(emp_ids))
+    )
     await session.execute(
         delete(EmploymentEvent).where(EmploymentEvent.company_id == company_id)
     )
