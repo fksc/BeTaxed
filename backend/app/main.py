@@ -1,5 +1,6 @@
 """BeTaxed API — load ``backend/.env`` before imports that read ``os.environ``."""
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,10 +13,35 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
-from app.routers import intakes_router, me_router
+from app.redis_util import ping as redis_ping, set_app_redis
+from app.routers import (
+    intakes_router,
+    me_router,
+    notifications_router,
+    ops_router,
+    people_router,
+)
 from app.settings import get_cors_origins, get_redis_url
 
-app = FastAPI(title="BeTaxed API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    url = get_redis_url()
+    if url:
+        from redis.asyncio import Redis
+
+        app.state.redis = Redis.from_url(url, decode_responses=True)
+    else:
+        app.state.redis = None
+    set_app_redis(app.state.redis)
+    yield
+    redis = getattr(app.state, "redis", None)
+    if redis is not None:
+        await redis.aclose()
+    set_app_redis(None)
+
+
+app = FastAPI(title="BeTaxed API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +53,9 @@ app.add_middleware(
 
 app.include_router(me_router)
 app.include_router(intakes_router)
+app.include_router(people_router)
+app.include_router(notifications_router)
+app.include_router(ops_router)
 
 
 @app.get("/health")
@@ -36,8 +65,10 @@ async def health() -> dict[str, str]:
 
 @app.get("/ready")
 async def ready(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
-    """Readiness: PostgreSQL; Redis is reserved (REDIS_URL) for a later ping."""
     await db.execute(text("SELECT 1"))
-    _ = request
-    _ = get_redis_url()
+    redis = getattr(request.app.state, "redis", None)
+    if redis is not None:
+        ok = await redis_ping(redis)
+        if not ok:
+            raise HTTPException(status_code=503, detail="redis_unavailable")
     return {"status": "ok"}

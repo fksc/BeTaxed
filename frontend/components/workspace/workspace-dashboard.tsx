@@ -13,6 +13,7 @@ import { currentIdToken } from "@/lib/firebase";
 import { formatEur } from "@/lib/format-money";
 import { loadIntakeSession, loadWorkspaceName } from "@/lib/intake-session";
 import { Link } from "@/i18n/navigation";
+import { paths } from "@/lib/app-paths";
 
 export function WorkspaceDashboard() {
   const t = useTranslations("workspace");
@@ -104,6 +105,9 @@ export function WorkspaceDashboard() {
               <p>{t("next.people")}</p>
               <p>{t("next.declarations")}</p>
               <p>{t("next.billing")}</p>
+              <Link href={paths.companiesPeople} className="text-primary underline">
+                {t("next.openPeople")}
+              </Link>
             </CardContent>
           </Card>
           <Card>

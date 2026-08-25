@@ -36,8 +36,9 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-005 | 2026-08-20 | open | — | Public employee status override (`PATCH`) |
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
 | SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
-| SL-008 | 2026-08-21 | open | — | Contract PDF vs SS row (override after teaser) |
-| SL-009 | 2026-08-21 | open | — | Gate (companies)/(admins) with Firebase + staff check |
+| SL-008 | 2026-08-21 | resolved | 2026-08-25 | Contract PDF vs SS row (override after teaser) |
+| SL-009 | 2026-08-21 | resolved | 2026-08-25 | Gate (companies)/(admins) with Firebase + staff check |
+| SL-010 | 2026-08-25 | open | — | Cloud Tasks for fanout + contract LLM review |
 
 ---
 
@@ -121,20 +122,33 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 ### SL-008 — Contract PDF vs SS row (override after teaser)
 - **Opened:** 2026-08-21
-- **Status:** open
-- **Resolved-date:** —
+- **Status:** resolved
+- **Resolved-date:** 2026-08-25
 - **Related:** `KB/10_product_flow.md` (educated guess), `KB/04_schema_documents.md` (`employment_document.matches_ss`), `KB/20_regime_ss_hiring_benefit.md` (extract can be wrong), mother rule 11
 - **Context:** Pass 1 teaser uses SS modality + vínculo `started_on` only. Direct can code **sem termo** with an early start when the signed file is **termo** (or the other way around). Worked example Aug 2026: two people SS-start 2021 → remaining 0; paper starts Feb/May 2022 → 6 and 9 months left if the 60-month clock uses `signed_on`. Schema already has `employment_document` and `source = CONTRACT`. There is **no** upload UI, mismatch workflow, or engine re-run from contracts. Do not auto-change the public four figures from PDFs in Pass 1.
 - **Why later:** Teaser must stay SS-only (OD-2, no recipe). Contract loop is workspace / ops (after convert). No ticket yet for the check UI.
 - **Pickup:** After convert, collect `EMPLOYMENT_CONTRACT` files, set `matches_ss`, let ops set employment modality/`started_on` from `signed_on` (`source = CONTRACT`). Recompute **internal** benefit cases. Public teaser stays the guess they already saw unless a later ticket defines a “revised reading” screen without teaching the recipe.
+- **Resolution:** DEV-836: company upload + Gemini/stub review sets `MATCH`/`MISMATCH`; staff queue + confirm copies paper fields onto employment (`source = CONTRACT`). Internal `benefit_case` recompute stays DEV-838. Public teaser is not rewritten.
 
 ---
 
 ### SL-009 — Gate (companies)/(admins) with Firebase + staff check
 - **Opened:** 2026-08-21
-- **Status:** open
-- **Resolved-date:** —
+- **Status:** resolved
+- **Resolved-date:** 2026-08-25
 - **Related:** DEV-847, `KB/40_permissions.md`, TJ `requireTjStaff` / `app/(admins)/layout.tsx`
 - **Context:** DEV-847 added route groups and TJ-style shells at `/companies/dashboard` and `/admins/dashboard`. Layouts do **not** require a Firebase session or a BeTaxed-staff flag, so the chrome can be browsed while there is no admin API. Anyone who knows the URL can open the ops shell.
 - **Why later:** No staff role on `user_base` wired to the Next app yet. A hard gate would 404 the screens this ticket needed to exist.
 - **Pickup:** Company layout: require Firebase + membership. Admin layout: require staff (DEV allow-list or `user_base` flag). Do not invent a full ops product in that change.
+- **Resolution:** DEV-836 gates `(companies)` on Firebase + `/v1/me` membership and `(admins)` on `user_base.user_type = BETAXED_STAFF`. Ops surface in this ticket is the contract-mismatch queue, not a full ops product.
+
+---
+
+### SL-010 — Cloud Tasks for fanout + contract LLM review
+- **Opened:** 2026-08-25
+- **Status:** open
+- **Resolved-date:** —
+- **Related:** DEV-836, `KB/08_schema_communications.md`, TJ `workers/cloud_tasks.py`
+- **Context:** Fan-out and Gemini review run **inline after commit** (TJ local fallback). Upload HTTP waits on the stub/Gemini call. Redis pub/sub is only the SSE wake-up.
+- **Why later:** No Cloud Tasks queues wired on BeTaxed Cloud Run yet. Inline is correct for tests and local DEV.
+- **Pickup:** `FANOUT_DOMAIN_EVENT` + `REVIEW_CONTRACT` queues, `POST /internal/workers/…`, OIDC / `INTERNAL_JOB_TOKEN`. Keep inline fallback when unset.

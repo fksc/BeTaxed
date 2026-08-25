@@ -144,9 +144,10 @@
     "next": {
       "title": "A seguir no espaço",
       "lead": "Os mesmos totais da leitura. O resto do ciclo vem em tickets posteriores.",
-      "people": "Pessoas e contratos — ainda não neste ecrã.",
+      "people": "Pessoas e contratos — envie os ficheiros em Pessoas.",
       "declarations": "Ficheiros mensais da Segurança Social — ainda não neste ecrã.",
-      "billing": "Faturas — ainda não neste ecrã."
+      "billing": "Faturas — ainda não neste ecrã.",
+      "openPeople": "Abrir Pessoas"
     },
     "activity": {
       "title": "Atividade recente",
@@ -156,6 +157,20 @@
       "crumb": "Definições",
       "title": "Definições da empresa",
       "lead": "Membros, faturação e preferências — ainda não neste ecrã."
+    },
+    "peopleCrumb": "Pessoas",
+    "people": {
+      "title": "Contratos",
+      "lead": "Carregue o contrato de cada pessoa. Nós comparamos com o extrato do nosso lado.",
+      "hint": "Este ecrã não ensina o regime.",
+      "empty": "Ainda não há pessoas neste espaço.",
+      "unnamed": "Pessoa",
+      "noFile": "Ainda sem contrato",
+      "pending": "Recebido, em revisão",
+      "received": "Recebido",
+      "failed": "Não foi possível ler o ficheiro",
+      "upload": "Enviar PDF",
+      "uploadFailed": "O envio falhou."
     }
   },
   "admins": {
@@ -167,6 +182,7 @@
     "overview": "Visão geral",
     "nav": {
       "overview": "Visão geral",
+      "flags": "Alertas de contrato",
       "companies": "Empresas",
       "intakes": "Leituras"
     },
@@ -176,7 +192,7 @@
       "intakes": "Leituras abertas",
       "intakesHint": "Pass 1 ainda por converter — ainda sem API neste ecrã",
       "flags": "Alertas",
-      "flagsHint": "Contratos vs extrato — ainda sem API neste ecrã"
+      "flagsHint": "Extrato vs contrato assinado"
     },
     "next": {
       "title": "A seguir nas operações",
@@ -188,6 +204,19 @@
       "crumb": "Definições",
       "title": "Definições de operações",
       "lead": "Equipas e preferências internas — ainda não neste ecrã."
+    },
+    "flags": {
+      "crumb": "Alertas de contrato",
+      "title": "SS vs contrato assinado",
+      "lead": "O papel e o extrato não coincidem. Confirme antes de tratar o contrato como fonte.",
+      "empty": "Sem divergências neste momento.",
+      "unnamed": "Pessoa",
+      "ss": "Extrato",
+      "paper": "Contrato",
+      "apply": "Usar datas do contrato",
+      "applied": "Aplicado ao emprego.",
+      "needAuth": "Não foi possível carregar os alertas.",
+      "applyFailed": "Não foi possível aplicar."
     }
   },
   "marketing": {
@@ -235,6 +264,19 @@
     "privacy": {
       "headline": "Política de privacidade",
       "lead": "Texto legal completo virá depois. Para já: o extrato que carregar na leitura é apagado se recusar continuar."
+    }
+  },
+  "notifications": {
+    "title": "Notificações",
+    "unreadTitle": "Por ler",
+    "markAllRead": "Marcar todas como lidas",
+    "loading": "A carregar…",
+    "empty": "Nada de novo.",
+    "events": {
+      "CONTRACT_UPLOADED": "Foi enviado um contrato",
+      "CONTRACT_REVIEWED": "Revisão do contrato concluída",
+      "CONTRACT_SS_MISMATCH": "O contrato não coincide com o extrato",
+      "CONTRACT_REVIEW_FAILED": "A revisão do contrato falhou"
     }
   }
 }

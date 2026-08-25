@@ -39,6 +39,36 @@ def get_redis_url() -> str | None:
 
 
 @lru_cache
+def get_google_cloud_project() -> str | None:
+    raw = (
+        os.environ.get("GOOGLE_CLOUD_PROJECT", "").strip()
+        or os.environ.get("GCP_PROJECT", "").strip()
+        or os.environ.get("FIREBASE_PROJECT_ID", "").strip()
+    )
+    return raw or None
+
+
+def get_vertex_location() -> str:
+    return os.environ.get("VERTEX_LOCATION", "europe-west1").strip() or "europe-west1"
+
+
+def get_gemini_model() -> str:
+    return os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
+
+
+def get_contract_llm_mode() -> str:
+    """gemini | stub | off. DEV without a GCP project defaults to stub."""
+    raw = os.environ.get("CONTRACT_LLM", "").strip().lower()
+    if raw in {"gemini", "stub", "off"}:
+        return raw
+    if get_google_cloud_project() and get_env_name().upper() != "DEV":
+        return "gemini"
+    if get_env_name().upper() == "DEV":
+        return "stub"
+    return "off"
+
+
+@lru_cache
 def get_default_fee_percent() -> str | None:
     """Platform default success-fee fraction. Empty until billing sets it; commercial_terms overrides per client."""
     raw = os.environ.get("DEFAULT_FEE_PERCENT", "").strip()

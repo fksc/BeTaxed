@@ -30,6 +30,10 @@ class ObjectStorage(ABC):
     def delete(self, storage_path: str) -> None:
         """Remove object at path."""
 
+    @abstractmethod
+    def get_bytes(self, storage_path: str) -> bytes:
+        """Read object bytes."""
+
 
 class LocalObjectStorage(ObjectStorage):
     """DEV fallback when GCS_BUCKET is unset."""
@@ -55,6 +59,9 @@ class LocalObjectStorage(ObjectStorage):
         path = Path(storage_path)
         if path.is_file():
             path.unlink()
+
+    def get_bytes(self, storage_path: str) -> bytes:
+        return Path(storage_path).read_bytes()
 
 
 class GcsObjectStorage(ObjectStorage):
@@ -90,6 +97,14 @@ class GcsObjectStorage(ObjectStorage):
         bucket_name, _, object_name = without.partition("/")
         bucket = self._client.bucket(bucket_name)
         bucket.blob(object_name).delete()
+
+    def get_bytes(self, storage_path: str) -> bytes:
+        if not storage_path.startswith("gs://"):
+            raise ValueError("expected gs:// path")
+        without = storage_path[5:]
+        bucket_name, _, object_name = without.partition("/")
+        bucket = self._client.bucket(bucket_name)
+        return bucket.blob(object_name).download_as_bytes()
 
 
 def sha256_hex(data: bytes) -> str:

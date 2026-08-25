@@ -38,10 +38,10 @@ export function WorkspaceSidebar() {
       soon: false,
     },
     {
-      href: paths.companiesDashboard,
+      href: paths.companiesPeople,
       label: t("nav.people"),
       icon: Users,
-      soon: true,
+      soon: false,
     },
     {
       href: paths.companiesDashboard,

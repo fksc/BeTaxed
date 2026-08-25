@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, FileInput, LayoutDashboard } from "lucide-react";
+import { Building2, FileInput, Flag, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { NavUser } from "@/components/shell/nav-user";
@@ -29,6 +29,12 @@ export function AdminsSidebar() {
       href: paths.adminsDashboard,
       label: t("nav.overview"),
       icon: LayoutDashboard,
+      soon: false,
+    },
+    {
+      href: paths.adminsFlags,
+      label: t("nav.flags"),
+      icon: Flag,
       soon: false,
     },
     {

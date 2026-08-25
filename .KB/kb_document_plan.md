@@ -24,6 +24,7 @@
 | `05_schema_benefit.md` | Regime, application, benefit case, saving month (**internal**) |
 | `06_schema_billing.md` | Commercial terms, invoices, payments |
 | `07_security_encryption.md` | What is encrypted, hashes, tenant isolation |
+| `08_schema_communications.md` | Domain events, notification rows, Redis pub/sub wake-up |
 
 ### Access
 | Doc | Contents |

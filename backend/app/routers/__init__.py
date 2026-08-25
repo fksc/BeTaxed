@@ -1,4 +1,13 @@
 from app.routers.intakes import router as intakes_router
 from app.routers.me import router as me_router
+from app.routers.notifications import router as notifications_router
+from app.routers.ops import router as ops_router
+from app.routers.people import router as people_router
 
-__all__ = ["intakes_router", "me_router"]
+__all__ = [
+    "intakes_router",
+    "me_router",
+    "notifications_router",
+    "ops_router",
+    "people_router",
+]

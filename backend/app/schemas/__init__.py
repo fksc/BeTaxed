@@ -1,3 +1,10 @@
+from app.schemas.contracts import (
+    ContractUploadOut,
+    MismatchFlagOut,
+    NotificationListOut,
+    NotificationOut,
+    PersonOut,
+)
 from app.schemas.intake import (
     ConvertIntakeIn,
     ConvertIntakeOut,
@@ -8,6 +15,7 @@ from app.schemas.me import CompanyScopeOut, IntakeScopeOut, MeOut, MembershipOut
 
 __all__ = [
     "CompanyScopeOut",
+    "ContractUploadOut",
     "ConvertIntakeIn",
     "ConvertIntakeOut",
     "IntakeCreatedOut",
@@ -15,4 +23,8 @@ __all__ = [
     "IntakeScopeOut",
     "MeOut",
     "MembershipOut",
+    "MismatchFlagOut",
+    "NotificationListOut",
+    "NotificationOut",
+    "PersonOut",
 ]

@@ -144,9 +144,10 @@
     "next": {
       "title": "Next in the workspace",
       "lead": "Same totals as the reading. The rest of the loop comes in later tickets.",
-      "people": "People and contracts — not in this screen yet.",
+      "people": "People and contracts — upload signed files in People.",
       "declarations": "Monthly Segurança Social files — not in this screen yet.",
-      "billing": "Invoices — not in this screen yet."
+      "billing": "Invoices — not in this screen yet.",
+      "openPeople": "Open People"
     },
     "activity": {
       "title": "Recent activity",
@@ -156,6 +157,20 @@
       "crumb": "Settings",
       "title": "Company settings",
       "lead": "Members, billing, and preferences — not on this screen yet."
+    },
+    "peopleCrumb": "People",
+    "people": {
+      "title": "Contracts",
+      "lead": "Upload each person’s employment contract. We check it against the extract on our side.",
+      "hint": "No eligibility recipe on this screen.",
+      "empty": "No people in this workspace yet.",
+      "unnamed": "Person",
+      "noFile": "No contract yet",
+      "pending": "Received, reviewing",
+      "received": "Received",
+      "failed": "Could not read the file",
+      "upload": "Upload PDF",
+      "uploadFailed": "Upload failed."
     }
   },
   "admins": {
@@ -167,6 +182,7 @@
     "overview": "Overview",
     "nav": {
       "overview": "Overview",
+      "flags": "Contract flags",
       "companies": "Companies",
       "intakes": "Readings"
     },
@@ -176,7 +192,7 @@
       "intakes": "Open readings",
       "intakesHint": "Pass 1 not yet converted — no API on this screen yet",
       "flags": "Flags",
-      "flagsHint": "Contracts vs extract — no API on this screen yet"
+      "flagsHint": "SS extract vs signed contract"
     },
     "next": {
       "title": "Next in operations",
@@ -188,6 +204,19 @@
       "crumb": "Settings",
       "title": "Operations settings",
       "lead": "Staff and internal preferences — not on this screen yet."
+    },
+    "flags": {
+      "crumb": "Contract flags",
+      "title": "SS vs signed contract",
+      "lead": "Paper and the extract disagree. Confirm before we treat the contract as source.",
+      "empty": "No mismatches right now.",
+      "unnamed": "Person",
+      "ss": "Extract",
+      "paper": "Contract",
+      "apply": "Use contract dates",
+      "applied": "Applied to employment.",
+      "needAuth": "Could not load flags.",
+      "applyFailed": "Could not apply."
     }
   },
   "marketing": {
@@ -235,6 +264,19 @@
     "privacy": {
       "headline": "Privacy policy",
       "lead": "Full legal copy comes later. For now: if you decline after a reading, we delete the extract."
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unreadTitle": "Unread",
+    "markAllRead": "Mark all read",
+    "loading": "Loading…",
+    "empty": "Nothing new.",
+    "events": {
+      "CONTRACT_UPLOADED": "A contract was uploaded",
+      "CONTRACT_REVIEWED": "Contract review finished",
+      "CONTRACT_SS_MISMATCH": "Contract does not match the extract",
+      "CONTRACT_REVIEW_FAILED": "Contract review failed"
     }
   }
 }
