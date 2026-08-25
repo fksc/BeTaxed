@@ -5,15 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { FileSpreadsheet, Flag, Users, Wallet } from "lucide-react";
 
 import { StatCard } from "@/components/workspace/stat-card";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ShellAppBar } from "@/components/shell/shell-app-bar";
 import { getIntake } from "@/lib/api/intakes";
 import type { IntakeOut } from "@/lib/api/types";
 import { currentIdToken } from "@/lib/firebase";
@@ -53,19 +46,7 @@ export function WorkspaceDashboard() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center gap-2 group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-        <div className="flex flex-1 items-center gap-2 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{t("breadcrumb")}</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-      </header>
+      <ShellAppBar crumb={t("breadcrumb")} />
 
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
         <div>
@@ -80,7 +61,7 @@ export function WorkspaceDashboard() {
         {error ? (
           <p className="text-sm text-destructive">
             {error}{" "}
-            <Link href="/" className="underline">
+            <Link href="/start" className="underline">
               {t("backToStart")}
             </Link>
           </p>

@@ -8,7 +8,6 @@ import { Dropzone } from "@/components/intake/dropzone";
 import { Field, TextInput } from "@/components/intake/field";
 import { TeaserCards } from "@/components/intake/teaser-cards";
 import { VerboseTable } from "@/components/intake/verbose-table";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Button } from "@/components/ui/button";
 import {
   convertIntake,
@@ -93,7 +92,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         setIntake(loaded);
         setSessionToken(stored.sessionToken);
         if (loaded.status === "CONVERTED") {
-          router.replace("/workspace");
+          router.replace("/companies/dashboard");
         } else if (loaded.teaser_now_monthly != null) {
           setPhase("result");
         }
@@ -205,7 +204,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       saveWorkspaceName(legalName.trim());
       saveIntakeSession(converted.id, null);
       setSessionToken(null);
-      router.replace("/workspace");
+      router.replace("/companies/dashboard");
     } catch (err) {
       setError(fail(err));
     } finally {
@@ -245,18 +244,6 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-border/80">
-        <div className="mx-auto flex w-full max-w-5xl items-baseline justify-between gap-4 px-6 py-5">
-          <p className="font-heading text-xl tracking-tight">{t("brand.name")}</p>
-          <div className="flex items-center gap-4">
-            <p className="hidden text-sm text-muted-foreground sm:block">
-              {t("brand.market")}
-            </p>
-            <LocaleSwitcher />
-          </div>
-        </div>
-      </header>
-
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-12 lg:py-16">
         {phase === "start" || phase === "working" ? (
           <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr]">

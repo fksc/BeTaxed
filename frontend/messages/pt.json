@@ -7,6 +7,11 @@
     "name": "BeTaxed",
     "market": "Portugal"
   },
+  "userMenu": {
+    "settings": "Definições",
+    "logOut": "Sair",
+    "signIn": "Entrar"
+  },
   "locale": {
     "pt": "PT",
     "en": "EN",
@@ -59,7 +64,14 @@
   },
   "auth": {
     "email": "Email",
-    "password": "Palavra-passe"
+    "password": "Palavra-passe",
+    "kicker": "Conta",
+    "signIn": "Entrar",
+    "signInTitle": "Entrar na BeTaxed",
+    "signInLead": "Use a conta com que criou o espaço, ou a que já tinha.",
+    "signingIn": "A entrar…",
+    "noAccount": "Ainda sem conta?",
+    "goToStart": "Comece pela leitura do extrato"
   },
   "converted": {
     "kicker": "Espaço criado",
@@ -139,6 +151,90 @@
     "activity": {
       "title": "Atividade recente",
       "empty": "Ainda sem atividade."
+    },
+    "settings": {
+      "crumb": "Definições",
+      "title": "Definições da empresa",
+      "lead": "Membros, faturação e preferências — ainda não neste ecrã."
+    }
+  },
+  "admins": {
+    "brand": "BeTaxed",
+    "brandHint": "Operações",
+    "navGroup": "Ops",
+    "soon": "Em breve",
+    "breadcrumb": "Painel",
+    "overview": "Visão geral",
+    "nav": {
+      "overview": "Visão geral",
+      "companies": "Empresas",
+      "intakes": "Leituras"
+    },
+    "kpi": {
+      "companies": "Empresas",
+      "companiesHint": "Clientes no espaço — ainda sem API neste ecrã",
+      "intakes": "Leituras abertas",
+      "intakesHint": "Pass 1 ainda por converter — ainda sem API neste ecrã",
+      "flags": "Alertas",
+      "flagsHint": "Contratos vs extrato — ainda sem API neste ecrã"
+    },
+    "next": {
+      "title": "A seguir nas operações",
+      "lead": "Este ecrã organiza o lado interno. Ferramentas reais vêm em tickets posteriores.",
+      "companies": "Lista de empresas — ainda não neste ecrã.",
+      "intakes": "Leituras em curso — ainda não neste ecrã."
+    },
+    "settings": {
+      "crumb": "Definições",
+      "title": "Definições de operações",
+      "lead": "Equipas e preferências internas — ainda não neste ecrã."
+    }
+  },
+  "marketing": {
+    "nav": {
+      "brand": "beTaxed",
+      "about": "Sobre nós",
+      "contact": "Contactos",
+      "start": "Ver a leitura",
+      "signIn": "Entrar",
+      "workspace": "Espaço",
+      "openMenu": "Abrir menu"
+    },
+    "footer": {
+      "brand": "beTaxed",
+      "email": "geral@betaxed.eu",
+      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal",
+      "about": "Sobre nós",
+      "contact": "Contactos",
+      "start": "Ver a leitura",
+      "privacy": "Política de privacidade"
+    },
+    "landing": {
+      "headline": "Otimização fiscal",
+      "heroCaption": "Antecipar. Executar. Legalmente.",
+      "subhead": "Revelar e potenciar oportunidades — para maior eficiência fiscal",
+      "lead": "Planeamento e otimização fiscal para empresas — uma forma legal de reduzir a carga tributária.",
+      "cta": "Ver a leitura do extrato",
+      "p1": "Muita gente olha para a otimização fiscal com desconfiança. A fiscalidade ficou marcada como um estigma: qualquer redução da fatura parece, à partida, um atalho à margem da lei.",
+      "p2": "Há muito que a ação fiscal deixou de ser só reativa junto das autoridades. Passou a um plano proativo: iniciativa e antecipação, com execução.",
+      "p3": "Uma abordagem profissional, planeamento adequado e a devida execução ajudam a sua empresa a aproveitar, legalmente, os benefícios que se aplicam à sua realidade. Sem ensinar o método no ecrã público."
+    },
+    "about": {
+      "kicker": "Sobre nós",
+      "headline": "Fiscalidade empresarial, com execução.",
+      "p1": "A BeTaxed trabalha com empresas em Portugal. Identificamos poupança por realizar na Segurança Social e, se ficar connosco, acompanhamos o processo.",
+      "p2": "Não somos uma calculadora de auto-serviço. O ecrã público mostra totais; o mapa de como os obter fica connosco.",
+      "p3": "Sede em Porto. Contacto: geral@betaxed.eu."
+    },
+    "contact": {
+      "kicker": "Contactos",
+      "headline": "Fale connosco",
+      "email": "geral@betaxed.eu",
+      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal"
+    },
+    "privacy": {
+      "headline": "Política de privacidade",
+      "lead": "Texto legal completo virá depois. Para já: o extrato que carregar na leitura é apagado se recusar continuar."
     }
   }
 }

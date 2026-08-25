@@ -4,6 +4,7 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   type Auth,
   type User,
@@ -11,7 +12,7 @@ import {
 
 let connectedEmulator = false;
 
-function getFirebaseAuth(): Auth {
+export function getFirebaseAuth(): Auth {
   const projectId =
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || "demo-betaxed";
   const apiKey =
@@ -74,4 +75,22 @@ export async function currentIdToken(): Promise<string | null> {
     return null;
   }
   return user.getIdToken();
+}
+
+export async function signInEmail(
+  email: string,
+  password: string,
+): Promise<User> {
+  const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+  return cred.user;
+}
+
+export async function signOutUser(): Promise<void> {
+  await signOut(getFirebaseAuth());
+}
+
+export function displayNameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  const spaced = local.replace(/[._-]+/g, " ").trim();
+  return spaced || email;
 }

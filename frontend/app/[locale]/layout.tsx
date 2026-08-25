@@ -1,28 +1,11 @@
 import type { Metadata } from "next";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
-import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import { notFound } from "next/navigation";
 
-import { routing } from "@/i18n/routing";
+import { DocumentLang } from "@/components/document-lang";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import "../globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "latin-ext"],
-});
-
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin", "latin-ext"],
-  style: ["normal", "italic"],
-});
+import { routing } from "@/i18n/routing";
 
 type Props = {
   children: React.ReactNode;
@@ -51,15 +34,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
 
   return (
-    <html
-      lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-background text-foreground">
-        <NextIntlClientProvider messages={messages}>
-          <TooltipProvider>{children}</TooltipProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <DocumentLang />
+      <TooltipProvider>{children}</TooltipProvider>
+    </NextIntlClientProvider>
   );
 }

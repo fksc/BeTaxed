@@ -3,7 +3,7 @@ import { paths } from "@/lib/app-paths";
 
 type Props = { params: Promise<{ locale: string }> };
 
-export default async function LegacyWorkspacePage({ params }: Props) {
+export default async function AdminsIndexPage({ params }: Props) {
   const { locale } = await params;
-  redirect({ href: paths.companiesDashboard, locale });
+  redirect({ href: paths.adminsDashboard, locale });
 }

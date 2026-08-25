@@ -37,6 +37,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
 | SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
 | SL-008 | 2026-08-21 | open | — | Contract PDF vs SS row (override after teaser) |
+| SL-009 | 2026-08-21 | open | — | Gate (companies)/(admins) with Firebase + staff check |
 
 ---
 
@@ -126,3 +127,14 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 - **Context:** Pass 1 teaser uses SS modality + vínculo `started_on` only. Direct can code **sem termo** with an early start when the signed file is **termo** (or the other way around). Worked example Aug 2026: two people SS-start 2021 → remaining 0; paper starts Feb/May 2022 → 6 and 9 months left if the 60-month clock uses `signed_on`. Schema already has `employment_document` and `source = CONTRACT`. There is **no** upload UI, mismatch workflow, or engine re-run from contracts. Do not auto-change the public four figures from PDFs in Pass 1.
 - **Why later:** Teaser must stay SS-only (OD-2, no recipe). Contract loop is workspace / ops (after convert). No ticket yet for the check UI.
 - **Pickup:** After convert, collect `EMPLOYMENT_CONTRACT` files, set `matches_ss`, let ops set employment modality/`started_on` from `signed_on` (`source = CONTRACT`). Recompute **internal** benefit cases. Public teaser stays the guess they already saw unless a later ticket defines a “revised reading” screen without teaching the recipe.
+
+---
+
+### SL-009 — Gate (companies)/(admins) with Firebase + staff check
+- **Opened:** 2026-08-21
+- **Status:** open
+- **Resolved-date:** —
+- **Related:** DEV-847, `KB/40_permissions.md`, TJ `requireTjStaff` / `app/(admins)/layout.tsx`
+- **Context:** DEV-847 added route groups and TJ-style shells at `/companies/dashboard` and `/admins/dashboard`. Layouts do **not** require a Firebase session or a BeTaxed-staff flag, so the chrome can be browsed while there is no admin API. Anyone who knows the URL can open the ops shell.
+- **Why later:** No staff role on `user_base` wired to the Next app yet. A hard gate would 404 the screens this ticket needed to exist.
+- **Pickup:** Company layout: require Firebase + membership. Admin layout: require staff (DEV allow-list or `user_base` flag). Do not invent a full ops product in that change.

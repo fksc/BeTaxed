@@ -7,6 +7,11 @@
     "name": "BeTaxed",
     "market": "Portugal"
   },
+  "userMenu": {
+    "settings": "Settings",
+    "logOut": "Log out",
+    "signIn": "Sign in"
+  },
   "locale": {
     "pt": "PT",
     "en": "EN",
@@ -59,7 +64,14 @@
   },
   "auth": {
     "email": "Email",
-    "password": "Password"
+    "password": "Password",
+    "kicker": "Account",
+    "signIn": "Sign in",
+    "signInTitle": "Sign in to BeTaxed",
+    "signInLead": "Use the account you created the workspace with, or one you already have.",
+    "signingIn": "Signing in…",
+    "noAccount": "No account yet?",
+    "goToStart": "Start with a reading of the extract"
   },
   "converted": {
     "kicker": "Workspace created",
@@ -139,6 +151,90 @@
     "activity": {
       "title": "Recent activity",
       "empty": "No activity yet."
+    },
+    "settings": {
+      "crumb": "Settings",
+      "title": "Company settings",
+      "lead": "Members, billing, and preferences — not on this screen yet."
+    }
+  },
+  "admins": {
+    "brand": "BeTaxed",
+    "brandHint": "Operations",
+    "navGroup": "Ops",
+    "soon": "Soon",
+    "breadcrumb": "Dashboard",
+    "overview": "Overview",
+    "nav": {
+      "overview": "Overview",
+      "companies": "Companies",
+      "intakes": "Readings"
+    },
+    "kpi": {
+      "companies": "Companies",
+      "companiesHint": "Client workspaces — no API on this screen yet",
+      "intakes": "Open readings",
+      "intakesHint": "Pass 1 not yet converted — no API on this screen yet",
+      "flags": "Flags",
+      "flagsHint": "Contracts vs extract — no API on this screen yet"
+    },
+    "next": {
+      "title": "Next in operations",
+      "lead": "This screen is the internal shell. Real ops tools come in later tickets.",
+      "companies": "Company list — not on this screen yet.",
+      "intakes": "In-flight readings — not on this screen yet."
+    },
+    "settings": {
+      "crumb": "Settings",
+      "title": "Operations settings",
+      "lead": "Staff and internal preferences — not on this screen yet."
+    }
+  },
+  "marketing": {
+    "nav": {
+      "brand": "beTaxed",
+      "about": "About us",
+      "contact": "Contact",
+      "start": "Read the extract",
+      "signIn": "Sign in",
+      "workspace": "Workspace",
+      "openMenu": "Open menu"
+    },
+    "footer": {
+      "brand": "beTaxed",
+      "email": "geral@betaxed.eu",
+      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal",
+      "about": "About us",
+      "contact": "Contact",
+      "start": "Read the extract",
+      "privacy": "Privacy policy"
+    },
+    "landing": {
+      "headline": "Tax optimisation",
+      "heroCaption": "Anticipate. Execute. Within the law.",
+      "subhead": "Unveiling and enhancing opportunities — for greater tax efficiency",
+      "lead": "Tax planning and optimisation for companies — a legal way to reduce the tax burden.",
+      "cta": "Read your extract",
+      "p1": "People often look at tax optimisation with suspicion. Tax itself became a stigma: any cut in the bill is assumed to come from something murky and outside the law.",
+      "p2": "Tax work has long since moved from a purely reactive stance with the authorities to a proactive one: taking initiative and anticipating, then executing.",
+      "p3": "A professional approach, proper planning, and execution help your company use, legally, the benefits that apply to its situation. The public screen does not teach the method."
+    },
+    "about": {
+      "kicker": "About us",
+      "headline": "Business tax, with execution.",
+      "p1": "BeTaxed works with companies in Portugal. We find unrealized Social Security savings and, if you stay, we run the process with you.",
+      "p2": "This is not a do-it-yourself calculator. The public screen shows totals; the map for how to get them stays with us.",
+      "p3": "Based in Porto. Contact: geral@betaxed.eu."
+    },
+    "contact": {
+      "kicker": "Contact",
+      "headline": "Get in touch",
+      "email": "geral@betaxed.eu",
+      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal"
+    },
+    "privacy": {
+      "headline": "Privacy policy",
+      "lead": "Full legal copy comes later. For now: if you decline after a reading, we delete the extract."
     }
   }
 }
