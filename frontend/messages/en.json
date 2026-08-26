@@ -228,7 +228,7 @@
     "declarationsCrumb": "Declarations",
     "declarations": {
       "lead": "Upload the monthly Segurança Social extract. We show counts from the latest applied file only.",
-      "hint": "No names, rates, or pay amounts on this screen.",
+      "hint": "Vínculos + contratos, or the combined workbook. Optionally add a remunerações leave sheet (NISS, leave type, start). No names, rates, or pay amounts on this screen.",
       "uploadTitle": "This month’s file",
       "month": "Month",
       "upload": "Upload xlsx or csv",
@@ -245,6 +245,8 @@
       "taxa": "Rate",
       "missing": "Missing",
       "conflicts": "Conflicts",
+      "leaveStarted": "Leave started",
+      "leaveEnded": "Leave ended",
       "statusApplied": "Applied",
       "statusFailed": "Failed",
       "statusParsed": "Parsed",

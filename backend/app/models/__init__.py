@@ -31,6 +31,7 @@ from app.models.ss_ingest import (
     SsBatch,
     SsBatchFile,
     SsRawContrato,
+    SsRawLeave,
     SsRawVinculo,
 )
 
@@ -60,6 +61,7 @@ __all__ = [
     "SsBatch",
     "SsBatchFile",
     "SsRawContrato",
+    "SsRawLeave",
     "SavingMonth",
     "SsRawVinculo",
     "StoredFile",

@@ -52,7 +52,7 @@ def test_ss_ingest_tables_exist(db_session) -> None:
                             "WHERE schemaname = 'public' "
                             "AND tablename IN ("
                             "'ss_batch', 'ss_batch_file', "
-                            "'ss_raw_vinculo', 'ss_raw_contrato'"
+                            "'ss_raw_vinculo', 'ss_raw_contrato', 'ss_raw_leave'"
                             ")"
                         )
                     )
@@ -63,6 +63,7 @@ def test_ss_ingest_tables_exist(db_session) -> None:
                     "ss_batch_file",
                     "ss_raw_vinculo",
                     "ss_raw_contrato",
+                    "ss_raw_leave",
                 }
         finally:
             await engine.dispose()

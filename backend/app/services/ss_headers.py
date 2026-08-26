@@ -53,6 +53,57 @@ CONTRATO_REQUIRED = (
     "remuneracao base",
 )
 
+# BeTaxed remunerações *leave* ingest — not official Segurança Social DR
+# headers. Samples only have vínculos + contratos (KB/03, DEV-849). Map
+# official remunerações columns here when a sample exists.
+LEAVE_FIELDS: dict[str, str] = {
+    "niss": "niss",
+    "tipo de ausencia": "leave_type",
+    "tipo de baixa": "leave_type",
+    "leave type": "leave_type",
+    "inicio ausencia": "started_on",
+    "data inicio ausencia": "started_on",
+    "inicio da ausencia": "started_on",
+    "started on": "started_on",
+    "fim ausencia": "ended_on",
+    "data fim ausencia": "ended_on",
+    "fim da ausencia": "ended_on",
+    "ended on": "ended_on",
+}
+
+LEAVE_REQUIRED_FIELDS = frozenset({"niss", "leave_type", "started_on"})
+
+_LEAVE_TYPE_FOLD: dict[str, str] = {
+    "parental": "PARENTAL",
+    "licenca parental": "PARENTAL",
+    "parentalidade": "PARENTAL",
+    "doenca": "SICKNESS",
+    "sickness": "SICKNESS",
+    "baixa": "SICKNESS",
+    "baixa medica": "SICKNESS",
+    "sick": "SICKNESS",
+    "nao remunerada": "UNPAID",
+    "unpaid": "UNPAID",
+    "sem remuneracao": "UNPAID",
+    "other": "OTHER",
+    "outra": "OTHER",
+    "outro": "OTHER",
+    "outros": "OTHER",
+}
+
+
+def map_leave_type(raw: str | None) -> str | None:
+    """Map a leave-sheet cell to PARENTAL/SICKNESS/UNPAID/OTHER.
+
+    Official SS remunerações numeric codes are unknown without a sample
+    and are not invented here.
+    """
+    if raw is None or str(raw).strip() == "":
+        return None
+    folded = fold_header(str(raw))
+    return _LEAVE_TYPE_FOLD.get(folded)
+
+
 # Analyst-only / formula columns on the sample workbook.
 _IGNORE_HEADERS = frozenset(
     {

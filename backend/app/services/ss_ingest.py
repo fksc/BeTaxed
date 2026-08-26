@@ -11,12 +11,20 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import SsBatch, SsBatchFile, SsRawContrato, SsRawVinculo, StoredFile
+from app.models import (
+    SsBatch,
+    SsBatchFile,
+    SsRawContrato,
+    SsRawLeave,
+    SsRawVinculo,
+    StoredFile,
+)
 from app.security.dek_store import get_or_create_pii_crypto
 from app.security.pii import PiiCrypto
 from app.services.ss_headers import fold_header
 from app.services.ss_parser import (
     ParsedContrato,
+    ParsedLeave,
     ParsedSsExport,
     ParsedVinculo,
     SsParseError,
@@ -39,6 +47,7 @@ class SsIngestResult:
     batch: SsBatch
     vinculo_count: int
     contrato_count: int
+    leave_count: int
     warnings: list[SsParseWarning]
     current_contrato_ids: list[uuid.UUID]
 
@@ -93,6 +102,7 @@ async def ingest_ss_export(
             batch=batch,
             vinculo_count=0,
             contrato_count=0,
+            leave_count=0,
             warnings=[],
             current_contrato_ids=[],
         )
@@ -110,8 +120,11 @@ async def ingest_ss_export(
     contrato_rows = [
         _to_raw_contrato(batch.id, row, crypto) for row in parsed.contratos
     ]
+    leave_rows = [_to_raw_leave(batch.id, row, crypto) for row in parsed.leaves]
     session.add_all(vinculo_rows)
     session.add_all(contrato_rows)
+    session.add_all(leave_rows)
+    batch.leave_declared = parsed.leave_declared
     await session.flush()
 
     current = _current_raw_contratos(contrato_rows, parsed)
@@ -121,6 +134,7 @@ async def ingest_ss_export(
         batch=batch,
         vinculo_count=len(vinculo_rows),
         contrato_count=len(contrato_rows),
+        leave_count=len(leave_rows),
         warnings=parsed.warnings,
         current_contrato_ids=[row.id for row in current],
     )
@@ -147,6 +161,12 @@ def _file_kinds_or_other(files: list[SsSourceFile]) -> list[str]:
             kinds.append("VINCULOS")
         elif "contrato" in folded:
             kinds.append("CONTRATOS")
+        elif (
+            "remunerac" in folded
+            or "ausencia" in folded
+            or "leave" in folded
+        ):
+            kinds.append("REMUNERACOES")
         else:
             kinds.append("OTHER")
     return kinds
@@ -236,6 +256,21 @@ def _to_raw_contrato(
         rendimento_from=row.rendimento_from,
         rendimento_to=row.rendimento_to,
         base_salary=row.base_salary,
+        leftover=_leftover_for_storage(row.leftover, crypto),
+    )
+
+
+def _to_raw_leave(
+    batch_id: uuid.UUID, row: ParsedLeave, crypto: PiiCrypto
+) -> SsRawLeave:
+    return SsRawLeave(
+        batch_id=batch_id,
+        source_row=row.source_row,
+        niss_hash=crypto.niss_hash(row.niss),
+        niss_enc=crypto.encrypt_niss(row.niss),
+        leave_type=row.leave_type,
+        started_on=row.started_on,
+        ended_on=row.ended_on,
         leftover=_leftover_for_storage(row.leftover, crypto),
     )
 

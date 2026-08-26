@@ -1,4 +1,8 @@
-"""Parse Segurança Social Vínculos + Contratos extracts (xlsx or csv, DEV-831)."""
+"""Parse Segurança Social Vínculos + Contratos extracts (xlsx or csv, DEV-831).
+
+Optional remunerações *leave* sheet (DEV-849) uses the BeTaxed ingest
+headers in ss_headers.LEAVE_FIELDS — not official SS DR column names.
+"""
 
 from __future__ import annotations
 
@@ -17,15 +21,18 @@ from app.security.crypto import normalize_niss
 from app.services.ss_headers import (
     CONTRATO_FIELDS,
     CONTRATO_REQUIRED,
+    LEAVE_FIELDS,
+    LEAVE_REQUIRED_FIELDS,
     VINCULO_FIELDS,
     VINCULO_REQUIRED,
     fold_header,
     is_ignored_header,
+    map_leave_type,
     parse_export_label,
 )
 
-SheetKind = Literal["vinculos", "contratos"]
-FileKind = Literal["COMBINED_XLSX", "VINCULOS", "CONTRATOS"]
+SheetKind = Literal["vinculos", "contratos", "remuneracoes"]
+FileKind = Literal["COMBINED_XLSX", "VINCULOS", "CONTRATOS", "REMUNERACOES"]
 
 
 class SsParseError(Exception):
@@ -80,10 +87,22 @@ class ParsedContrato:
 
 
 @dataclass
+class ParsedLeave:
+    source_row: int
+    niss: str
+    leave_type: str
+    started_on: date
+    ended_on: date | None = None
+    leftover: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class ParsedWorkbook:
     kind: FileKind
     vinculos: list[ParsedVinculo]
     contratos: list[ParsedContrato]
+    leaves: list[ParsedLeave]
+    leave_declared: bool
     employer_niss: str | None
     export_label: str | None
 
@@ -92,6 +111,8 @@ class ParsedWorkbook:
 class ParsedSsExport:
     vinculos: list[ParsedVinculo]
     contratos: list[ParsedContrato]
+    leaves: list[ParsedLeave]
+    leave_declared: bool
     file_kinds: list[FileKind]
     employer_niss: str | None
     export_label: str | None
@@ -112,12 +133,17 @@ def current_contratos(rows: list[ParsedContrato]) -> list[ParsedContrato]:
 def parse_ss_files(files: list[SsSourceFile]) -> ParsedSsExport:
     if not files:
         raise SsParseError("At least one SS export file is required.")
-    if len(files) > 2:
-        raise SsParseError("Expected one combined workbook or two files (xlsx or csv).")
+    if len(files) > 3:
+        raise SsParseError(
+            "Expected one combined workbook, vínculos + contratos, "
+            "or those plus a remunerações leave file."
+        )
 
     parsed_files = [parse_ss_workbook(item) for item in files]
     vinculos: list[ParsedVinculo] = []
     contratos: list[ParsedContrato] = []
+    leaves: list[ParsedLeave] = []
+    leave_declared = False
     kinds: list[FileKind] = []
     employer_niss: str | None = None
     export_label: str | None = None
@@ -126,6 +152,9 @@ def parse_ss_files(files: list[SsSourceFile]) -> ParsedSsExport:
         kinds.append(parsed.kind)
         vinculos.extend(parsed.vinculos)
         contratos.extend(parsed.contratos)
+        if parsed.leave_declared:
+            leave_declared = True
+            leaves.extend(parsed.leaves)
         if parsed.employer_niss and employer_niss is None:
             employer_niss = parsed.employer_niss
         if parsed.export_label and (
@@ -142,23 +171,51 @@ def parse_ss_files(files: list[SsSourceFile]) -> ParsedSsExport:
         raise SsParseError("No Vínculos rows found.")
     if not contratos:
         raise SsParseError("No Contratos rows found.")
-    if len(files) == 2:
-        kinds_set = set(kinds)
-        if kinds_set != {"VINCULOS", "CONTRATOS"}:
-            raise SsParseError(
-                "Two files must be one Vínculos file and one Contratos file."
-            )
+    _assert_file_kinds(kinds)
+    _assert_single_open_leave(leaves)
 
     warnings = _join_warnings(vinculos, contratos)
     warnings.extend(_open_period_warnings(contratos))
+    warnings.extend(_orphan_leave_warnings(vinculos, leaves))
     return ParsedSsExport(
         vinculos=vinculos,
         contratos=contratos,
+        leaves=leaves,
+        leave_declared=leave_declared,
         file_kinds=kinds,
         employer_niss=employer_niss,
         export_label=export_label,
         warnings=warnings,
     )
+
+
+def _assert_file_kinds(kinds: list[FileKind]) -> None:
+    kinds_set = set(kinds)
+    if len(kinds) == 1:
+        return
+    if len(kinds) == 2 and kinds_set in (
+        {"VINCULOS", "CONTRATOS"},
+        {"COMBINED_XLSX", "REMUNERACOES"},
+    ):
+        return
+    if len(kinds) == 3 and kinds_set == {"VINCULOS", "CONTRATOS", "REMUNERACOES"}:
+        return
+    raise SsParseError(
+        "Files must be vínculos + contratos, a combined workbook, "
+        "and optionally one remunerações leave file."
+    )
+
+
+def _assert_single_open_leave(rows: list[ParsedLeave]) -> None:
+    open_niss: set[str] = set()
+    for row in rows:
+        if row.ended_on is not None:
+            continue
+        if row.niss in open_niss:
+            raise SsParseError(
+                "Remunerações leave sheet has more than one open row for the same NISS."
+            )
+        open_niss.add(row.niss)
 
 
 def parse_ss_workbook(source: SsSourceFile) -> ParsedWorkbook:
@@ -183,23 +240,35 @@ def _parsed_workbook(
 ) -> ParsedWorkbook:
     vinculos: list[ParsedVinculo] = []
     contratos: list[ParsedContrato] = []
+    leaves: list[ParsedLeave] = []
     if "vinculos" in classified:
         vinculos = _parse_vinculo_sheet(classified["vinculos"])
     if "contratos" in classified:
         contratos = _parse_contrato_sheet(classified["contratos"])
+    leave_declared = "remuneracoes" in classified
+    if leave_declared:
+        leaves = _parse_leave_sheet(classified["remuneracoes"])
 
-    if "vinculos" in classified and "contratos" in classified:
+    if vinculos and contratos:
         kind: FileKind = "COMBINED_XLSX"
-    elif "vinculos" in classified:
+    elif vinculos:
         kind = "VINCULOS"
-    else:
+    elif contratos:
         kind = "CONTRATOS"
+    elif leave_declared:
+        kind = "REMUNERACOES"
+    else:
+        raise SsParseError(
+            f"{source.filename} has no Vínculos, Contratos, or remunerações leave sheet."
+        )
 
     employer_niss, export_label = parse_export_label(source.filename)
     return ParsedWorkbook(
         kind=kind,
         vinculos=vinculos,
         contratos=contratos,
+        leaves=leaves,
+        leave_declared=leave_declared,
         employer_niss=employer_niss,
         export_label=export_label,
     )
@@ -222,7 +291,8 @@ def _classify_sheets(filename: str, sheets: list[Any]) -> dict[SheetKind, Any]:
         classified[kind] = sheet
     if not classified:
         raise SsParseError(
-            f"{filename} has no Vínculos or Contratos sheet (xlsx or csv)."
+            f"{filename} has no Vínculos, Contratos, or remunerações leave sheet "
+            "(xlsx or csv)."
         )
     return classified
 
@@ -275,6 +345,12 @@ def _sheet_kind(title: str) -> SheetKind | None:
         return "vinculos"
     if "contrato" in folded:
         return "contratos"
+    if (
+        "remunerac" in folded
+        or "ausencia" in folded
+        or "leave" in folded
+    ):
+        return "remuneracoes"
     return None
 
 
@@ -287,6 +363,12 @@ def _sheet_kind_from_headers(sheet: Any) -> SheetKind | None:
         return "vinculos"
     if "modalidade contrato" in names:
         return "contratos"
+    if (
+        "tipo de ausencia" in names
+        or "tipo de baixa" in names
+        or "leave type" in names
+    ):
+        return "remuneracoes"
     return None
 
 
@@ -376,6 +458,49 @@ def _parse_contrato_sheet(sheet: Any) -> list[ParsedContrato]:
         )
     if not rows:
         raise SsParseError("Contratos sheet has no data rows.")
+    return rows
+
+
+def _parse_leave_sheet(sheet: Any) -> list[ParsedLeave]:
+    mapped, leftover_cols, _missing = _map_columns(sheet, LEAVE_FIELDS, ())
+    have = set(mapped.values())
+    missing = sorted(LEAVE_REQUIRED_FIELDS - have)
+    if missing:
+        raise SsParseError(
+            "Remunerações leave sheet is missing required headers: "
+            + ", ".join(missing)
+            + ". Use NISS, Tipo de ausência, Início ausência "
+            "(BeTaxed ingest; not official SS remunerações columns)."
+        )
+    rows: list[ParsedLeave] = []
+    for source_row, values in _iter_data_rows(sheet):
+        fields, leftover = _row_values(values, mapped, leftover_cols)
+        niss = _optional_niss(fields.get("niss"))
+        if niss is None:
+            continue
+        leave_type = map_leave_type(fields.get("leave_type"))
+        if leave_type is None:
+            raise SsParseError(
+                f"Unknown leave type {fields.get('leave_type')!r} on row "
+                f"{source_row}. Use PARENTAL, SICKNESS, UNPAID, or OTHER. "
+                "Official Segurança Social remunerações codes are not in the "
+                "sample extract and are not invented."
+            )
+        started_on = _optional_date(fields.get("started_on"))
+        if started_on is None:
+            raise SsParseError(
+                f"Remunerações leave row {source_row} is missing Início ausência."
+            )
+        rows.append(
+            ParsedLeave(
+                source_row=source_row,
+                niss=niss,
+                leave_type=leave_type,
+                started_on=started_on,
+                ended_on=_optional_date(fields.get("ended_on")),
+                leftover=leftover,
+            )
+        )
     return rows
 
 
@@ -542,6 +667,23 @@ def _join_warnings(
             )
         )
     return warnings
+
+
+def _orphan_leave_warnings(
+    vinculos: list[ParsedVinculo], leaves: list[ParsedLeave]
+) -> list[SsParseWarning]:
+    if not leaves:
+        return []
+    vinculo_niss = {row.niss for row in vinculos}
+    orphan = {row.niss for row in leaves} - vinculo_niss
+    if not orphan:
+        return []
+    return [
+        SsParseWarning(
+            code="ORPHAN_LEAVE",
+            detail=f"{len(orphan)} leave NISS with no vínculo",
+        )
+    ]
 
 
 def _open_period_warnings(contratos: list[ParsedContrato]) -> list[SsParseWarning]:

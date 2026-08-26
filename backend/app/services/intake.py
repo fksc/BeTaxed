@@ -249,6 +249,7 @@ async def _rekey_intake_to_company(
             .options(
                 selectinload(SsBatch.vinculos),
                 selectinload(SsBatch.contratos),
+                selectinload(SsBatch.leaves),
             )
             .where(SsBatch.intake_id == intake_id)
         )
@@ -289,6 +290,11 @@ def _rekey_batch(
         row.leftover = rekey_leftover_niss(row.leftover, intake_crypto, company_crypto)
     for row in batch.contratos:
         _rekey_raw_identity(row, intake_crypto, company_crypto)
+        row.leftover = rekey_leftover_niss(row.leftover, intake_crypto, company_crypto)
+    for row in batch.leaves:
+        niss = intake_crypto.decrypt_niss(row.niss_enc)
+        row.niss_hash = company_crypto.niss_hash(niss)
+        row.niss_enc = company_crypto.encrypt_niss(niss)
         row.leftover = rekey_leftover_niss(row.leftover, intake_crypto, company_crypto)
 
 

@@ -214,4 +214,4 @@ CREATE INDEX idx_event_company_type ON employment_event(company_id, event_type);
 - `STATUS_OVERRIDE`: company user changes `employee.status` before the next file (or instead of HRMS).
 - `SOURCE_CONFLICT`: e.g. user says `TERMINATED`, latest SS still active. Ops/HR resolve; do not auto-win SS.
 - Termination `initiator` + `reason` exist for clawback (`KB/20_regime_ss_hiring_benefit.md#cease-and-clawback`). Hammer the legal list later; keep the columns.
-- Parental leave may be absent from vínculos/contratos; allow `USER` / future monthly DR as `source`.
+- Parental leave may be absent from vínculos/contratos; `USER` override or remunerações leave ingest (`source = SS_DIFF`, DEV-849) sets `ON_LEAVE`.

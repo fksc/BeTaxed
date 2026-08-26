@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   ArrowLeftRight,
+  CalendarCheck,
+  CalendarOff,
   Percent,
   UserMinus,
   UserPlus,
@@ -241,6 +243,16 @@ export function DeclarationsPage() {
             label={t("declarations.conflicts")}
             value={String(eventCount(latest, "SOURCE_CONFLICT"))}
             icon={<AlertTriangle size={14} />}
+          />
+          <StatCard
+            label={t("declarations.leaveStarted")}
+            value={String(eventCount(latest, "LEAVE_STARTED"))}
+            icon={<CalendarOff size={14} />}
+          />
+          <StatCard
+            label={t("declarations.leaveEnded")}
+            value={String(eventCount(latest, "LEAVE_ENDED"))}
+            icon={<CalendarCheck size={14} />}
           />
         </div>
 

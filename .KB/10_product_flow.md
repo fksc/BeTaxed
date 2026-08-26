@@ -60,7 +60,7 @@ If they already have a `user_base` (account-first), **wipe the intake data**; do
 
 ## After the workspace exists
 
-Monthly: they upload the two SS declaration files (or the combined export). Diff vs last **applied** batch → `employment_event` (joined, left, pay change, leave when the file supports it, missing from declaration).
+Monthly: they upload the two SS declaration files (or the combined export), optionally plus a remunerações leave sheet. Diff vs last **applied** batch → `employment_event` (joined, left, pay change, leave from remunerações only, missing from declaration).
 
 Company users can set employee status (`ACTIVE` / `ON_LEAVE` / `TERMINATED`) until HRMS exists. If SS disagrees, record a **conflict**; do not silently overwrite the user.
 
