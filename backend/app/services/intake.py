@@ -35,6 +35,7 @@ from app.services.ss_apply import (
     apply_ss_batch,
     attach_employment_company,
     delete_intake_employment_spine,
+    upsert_headcount_for_company_applied_batches,
 )
 from app.services.teaser import persist_intake_teaser_if_missing
 from app.storage import get_object_storage
@@ -172,6 +173,7 @@ async def convert_intake(
         stored.company_id = company.id
 
     await attach_employment_company(session, intake.id, company.id)
+    await upsert_headcount_for_company_applied_batches(session, company.id)
 
     await _rekey_intake_to_company(session, intake.id, company)
 

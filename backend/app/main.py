@@ -20,6 +20,7 @@ from app.routers import (
     notifications_router,
     ops_router,
     people_router,
+    ss_batches_router,
 )
 from app.settings import get_cors_origins, get_redis_url
 
@@ -54,6 +55,7 @@ app.add_middleware(
 app.include_router(me_router)
 app.include_router(intakes_router)
 app.include_router(people_router)
+app.include_router(ss_batches_router)
 app.include_router(notifications_router)
 app.include_router(ops_router)
 

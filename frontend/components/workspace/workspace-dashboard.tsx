@@ -105,9 +105,14 @@ export function WorkspaceDashboard() {
               <p>{t("next.people")}</p>
               <p>{t("next.declarations")}</p>
               <p>{t("next.billing")}</p>
-              <Link href={paths.companiesPeople} className="text-primary underline">
-                {t("next.openPeople")}
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link href={paths.companiesPeople} className="text-primary underline">
+                  {t("next.openPeople")}
+                </Link>
+                <Link href={paths.companiesDeclarations} className="text-primary underline">
+                  {t("next.openDeclarations")}
+                </Link>
+              </div>
             </CardContent>
           </Card>
           <Card>

@@ -1,7 +1,8 @@
 """Apply a PARSED SS batch onto canonical employment (KB/02, KB/03, DEV-834).
 
-Does not invent leave from the current extract (SL-004). Does not write
-company_headcount_month (SL-003). Never sets first_permanent_* from SS.
+Writes company_headcount_month when the batch is company-scoped (DEV-835).
+Does not invent leave from the current extract (SL-004 / DEV-849).
+Never sets first_permanent_* from SS.
 """
 
 from __future__ import annotations
@@ -9,13 +10,13 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
-from decimal import Decimal
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import (
+    CompanyHeadcountMonth,
     CompensationPeriod,
     Employee,
     EmployeeExternalId,
@@ -90,6 +91,7 @@ async def apply_ss_batch(session: AsyncSession, batch_id: uuid.UUID) -> SsApplyR
         event_types.extend(await _apply_missing(session, batch, snap))
 
     batch.parse_status = "APPLIED"
+    await upsert_ss_batch_headcount(session, batch)
     await session.flush()
     return SsApplyResult(batch=batch, event_types=event_types)
 
@@ -123,6 +125,11 @@ async def delete_company_employment_spine(
     emp_ids = select(Employee.id).where(Employee.company_id == company_id)
     empl_ids = select(Employment.id).where(Employment.company_id == company_id)
     await session.execute(
+        delete(CompanyHeadcountMonth).where(
+            CompanyHeadcountMonth.company_id == company_id
+        )
+    )
+    await session.execute(
         delete(EmploymentDocument).where(EmploymentDocument.employee_id.in_(emp_ids))
     )
     await session.execute(
@@ -148,6 +155,89 @@ async def attach_employment_company(
         ).scalars().all()
         for row in rows:
             row.company_id = company_id
+
+
+async def upsert_ss_batch_headcount(session: AsyncSession, batch: SsBatch) -> None:
+    """Count distinct active vínculos and upsert source=SS_BATCH for the month."""
+    if batch.company_id is None:
+        return
+    count = (
+        await session.execute(
+            select(func.count(func.distinct(SsRawVinculo.niss_hash))).where(
+                SsRawVinculo.batch_id == batch.id,
+                SsRawVinculo.ended_on.is_(None),
+            )
+        )
+    ).scalar_one()
+    existing = (
+        await session.execute(
+            select(CompanyHeadcountMonth).where(
+                CompanyHeadcountMonth.company_id == batch.company_id,
+                CompanyHeadcountMonth.year_month == batch.period_year_month,
+                CompanyHeadcountMonth.source == "SS_BATCH",
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        session.add(
+            CompanyHeadcountMonth(
+                company_id=batch.company_id,
+                year_month=batch.period_year_month,
+                headcount=int(count),
+                source="SS_BATCH",
+                source_batch_id=batch.id,
+            )
+        )
+    else:
+        existing.headcount = int(count)
+        existing.source_batch_id = batch.id
+    await session.flush()
+
+
+async def upsert_headcount_for_company_applied_batches(
+    session: AsyncSession, company_id: uuid.UUID
+) -> None:
+    """Backfill SS_BATCH headcount after convert attaches company_id."""
+    batches = (
+        await session.execute(
+            select(SsBatch).where(
+                SsBatch.company_id == company_id,
+                SsBatch.parse_status == "APPLIED",
+            )
+        )
+    ).scalars().all()
+    for batch in batches:
+        await upsert_ss_batch_headcount(session, batch)
+
+
+async def upsert_user_headcount(
+    session: AsyncSession,
+    company_id: uuid.UUID,
+    year_month: date,
+    headcount: int,
+) -> CompanyHeadcountMonth:
+    existing = (
+        await session.execute(
+            select(CompanyHeadcountMonth).where(
+                CompanyHeadcountMonth.company_id == company_id,
+                CompanyHeadcountMonth.year_month == year_month,
+                CompanyHeadcountMonth.source == "USER",
+            )
+        )
+    ).scalar_one_or_none()
+    if existing is None:
+        existing = CompanyHeadcountMonth(
+            company_id=company_id,
+            year_month=year_month,
+            headcount=headcount,
+            source="USER",
+            source_batch_id=None,
+        )
+        session.add(existing)
+    else:
+        existing.headcount = headcount
+    await session.flush()
+    return existing
 
 
 async def _previous_applied(session: AsyncSession, batch: SsBatch) -> SsBatch | None:
