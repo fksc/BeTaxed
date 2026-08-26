@@ -224,6 +224,7 @@ async def post_invoicing_method(
         company_id,
         invoicing_method=body.invoicing_method,
         certified_vendor_name=body.certified_vendor_name,
+        update_vendor_name="certified_vendor_name" in body.model_fields_set,
     )
     await db.commit()
     return {

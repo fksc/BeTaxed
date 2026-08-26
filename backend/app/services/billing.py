@@ -389,7 +389,8 @@ async def issue_invoice(
         )
     today = date.today()
     invoice.issued_on = today
-    invoice.due_on = today + timedelta(days=30)
+    if invoice.due_on is None:
+        invoice.due_on = today + timedelta(days=30)
     await _append_event(session, invoice, "ISSUED", actor_id=actor_id, reason=None)
     await session.flush()
     return invoice
@@ -599,6 +600,7 @@ async def set_invoicing_method(
     *,
     invoicing_method: str,
     certified_vendor_name: str | None,
+    update_vendor_name: bool,
 ) -> Company:
     if invoicing_method not in {"STRIPE_SEPA", "CERTIFIED_SOFTWARE"}:
         raise HTTPException(
@@ -609,6 +611,7 @@ async def set_invoicing_method(
     if company is None or company.deleted_at is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
     company.invoicing_method = invoicing_method
-    company.certified_vendor_name = certified_vendor_name
+    if update_vendor_name:
+        company.certified_vendor_name = certified_vendor_name
     await session.flush()
     return company

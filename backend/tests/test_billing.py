@@ -192,6 +192,7 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                         "legal_invoice_number": "FT 2026/183",
                         "atcud": "JSTD1234",
                         "certified_external_id": "should-not-stick",
+                        "due_on": "2026-10-15",
                     },
                     files={"file": ("fatura.pdf", b"%PDF-1.4 f", "application/pdf")},
                 )
@@ -199,6 +200,7 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                 assert legal.json()["legal_invoice_number"] == "FT 2026/183"
                 assert legal.json()["atcud"] == "JSTD1234"
                 assert legal.json()["has_legal_pdf"] is True
+                assert legal.json()["due_on"] == "2026-10-15"
                 assert "certified_external_id" not in legal.json()
                 assert "should-not-stick" not in str(legal.json())
 
@@ -235,6 +237,13 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                 assert invoicing.status_code == 200, invoicing.text
                 assert invoicing.json()["invoicing_method"] == "CERTIFIED_SOFTWARE"
                 assert invoicing.json()["certified_vendor_name"] == "VendorX"
+                method_only = await client.post(
+                    f"/v1/ops/companies/{company_id}/invoicing",
+                    headers=staff_headers,
+                    json={"invoicing_method": "CERTIFIED_SOFTWARE"},
+                )
+                assert method_only.status_code == 200, method_only.text
+                assert method_only.json()["certified_vendor_name"] == "VendorX"
 
                 issued = await client.post(
                     f"/v1/ops/invoices/{invoice_id}/issue",
@@ -242,6 +251,7 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                 )
                 assert issued.status_code == 200, issued.text
                 assert issued.json()["status"] == "ISSUED"
+                assert issued.json()["due_on"] == "2026-10-15"
 
                 resolved = await client.post(
                     f"/v1/ops/invoices/{invoice_id}/resolve",
