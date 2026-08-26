@@ -106,6 +106,13 @@ def upgrade() -> None:
         ),
     )
     op.create_index("idx_invoice_company_status", "invoice", ["company_id", "status"])
+    op.create_index(
+        "uq_invoice_stripe_invoice_id",
+        "invoice",
+        ["stripe_invoice_id"],
+        unique=True,
+        postgresql_where=sa.text("stripe_invoice_id IS NOT NULL"),
+    )
 
     op.create_table(
         "invoice_line",
@@ -220,6 +227,7 @@ def downgrade() -> None:
     op.drop_table("payment")
     op.drop_index("idx_invoice_line_invoice", table_name="invoice_line")
     op.drop_table("invoice_line")
+    op.drop_index("uq_invoice_stripe_invoice_id", table_name="invoice")
     op.drop_index("idx_invoice_company_status", table_name="invoice")
     op.drop_table("invoice")
     op.drop_index("idx_commercial_terms_company", table_name="commercial_terms")

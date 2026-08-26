@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.services.billing import apply_stripe_paid
-from app.settings import get_stripe_webhook_secret
+from app.settings import get_env_name, get_stripe_webhook_secret
 
 router = APIRouter(prefix="/v1/webhooks", tags=["webhooks"])
 
@@ -19,7 +19,14 @@ async def post_stripe_webhook(
     stripe_signature: str | None = Header(default=None, alias="Stripe-Signature"),
 ) -> dict[str, str]:
     secret = get_stripe_webhook_secret()
-    if secret and stripe_signature != secret:
+    env = get_env_name().upper()
+    if not secret:
+        if env != "DEV":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Stripe webhook secret is not configured.",
+            )
+    elif stripe_signature != secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid Stripe signature."
         )
@@ -29,6 +36,8 @@ async def post_stripe_webhook(
     stripe_id = obj.get("id")
     if event_type not in {"invoice.paid", "invoice.payment_succeeded"} or not stripe_id:
         return {"status": "ignored"}
-    await apply_stripe_paid(db, stripe_id, payload)
+    invoice = await apply_stripe_paid(db, stripe_id, payload)
+    if invoice is None:
+        return {"status": "ignored"}
     await db.commit()
     return {"status": "ok"}

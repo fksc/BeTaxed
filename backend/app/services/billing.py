@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps.context import CompanyContext
@@ -85,13 +85,15 @@ async def fee_percent_for(
             .where(
                 CommercialTerms.company_id == company_id,
                 CommercialTerms.valid_from <= as_of,
+                or_(
+                    CommercialTerms.valid_to.is_(None),
+                    CommercialTerms.valid_to >= as_of,
+                ),
             )
             .order_by(CommercialTerms.valid_from.desc())
         )
     ).scalars().first()
     if row is None:
-        return _default_fee()
-    if row.valid_to is not None and row.valid_to < as_of:
         return _default_fee()
     return Decimal(row.fee_percent)
 
@@ -302,12 +304,14 @@ async def create_draft_invoice(
     rows = (
         (
             await session.execute(
-                select(SavingMonth).where(
+                select(SavingMonth)
+                .where(
                     SavingMonth.company_id == company_id,
                     SavingMonth.year_month == month,
                     SavingMonth.billable.is_(True),
                     SavingMonth.locked_at.is_(None),
                 )
+                .with_for_update()
             )
         )
         .scalars()
@@ -436,24 +440,18 @@ async def void_invoice(
 
 async def apply_stripe_paid(
     session: AsyncSession, stripe_invoice_id: str, payload: dict
-) -> Invoice:
+) -> Invoice | None:
     invoice = (
         await session.execute(
             select(Invoice).where(Invoice.stripe_invoice_id == stripe_invoice_id)
         )
     ).scalar_one_or_none()
     if invoice is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No invoice matches that Stripe id.",
-        )
+        return None
     if invoice.status == "PAID":
         return invoice
     if invoice.status not in {"ISSUED", "DUE", "LATE"}:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Invoice cannot be marked paid.",
-        )
+        return None
     invoice.paid_on = date.today()
     session.add(
         Payment(

@@ -58,6 +58,12 @@ class Invoice(Base):
             name="ck_invoice_status",
         ),
         Index("idx_invoice_company_status", "company_id", "status"),
+        Index(
+            "uq_invoice_stripe_invoice_id",
+            "stripe_invoice_id",
+            unique=True,
+            postgresql_where=text("stripe_invoice_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
