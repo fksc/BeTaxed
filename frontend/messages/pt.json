@@ -180,7 +180,13 @@
       "needAuth": "Não foi possível carregar as faturas.",
       "issued": "Emitida",
       "due": "Vencimento",
-      "paid": "Paga"
+      "paid": "Paga",
+      "legalNumber": "Número da fatura",
+      "atcud": "ATCUD",
+      "attachLegal": "Anexar PDF certificado",
+      "proforma": "Proforma",
+      "legalPdf": "PDF legal",
+      "attachFailed": "Não foi possível anexar o ficheiro."
     },
     "peopleCrumb": "Pessoas",
     "people": {
@@ -323,7 +329,15 @@
       "reason": "Motivo",
       "draftFailed": "Não foi possível criar o rascunho.",
       "issueFailed": "Não foi possível emitir.",
-      "resolveFailed": "Não foi possível resolver."
+      "resolveFailed": "Não foi possível resolver.",
+      "method": "Método de faturação",
+      "vendor": "Software certificado",
+      "saveMethod": "Guardar método",
+      "methodFailed": "Não foi possível guardar o método.",
+      "vendorId": "Id no software",
+      "atcud": "ATCUD",
+      "proforma": "Proforma",
+      "legalPdf": "PDF legal"
     }
   },
   "marketing": {

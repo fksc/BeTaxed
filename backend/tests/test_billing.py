@@ -23,6 +23,7 @@ from app.models import (
     TenantCryptoKey,
     UserBase,
 )
+from app.models.billing import Payment
 from app.services.ss_apply import delete_company_employment_spine, delete_intake_employment_spine
 from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_SESSION
 from tests.ss_xlsx_fixtures import EMPLOYER_NISS, combined_workbook
@@ -163,7 +164,77 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                 assert "saving_amount" not in blob
                 assert "employee_id" not in blob
                 assert "remaining_months" not in blob
+                assert "certified_external_id" not in blob
                 assert listed.json()[0]["id"] == invoice_id
+                assert listed.json()[0]["has_proforma"] is False
+                assert listed.json()[0]["has_legal_pdf"] is False
+
+                hr_pf = await client.post(
+                    f"/v1/invoices/{invoice_id}/proforma",
+                    headers=hr_auth,
+                    files={"file": ("proforma.pdf", b"%PDF-1.4 p", "application/pdf")},
+                )
+                assert hr_pf.status_code == 403
+
+                proforma = await client.post(
+                    f"/v1/invoices/{invoice_id}/proforma",
+                    headers=auth,
+                    files={"file": ("proforma.pdf", b"%PDF-1.4 p", "application/pdf")},
+                )
+                assert proforma.status_code == 200, proforma.text
+                assert proforma.json()["has_proforma"] is True
+                assert "certified_external_id" not in proforma.json()
+
+                legal = await client.post(
+                    f"/v1/invoices/{invoice_id}/legal-pdf",
+                    headers=auth,
+                    data={
+                        "legal_invoice_number": "FT 2026/183",
+                        "atcud": "JSTD1234",
+                        "certified_external_id": "should-not-stick",
+                    },
+                    files={"file": ("fatura.pdf", b"%PDF-1.4 f", "application/pdf")},
+                )
+                assert legal.status_code == 200, legal.text
+                assert legal.json()["legal_invoice_number"] == "FT 2026/183"
+                assert legal.json()["atcud"] == "JSTD1234"
+                assert legal.json()["has_legal_pdf"] is True
+                assert "certified_external_id" not in legal.json()
+                assert "should-not-stick" not in str(legal.json())
+
+                staff_legal = await client.post(
+                    f"/v1/invoices/{invoice_id}/legal-pdf",
+                    headers={**staff_headers, HEADER_COMPANY_ID: str(company_id)},
+                    data={"certified_external_id": "vendor-99"},
+                    files={"file": ("fatura2.pdf", b"%PDF-1.4 f2", "application/pdf")},
+                )
+                assert staff_legal.status_code == 200, staff_legal.text
+                assert "certified_external_id" not in staff_legal.json()
+
+                ops_listed = await client.get("/v1/ops/invoices", headers=staff_headers)
+                assert ops_listed.status_code == 200, ops_listed.text
+                ops_row = next(row for row in ops_listed.json() if row["id"] == invoice_id)
+                assert ops_row["certified_external_id"] == "vendor-99"
+                assert ops_row["atcud"] == "JSTD1234"
+
+                company_invoicing = await client.post(
+                    f"/v1/ops/companies/{company_id}/invoicing",
+                    headers=auth,
+                    json={"invoicing_method": "CERTIFIED_SOFTWARE"},
+                )
+                assert company_invoicing.status_code == 403
+
+                invoicing = await client.post(
+                    f"/v1/ops/companies/{company_id}/invoicing",
+                    headers=staff_headers,
+                    json={
+                        "invoicing_method": "CERTIFIED_SOFTWARE",
+                        "certified_vendor_name": "VendorX",
+                    },
+                )
+                assert invoicing.status_code == 200, invoicing.text
+                assert invoicing.json()["invoicing_method"] == "CERTIFIED_SOFTWARE"
+                assert invoicing.json()["certified_vendor_name"] == "VendorX"
 
                 issued = await client.post(
                     f"/v1/ops/invoices/{invoice_id}/issue",
@@ -179,6 +250,14 @@ def test_invoices_company_payload_hr_forbidden_staff_draft_issue_resolve(
                 )
                 assert resolved.status_code == 200, resolved.text
                 assert resolved.json()["status"] == "MANUALLY_RESOLVED"
+                async with AsyncSessionLocal() as session:
+                    payment = (
+                        await session.execute(
+                            select(Payment).where(Payment.invoice_id == invoice_id)
+                        )
+                    ).scalar_one()
+                    assert payment.method == "CERTIFIED"
+                    assert payment.external_ref == "vendor-99"
         finally:
             async with AsyncSessionLocal() as session:
                 if company_id is not None:

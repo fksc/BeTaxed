@@ -28,6 +28,9 @@ class CompanyInvoiceOut(BaseModel):
     due_on: date | None
     paid_on: date | None
     legal_invoice_number: str | None
+    atcud: str | None = None
+    has_proforma: bool = False
+    has_legal_pdf: bool = False
     lines: list[CompanyInvoiceLineOut]
 
 
@@ -56,7 +59,11 @@ class StaffInvoiceOut(BaseModel):
     due_on: date | None
     paid_on: date | None
     legal_invoice_number: str | None
+    atcud: str | None = None
+    certified_external_id: str | None = None
     stripe_invoice_id: str | None
+    has_proforma: bool = False
+    has_legal_pdf: bool = False
     lines: list[StaffInvoiceLineOut] = Field(default_factory=list)
 
 
@@ -82,6 +89,11 @@ class CommercialTermsIn(BaseModel):
     fee_percent: Decimal
     valid_from: date
     valid_to: date | None = None
+
+
+class InvoicingMethodIn(BaseModel):
+    invoicing_method: str
+    certified_vendor_name: str | None = None
 
 
 class InvoiceStatusEventOut(BaseModel):
