@@ -557,9 +557,6 @@ async def start_sepa_checkout(session: AsyncSession, company: Company) -> str:
         name=company.legal_name,
         metadata={"company_id": str(company.id)},
     )
-    if company.stripe_customer_id != customer_id:
-        company.stripe_customer_id = customer_id
-        await session.flush()
     locale = company.locale or "pt"
     base = get_public_app_url()
     success = f"{base}/{locale}/companies/invoices?sepa=ok"
@@ -593,6 +590,8 @@ async def collect_stripe_sepa(
             status_code=status.HTTP_409_CONFLICT,
             detail="Complete SEPA checkout before collecting.",
         )
+    if invoice.stripe_invoice_id:
+        return invoice
     description = month_label(invoice.period_from)
     stripe_id, mandate_id = create_and_finalize_stripe_invoice(
         customer_id=company.stripe_customer_id,

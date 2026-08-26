@@ -49,9 +49,15 @@ def test_sepa_checkout_collect_failed_debit_is_late_not_paid(
         "app.services.billing.create_sepa_setup_session",
         lambda **_: "https://checkout.stripe.test/session",
     )
+    created_invoices: list[str] = []
+
+    def fake_create(**_: object) -> tuple[str, str]:
+        created_invoices.append("in_sepa_1")
+        return ("in_sepa_1", "mandate_1")
+
     monkeypatch.setattr(
         "app.services.billing.create_and_finalize_stripe_invoice",
-        lambda **_: ("in_sepa_1", "mandate_1"),
+        fake_create,
     )
 
     async def body() -> None:
@@ -144,6 +150,8 @@ def test_sepa_checkout_collect_failed_debit_is_late_not_paid(
                 )
                 assert checkout.status_code == 200, checkout.text
                 assert checkout.json()["url"].startswith("https://checkout.stripe.test/")
+                still_pending = await client.get("/v1/billing", headers=auth)
+                assert still_pending.json()["has_stripe_customer"] is False
 
                 completed = json.dumps(
                     {
@@ -205,6 +213,13 @@ def test_sepa_checkout_collect_failed_debit_is_late_not_paid(
                 assert collected.status_code == 200, collected.text
                 assert collected.json()["status"] == "DUE"
                 assert "saving_amount" not in str(collected.json())
+                again = await client.post(
+                    f"/v1/invoices/{invoice_id}/sepa-collect",
+                    headers=auth,
+                )
+                assert again.status_code == 200, again.text
+                assert again.json()["status"] == "DUE"
+                assert created_invoices == ["in_sepa_1"]
 
                 failed = json.dumps(
                     {

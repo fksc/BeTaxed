@@ -153,7 +153,9 @@ export function CompaniesInvoicesPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("sepaSetup")}</CardTitle>
             <CardDescription className="text-xs">
-              {billing?.has_stripe_customer ? t("sepaReady") : t("lead")}
+              {billing?.invoicing_method === "STRIPE_SEPA" && billing.has_stripe_customer
+                ? t("sepaReady")
+                : t("lead")}
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-1">
