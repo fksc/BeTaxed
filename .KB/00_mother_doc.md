@@ -20,7 +20,7 @@ BeTaxed is a **B2B Social Security savings product** for Portuguese companies. T
 | Actor | Role |
 |---|---|
 | BeTaxed Admin / Ops | Platform staff. Full access with explicit `company_id` (or intake) in the request. Never “belongs” to a client company. |
-| Company Admin | Workspace owner. Billing, members, continue/decline intake. |
+| Company Admin | Workspace owner. Billing, members (invite / resend), continue/decline intake. |
 | Company HR | Employees, contracts, status overrides, monthly SS uploads. |
 | Company Finance | Invoices, payments, invoicing method. |
 
@@ -34,8 +34,9 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 |---|---|
 | UserBase | Every human actor. Maps Firebase UID to internal UUID. |
 | Intake | Two-pass pre-workspace: SS upload + teaser. Convert → company, or decline → **purge**. |
-| Company | Client tenant / workspace. Created only when they continue. |
-| CompanyMembership | User ↔ company with role. |
+| Company | Client tenant / workspace. Created on intake convert **or** sales-led ops invite (DEV-852). |
+| CompanyMembership | User ↔ company with role. Seat limit `company.max_members` (default 3). |
+| CompanyInvite | Pending/failed/expired onboarding invite (set password). |
 | Employee | Person in a tenant. Internal UUID; NISS is encrypted + HMAC, never the PK. |
 | Employment | One vínculo. Rehire = new row, same employee. |
 | CompensationPeriod | Salary / rendimento period on an employment. |

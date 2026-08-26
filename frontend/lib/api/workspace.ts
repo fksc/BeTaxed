@@ -167,3 +167,60 @@ export type BillingSettingsOut = {
   invoicing_method: string | null;
   has_stripe_customer: boolean;
 };
+
+export type MemberOut = {
+  id: string;
+  user_id: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type InviteOut = {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  needs_password: boolean;
+  expires_at: string;
+  sent_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  invite_url?: string | null;
+};
+
+export type MembersBundleOut = {
+  max_members: number;
+  seats_used: number;
+  members: MemberOut[];
+  invites: InviteOut[];
+};
+
+export type OpsCompanyListOut = {
+  id: string;
+  legal_name: string;
+  trading_name: string | null;
+  locale: string;
+  status: string;
+  max_members: number;
+  seats_used: number;
+  has_nif: boolean;
+  created_from_intake_id: string | null;
+  created_at: string;
+};
+
+export type OpsCompanyDetailOut = OpsCompanyListOut & {
+  members: MemberOut[];
+  invites: InviteOut[];
+  invite_url?: string | null;
+};
+
+export type PublicInviteOut = {
+  company_name: string;
+  email: string;
+  role: string;
+  status: string;
+  needs_password: boolean;
+  expires_at: string;
+};

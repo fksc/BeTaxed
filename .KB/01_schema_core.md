@@ -6,7 +6,7 @@
 
 ## Overview
 
-Identity, tenancy, and two-pass intake. Every other entity references `company` (after convert) or `intake` (pass 1).
+Identity, tenancy, and two-pass intake. Every other entity references `company` (after convert **or** sales-led create) or `intake` (pass 1).
 
 ---
 
@@ -44,7 +44,7 @@ Upload-first pass 1 has **no** `user_base` yet (`intake.user_id` null; `session_
 
 ## Table: company
 
-Client tenant. Created **only** when intake is converted (pass 2 stay).
+Client tenant. Created when intake is converted (pass 2 stay) **or** when BeTaxed staff create it for a sales-led invite (DEV-852). `created_from_intake_id` is null on the sales-led path.
 
 ```sql
 CREATE TABLE company (
@@ -64,6 +64,8 @@ CREATE TABLE company (
     invoicing_method VARCHAR(32)
         CHECK (invoicing_method IN ('STRIPE_SEPA', 'CERTIFIED_SOFTWARE')),
     certified_vendor_name VARCHAR(128),     -- nullable until finance picks a tool
+    max_members INTEGER NOT NULL DEFAULT 3
+        CHECK (max_members >= 1),           -- seat cap; ops may raise (DEV-852)
     created_from_intake_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -78,6 +80,7 @@ CREATE UNIQUE INDEX idx_company_employer_niss_hash
 - Access-condition booleans (`ss_regularized`, `at_regularized`, `payroll_not_in_arrears`) are a **current checklist**, not the recipe. SS/AT no-debt **certificates** are dated (`issued_on` + `valid_until`, default 4 months) on `company_certificate` (`KB/05`, DEV-838). Snapshot gates onto `company_application` at submit so a later cert cannot rewrite history.
 - `invoicing_method` may be null until finance sets it. `certified_vendor_name` stays null until they pick the certified tool (DEV-841).
 - Soft-delete with `deleted_at`.
+- `max_members` default **3**. BeTaxed staff may raise it on the ops company view. Seat use = active memberships + open invites (`PENDING` / `FAILED` / `EXPIRED`). `CANCELLED` / `ACCEPTED` do not occupy an extra seat.
 
 ---
 
@@ -98,9 +101,48 @@ CREATE INDEX idx_membership_company ON company_membership(company_id);
 ```
 
 **Rules:**
-- Uploader who continues becomes `ADMIN`.
+- Uploader who continues becomes `ADMIN` (membership active immediately).
+- Sales-led first admin: invite creates `user_base` + membership with `is_active = FALSE` until they set a password (`KB/10`).
 - BeTaxed staff are **not** members. They act with explicit `company_id` in the request (`KB/40_permissions.md`).
 - One person may belong to multiple companies.
+- Creating a membership or an open invite fails closed when seats are full.
+
+---
+
+## Table: company_invite
+
+Onboarding invite (DEV-852). Token is stored hashed; plaintext is emailed or returned once to the sender.
+
+```sql
+CREATE TABLE company_invite (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'HR', 'FINANCE')),
+    token_hash BYTEA NOT NULL,
+    invited_by_id UUID NOT NULL REFERENCES user_base(id),
+    user_id UUID REFERENCES user_base(id),
+    membership_id UUID REFERENCES company_membership(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'ACCEPTED', 'EXPIRED', 'FAILED', 'CANCELLED')),
+    needs_password BOOLEAN NOT NULL DEFAULT TRUE,
+    last_error TEXT,
+    expires_at TIMESTAMPTZ NOT NULL,
+    sent_at TIMESTAMPTZ,
+    accepted_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (token_hash)
+);
+
+CREATE INDEX idx_company_invite_company ON company_invite(company_id);
+CREATE INDEX idx_company_invite_email ON company_invite(company_id, email);
+```
+
+**Rules:**
+- TTL default 72 hours. Expired rows stay `EXPIRED` (or are treated as expired when `expires_at` has passed) until resend or cancel.
+- Resend allowed for `PENDING`, `FAILED`, and `EXPIRED` (new token, new expiry). Not for `ACCEPTED` / `CANCELLED`.
+- Unknown / duplicate active member email → fail closed (409). Open invite for the same email → resend that row.
+- Invite email is the **only** transactional mail in v1 (`KB/08`). Resend or Brevo when `RESEND_API_KEY` / `BREVO_API_KEY` is set (`EMAIL_PROVIDER` to pick); otherwise the API returns `invite_url` for the sender to copy.
 
 ---
 

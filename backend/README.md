@@ -46,6 +46,12 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `POST /v1/ops/companies/{id}/applications` — snapshot headcount trailing-12, SS/AT cert caches, mark DETECTED cases SUBMITTED.
 - `GET/POST /v1/certificates` — SS/AT no-debt PDFs. Admin/Finance/staff. HR 403.
 - `POST /v1/ops/employment-documents/{id}/apply` — staff copies paper fields onto employment (`source = CONTRACT`).
+- `POST /v1/ops/companies` — staff sales-led create: required `legal_name` + `admin_email`. Creates company (no intake), `COMPANY_STAFF` user, inactive `ADMIN` membership, and `company_invite`. Default `max_members` is 3.
+- `GET /v1/ops/companies` / `GET|PATCH /v1/ops/companies/{id}` — staff list/detail; PATCH may raise `max_members`.
+- `GET /v1/members` — member list + open invites. Any member or staff (`X-Company-Id`).
+- `POST /v1/members/invites` — Admin/staff invite `ADMIN`/`HR`/`FINANCE`. 409 when seats are full. Returns `invite_url` (copy-link). Sends mail via Resend or Brevo when `RESEND_API_KEY` / `BREVO_API_KEY` (and optional `EMAIL_PROVIDER`) is set.
+- `POST /v1/members/invites/{id}/resend` / `cancel` — Admin/staff. Resend if pending, failed, or expired.
+- `GET /v1/invites/{token}` / `POST /v1/invites/{token}/accept` — public onboarding. New users set a Firebase password (≥8). Existing accounts sign in then accept.
 - `GET /v1/me` — Firebase Bearer token; upserts `user_base` (`COMPANY_STAFF` on first login; `BETAXED_STAFF` is a DB promotion)
 - `GET /v1/me/company` — requires `X-Company-Id` (never inferred). Staff: any company, no membership. Company users: active member.
 - `GET /v1/me/intake` — requires `X-Intake-Id`. Owner, staff, or matching `X-Intake-Session` (upload-first, OD-1). Unbound intake without a session is staff-only.

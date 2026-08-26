@@ -19,6 +19,7 @@ from app.routers import (
     intakes_router,
     invoices_router,
     me_router,
+    members_router,
     notifications_router,
     ops_router,
     people_router,
@@ -56,6 +57,7 @@ app.add_middleware(
 )
 
 app.include_router(me_router)
+app.include_router(members_router)
 app.include_router(intakes_router)
 app.include_router(people_router)
 app.include_router(ss_batches_router)

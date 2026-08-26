@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellAppBar } from "@/components/shell/shell-app-bar";
-import { getMe, listCertificates, uploadCertificate } from "@/lib/api/workspace-client";
-import type { CertificateOut } from "@/lib/api/workspace";
+import { getMe, listCertificates, listMembers, uploadCertificate } from "@/lib/api/workspace-client";
+import type { CertificateOut, MembersBundleOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
+import { MembersPanel } from "@/components/workspace/members-panel";
 
 const selectClass =
   "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring";
@@ -19,9 +20,13 @@ const selectClass =
 export function CompaniesSettingsPage() {
   const t = useTranslations("workspace.settings");
   const [rows, setRows] = useState<CertificateOut[]>([]);
+  const [members, setMembers] = useState<MembersBundleOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [canUpload, setCanUpload] = useState(false);
+  const [canInvite, setCanInvite] = useState(false);
+  const [idToken, setIdToken] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string | null>(null);
   const [kind, setKind] = useState<"SS_NO_DEBT" | "AT_NO_DEBT">("SS_NO_DEBT");
   const [issuedOn, setIssuedOn] = useState(() => new Date().toISOString().slice(0, 10));
   const fileRef = useRef<HTMLInputElement>(null);
@@ -33,6 +38,8 @@ export function CompaniesSettingsPage() {
       setError(t("lead"));
       return;
     }
+    setIdToken(idToken);
+    setCompanyId(companyId);
     try {
       const me = await getMe({ idToken });
       const membership = me.memberships.find((row) => row.company_id === companyId);
@@ -41,13 +48,11 @@ export function CompaniesSettingsPage() {
         membership?.role === "ADMIN" ||
         membership?.role === "FINANCE";
       setCanUpload(allowed);
-      if (!allowed) {
-        setRows([]);
-        setError(null);
-        return;
-      }
-      const certs = await listCertificates({ idToken, companyId });
+      setCanInvite(me.user_type === "BETAXED_STAFF" || membership?.role === "ADMIN");
+      const certs = allowed ? await listCertificates({ idToken, companyId }) : [];
       setRows(certs);
+      const bundle = await listMembers({ idToken, companyId });
+      setMembers(bundle);
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -160,6 +165,17 @@ export function CompaniesSettingsPage() {
             void onFile(file);
           }}
         />
+        {members && idToken && companyId ? (
+          <MembersPanel
+            members={members.members}
+            invites={members.invites}
+            seatsUsed={members.seats_used}
+            maxMembers={members.max_members}
+            canInvite={canInvite}
+            opts={{ idToken, companyId }}
+            onChanged={reload}
+          />
+        ) : null}
       </div>
     </>
   );

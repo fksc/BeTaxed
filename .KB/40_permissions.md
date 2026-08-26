@@ -22,6 +22,10 @@ Legend: **Y** = allowed, **—** = no, **ops** = BeTaxed staff only.
 | Manual invoice resolve | — | — | — | — | ops |
 | Read benefit_case / saving_month (incl. flag vs grant) | — | — | — | — | ops |
 | Change commercial_terms | — | — | — | — | ops |
+| Create company (sales-led) + first admin invite | — | — | — | — | ops |
+| Invite / resend / cancel company members | — | Y | — | — | ops |
+| Override `max_members` | — | — | — | — | ops |
+| See member list | — | Y | Y | Y | ops |
 
 Company invoice payloads must not include `saving_amount` per employee, `ineligibility_code`, or regime parameters.
 

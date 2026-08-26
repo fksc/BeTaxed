@@ -17,5 +17,9 @@ export const paths = {
   adminsFlags: "/admins/flags",
   adminsCases: "/admins/cases",
   adminsInvoices: "/admins/invoices",
+  adminsCompanies: "/admins/companies",
+  adminsCompanyNew: "/admins/companies/new",
+  adminsCompany: (id: string) => `/admins/companies/${id}`,
   adminsSettings: "/admins/settings",
+  invite: (token: string) => `/invite/${token}`,
 } as const;

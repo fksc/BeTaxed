@@ -16,6 +16,8 @@ Pass 2 (leave)    Decline → hard-delete everything from pass 1
 
 Identity **when** pass 1 runs is **OD-1 locked (both):** the prospect may create an account first, or upload first and create an account later. Schema: `intake.user_id` nullable; anonymous pass 1 binds with `session_token_hash`.
 
+A company can also join **without** pass 1: sales-led create + admin invite (`KB/10` sales-led, DEV-852).
+
 ---
 
 ## Pass 1 — look
@@ -55,6 +57,14 @@ If they do not continue:
 - This is not an archive. Pass 1 must not become a free calculator or a PII store for non-customers.
 
 If they already have a `user_base` (account-first), **wipe the intake data**; do not keep the parsed employees. Keeping an empty login is allowed.
+
+---
+
+## Sales-led join (no teaser)
+
+BeTaxed staff create the tenant with required profile fields (`legal_name`; optional trading name, locale, NIF) and invite the company admin in the same action: `user_base` (`COMPANY_STAFF`) + `ADMIN` membership (inactive until accept) + `company_invite`. The invite link is onboarding: set Firebase password (or sign in if that email already has an account), then the workspace.
+
+Company Admin and staff may invite further `ADMIN` / `HR` / `FINANCE` users, resend if send failed or the link expired, and cancel an unused invite. Default **3 seats**; staff override `max_members` on the ops company view. Do not invent members from SS extract people — those are employees, not actors.
 
 ---
 
