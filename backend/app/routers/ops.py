@@ -25,6 +25,7 @@ from app.services.benefit_engine import rebuild_company_ledger, submit_company_a
 from app.services.benefit_ops import list_ops_benefit_cases
 from app.services.billing import (
     add_commercial_terms,
+    collect_stripe_sepa,
     create_draft_invoice,
     issue_invoice,
     list_all_invoices,
@@ -171,6 +172,18 @@ async def post_void_invoice(
     db: AsyncSession = Depends(get_db),
 ) -> StaffInvoiceOut:
     invoice = await void_invoice(db, invoice_id, user.id, body.reason)
+    await db.commit()
+    await db.refresh(invoice)
+    return StaffInvoiceOut.model_validate(await staff_invoice_dict(db, invoice))
+
+
+@router.post("/invoices/{invoice_id}/collect", response_model=StaffInvoiceOut)
+async def post_collect_invoice(
+    invoice_id: uuid.UUID,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> StaffInvoiceOut:
+    invoice = await collect_stripe_sepa(db, invoice_id)
     await db.commit()
     await db.refresh(invoice)
     return StaffInvoiceOut.model_validate(await staff_invoice_dict(db, invoice))

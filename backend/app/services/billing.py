@@ -1,7 +1,7 @@
-"""Invoices, commercial_terms, and status ledger (KB/06, DEV-839, DEV-841).
+"""Invoices, commercial_terms, and status ledger (KB/06, DEV-839–DEV-842).
 
 Company serializers omit saving_amount, employee_id, remaining months, and
-certified_external_id. Stripe SEPA collection is DEV-842.
+certified_external_id.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ from __future__ import annotations
 import calendar
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, or_, select, update
@@ -24,8 +24,13 @@ from app.models.billing import (
     InvoiceStatusEvent,
     Payment,
 )
-from app.settings import get_default_fee_percent
+from app.settings import get_default_fee_percent, get_public_app_url
 from app.storage import build_object_name, get_object_storage, sha256_hex
+from app.services.stripe_billing import (
+    create_and_finalize_stripe_invoice,
+    create_sepa_setup_session,
+    ensure_stripe_customer,
+)
 
 
 def first_of_month(value: date) -> date:
@@ -472,10 +477,19 @@ async def apply_stripe_paid(
     if invoice.status not in {"ISSUED", "DUE", "LATE"}:
         return None
     invoice.paid_on = date.today()
+    company = await session.get(Company, invoice.company_id)
+    method = (
+        "STRIPE_SEPA"
+        if (
+            invoice.stripe_mandate_id
+            or (company is not None and company.invoicing_method == "STRIPE_SEPA")
+        )
+        else "STRIPE_OTHER"
+    )
     session.add(
         Payment(
             invoice_id=invoice.id,
-            method="STRIPE_OTHER",
+            method=method,
             amount=invoice.total,
             paid_at=datetime.now(UTC),
             external_ref=stripe_invoice_id,
@@ -485,6 +499,113 @@ async def apply_stripe_paid(
     await _append_event(
         session, invoice, "PAID", actor_id=None, reason="stripe_webhook"
     )
+    await session.flush()
+    return invoice
+
+
+async def apply_stripe_failed(
+    session: AsyncSession, stripe_invoice_id: str, payload: dict
+) -> Invoice | None:
+    """Failed SEPA debit → LATE. Never PAID."""
+    invoice = (
+        await session.execute(
+            select(Invoice).where(Invoice.stripe_invoice_id == stripe_invoice_id)
+        )
+    ).scalar_one_or_none()
+    if invoice is None:
+        return None
+    if invoice.status in {"PAID", "VOID", "MANUALLY_RESOLVED", "CONSOLIDATED"}:
+        return invoice
+    if invoice.status == "LATE":
+        return invoice
+    if invoice.status not in {"ISSUED", "DUE"}:
+        return None
+    await _append_event(
+        session, invoice, "LATE", actor_id=None, reason="stripe_payment_failed"
+    )
+    await session.flush()
+    return invoice
+
+
+async def apply_checkout_completed(session: AsyncSession, payload: dict) -> Company | None:
+    obj = (payload.get("data") or {}).get("object") or {}
+    raw_company_id = (obj.get("metadata") or {}).get("company_id")
+    customer_id = obj.get("customer")
+    if not raw_company_id or not customer_id:
+        return None
+    try:
+        company_id = uuid.UUID(str(raw_company_id))
+    except ValueError:
+        return None
+    company = await session.get(Company, company_id)
+    if company is None or company.deleted_at is not None:
+        return None
+    company.stripe_customer_id = str(customer_id)
+    if company.invoicing_method is None:
+        company.invoicing_method = "STRIPE_SEPA"
+    await session.flush()
+    return company
+
+
+def _amount_cents(amount: Decimal) -> int:
+    return int((amount * Decimal("100")).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+async def start_sepa_checkout(session: AsyncSession, company: Company) -> str:
+    customer_id = ensure_stripe_customer(
+        existing_id=company.stripe_customer_id,
+        name=company.legal_name,
+        metadata={"company_id": str(company.id)},
+    )
+    if company.stripe_customer_id != customer_id:
+        company.stripe_customer_id = customer_id
+        await session.flush()
+    locale = company.locale or "pt"
+    base = get_public_app_url()
+    success = f"{base}/{locale}/companies/invoices?sepa=ok"
+    cancel = f"{base}/{locale}/companies/invoices?sepa=cancel"
+    return create_sepa_setup_session(
+        customer_id=customer_id,
+        success_url=success,
+        cancel_url=cancel,
+        metadata={"company_id": str(company.id)},
+    )
+
+
+async def collect_stripe_sepa(
+    session: AsyncSession, invoice_id: uuid.UUID, company_id: uuid.UUID | None = None
+) -> Invoice:
+    invoice = await session.get(Invoice, invoice_id)
+    if invoice is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+    if company_id is not None and invoice.company_id != company_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+    if invoice.status not in {"ISSUED", "DUE", "LATE"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only ISSUED, DUE, or LATE invoices can be collected via Stripe.",
+        )
+    company = await session.get(Company, invoice.company_id)
+    if company is None or company.deleted_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found.")
+    if not company.stripe_customer_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Complete SEPA checkout before collecting.",
+        )
+    description = month_label(invoice.period_from)
+    stripe_id, mandate_id = create_and_finalize_stripe_invoice(
+        customer_id=company.stripe_customer_id,
+        amount_cents=_amount_cents(invoice.total),
+        currency=invoice.currency,
+        description=description,
+        metadata={"betaxed_invoice_id": str(invoice.id), "company_id": str(company.id)},
+    )
+    invoice.stripe_invoice_id = stripe_id
+    if mandate_id:
+        invoice.stripe_mandate_id = mandate_id
+    if invoice.status == "ISSUED":
+        await _append_event(session, invoice, "DUE", actor_id=None, reason="stripe_collect")
     await session.flush()
     return invoice
 

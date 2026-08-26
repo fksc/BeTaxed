@@ -186,7 +186,11 @@
       "attachLegal": "Attach certified PDF",
       "proforma": "Proforma",
       "legalPdf": "Legal PDF",
-      "attachFailed": "Could not attach the file."
+      "attachFailed": "Could not attach the file.",
+      "sepaSetup": "Set up SEPA Direct Debit",
+      "sepaCollect": "Collect with SEPA",
+      "sepaReady": "SEPA mandate is on file.",
+      "sepaFailed": "Could not start SEPA checkout."
     },
     "peopleCrumb": "People",
     "people": {
@@ -337,7 +341,9 @@
       "vendorId": "Vendor record id",
       "atcud": "ATCUD",
       "proforma": "Proforma",
-      "legalPdf": "Legal PDF"
+      "legalPdf": "Legal PDF",
+      "collect": "Collect SEPA",
+      "collectFailed": "Could not start SEPA collection."
     }
   },
   "marketing": {

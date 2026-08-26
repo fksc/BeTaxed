@@ -1,5 +1,6 @@
 import { apiJson, type AuthOpts } from "@/lib/api/http";
 import type {
+  BillingSettingsOut,
   BenefitCaseOut,
   CertificateOut,
   CompanyApplicationOut,
@@ -260,6 +261,36 @@ export async function setCompanyInvoicing(
         certified_vendor_name: certifiedVendorName || null,
       }),
     },
+    opts,
+  );
+}
+
+export async function getBillingSettings(opts: AuthOpts): Promise<BillingSettingsOut> {
+  return apiJson<BillingSettingsOut>("/v1/billing", { method: "GET" }, opts);
+}
+
+export async function startSepaCheckout(opts: AuthOpts): Promise<{ url: string }> {
+  return apiJson<{ url: string }>("/v1/invoices/sepa-checkout", { method: "POST" }, opts);
+}
+
+export async function collectSepa(
+  invoiceId: string,
+  opts: AuthOpts,
+): Promise<CompanyInvoiceOut> {
+  return apiJson<CompanyInvoiceOut>(
+    `/v1/invoices/${invoiceId}/sepa-collect`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function collectOpsInvoice(
+  invoiceId: string,
+  opts: AuthOpts,
+): Promise<StaffInvoiceOut> {
+  return apiJson<StaffInvoiceOut>(
+    `/v1/ops/invoices/${invoiceId}/collect`,
+    { method: "POST" },
     opts,
   );
 }

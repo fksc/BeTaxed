@@ -186,7 +186,11 @@
       "attachLegal": "Anexar PDF certificado",
       "proforma": "Proforma",
       "legalPdf": "PDF legal",
-      "attachFailed": "Não foi possível anexar o ficheiro."
+      "attachFailed": "Não foi possível anexar o ficheiro.",
+      "sepaSetup": "Configurar débito direto SEPA",
+      "sepaCollect": "Cobrar por SEPA",
+      "sepaReady": "Mandato SEPA registado.",
+      "sepaFailed": "Não foi possível iniciar o checkout SEPA."
     },
     "peopleCrumb": "Pessoas",
     "people": {
@@ -337,7 +341,9 @@
       "vendorId": "Id no software",
       "atcud": "ATCUD",
       "proforma": "Proforma",
-      "legalPdf": "PDF legal"
+      "legalPdf": "PDF legal",
+      "collect": "Cobrar SEPA",
+      "collectFailed": "Não foi possível iniciar a cobrança SEPA."
     }
   },
   "marketing": {

@@ -162,3 +162,8 @@ export type StaffInvoiceOut = {
   has_legal_pdf: boolean;
   lines: StaffInvoiceLineOut[];
 };
+
+export type BillingSettingsOut = {
+  invoicing_method: string | null;
+  has_stripe_customer: boolean;
+};

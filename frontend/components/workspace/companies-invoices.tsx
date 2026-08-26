@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellAppBar } from "@/components/shell/shell-app-bar";
 import {
+  collectSepa,
+  getBillingSettings,
   getMe,
   listCompanyInvoices,
+  startSepaCheckout,
   uploadLegalPdf,
   uploadProforma,
 } from "@/lib/api/workspace-client";
-import type { CompanyInvoiceOut } from "@/lib/api/workspace";
+import type { BillingSettingsOut, CompanyInvoiceOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
@@ -23,6 +26,7 @@ type DraftFields = { legalNumber: string; atcud: string };
 export function CompaniesInvoicesPage() {
   const t = useTranslations("workspace.invoices");
   const [rows, setRows] = useState<CompanyInvoiceOut[]>([]);
+  const [billing, setBilling] = useState<BillingSettingsOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, DraftFields>>({});
   const [targetId, setTargetId] = useState<string | null>(null);
@@ -52,7 +56,9 @@ export function CompaniesInvoicesPage() {
       return;
     }
     const invoices = await listCompanyInvoices({ idToken, companyId });
+    const settings = await getBillingSettings({ idToken, companyId });
     setRows(invoices);
+    setBilling(settings);
     setError(null);
   }
 
@@ -106,6 +112,34 @@ export function CompaniesInvoicesPage() {
     }
   }
 
+  async function onSepaSetup() {
+    const idToken = await currentIdToken();
+    const companyId = loadCompanyId();
+    if (!idToken || !companyId) {
+      return;
+    }
+    try {
+      const checkout = await startSepaCheckout({ idToken, companyId });
+      window.location.assign(checkout.url);
+    } catch {
+      setError(t("sepaFailed"));
+    }
+  }
+
+  async function onSepaCollect(invoiceId: string) {
+    const idToken = await currentIdToken();
+    const companyId = loadCompanyId();
+    if (!idToken || !companyId) {
+      return;
+    }
+    try {
+      await collectSepa(invoiceId, { idToken, companyId });
+      await reload();
+    } catch {
+      setError(t("sepaFailed"));
+    }
+  }
+
   return (
     <>
       <ShellAppBar crumb={t("crumb")} />
@@ -115,6 +149,19 @@ export function CompaniesInvoicesPage() {
       </div>
       <div className="space-y-4 p-4 sm:p-6">
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("sepaSetup")}</CardTitle>
+            <CardDescription className="text-xs">
+              {billing?.has_stripe_customer ? t("sepaReady") : t("lead")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <Button type="button" size="sm" variant="outline" onClick={() => void onSepaSetup()}>
+              {t("sepaSetup")}
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("title")}</CardTitle>
@@ -189,6 +236,16 @@ export function CompaniesInvoicesPage() {
                       >
                         {t("attachLegal")}
                       </Button>
+                      {row.status === "ISSUED" || row.status === "DUE" || row.status === "LATE" ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void onSepaCollect(row.id)}
+                        >
+                          {t("sepaCollect")}
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 );
