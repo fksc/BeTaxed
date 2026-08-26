@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
-from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
@@ -37,6 +36,7 @@ from app.services.ss_apply import (
     delete_intake_employment_spine,
     upsert_headcount_for_company_applied_batches,
 )
+from app.services.ss_ingest import rekey_leftover_niss
 from app.services.teaser import persist_intake_teaser_if_missing
 from app.storage import get_object_storage
 
@@ -286,10 +286,10 @@ def _rekey_batch(
             company.employer_niss_enc = batch.employer_niss_enc
     for row in batch.vinculos:
         _rekey_raw_identity(row, intake_crypto, company_crypto)
-        row.leftover = _drop_leftover_niss_hashes(row.leftover)
+        row.leftover = rekey_leftover_niss(row.leftover, intake_crypto, company_crypto)
     for row in batch.contratos:
         _rekey_raw_identity(row, intake_crypto, company_crypto)
-        row.leftover = _drop_leftover_niss_hashes(row.leftover)
+        row.leftover = rekey_leftover_niss(row.leftover, intake_crypto, company_crypto)
 
 
 def _rekey_raw_identity(
@@ -326,18 +326,6 @@ def _rekey_employee(
         employee.dob_enc = company_crypto.encrypt_dob(
             intake_crypto.decrypt_dob(employee.dob_enc)
         )
-
-
-def _drop_leftover_niss_hashes(leftover: dict[str, Any] | None) -> dict[str, Any] | None:
-    """Intake-scoped leftover hashes cannot be re-HMAC'd without plaintext."""
-    if not leftover:
-        return leftover
-    cleaned = {
-        key: value
-        for key, value in leftover.items()
-        if not (isinstance(value, dict) and "niss_hash" in value)
-    }
-    return cleaned or None
 
 
 async def purge_intake(session: AsyncSession, intake: Intake) -> Intake:

@@ -17,6 +17,7 @@
 | Data | How |
 |---|---|
 | Employee NISS | `niss_enc` + `niss_hash = HMAC(niss, tenant_or_app_secret)` |
+| Leftover extra NISS in SS JSONB | `niss_enc` (envelope) + tenant-scoped `niss_hash`; convert re-keys (DEV-848) |
 | Employer NISS, company NIF | `*_enc` + employer `*_hash` for matching uploads |
 | Name, date of birth | `*_enc` |
 | SS export bytes, contract PDFs | GCS CMEK + optional app encrypt before put |

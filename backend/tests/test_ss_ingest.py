@@ -159,6 +159,7 @@ def test_ingest_combined_hashes_and_current_pay(db_session) -> None:
                 assert PERSON_A not in dumped
                 assert SUBSTITUTE_NISS not in dumped
                 assert crypto.niss_hash(SUBSTITUTE_NISS).hex() in dumped
+                assert "niss_enc" in dumped
 
                 files = (
                     await session.execute(
