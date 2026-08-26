@@ -144,7 +144,7 @@
     "next": {
       "title": "Next in the workspace",
       "lead": "Same totals as the reading. The rest of the loop comes in later tickets.",
-      "people": "People and contracts — upload signed files in People.",
+      "people": "People — status until HRMS, and signed contracts in People.",
       "declarations": "Monthly Segurança Social files — upload them in Declarations.",
       "billing": "Invoices — not in this screen yet.",
       "openPeople": "Open People",
@@ -161,9 +161,9 @@
     },
     "peopleCrumb": "People",
     "people": {
-      "title": "Contracts",
-      "lead": "Upload each person’s employment contract. We check it against the extract on our side.",
-      "hint": "No eligibility recipe on this screen.",
+      "title": "People",
+      "lead": "Set status until an HRMS exists, and upload each employment contract. We check the file against the extract on our side.",
+      "hint": "No eligibility recipe or termination legal list on this screen.",
       "empty": "No people in this workspace yet.",
       "unnamed": "Person",
       "noFile": "No contract yet",
@@ -171,7 +171,26 @@
       "received": "Received",
       "failed": "Could not read the file",
       "upload": "Upload PDF",
-      "uploadFailed": "Upload failed."
+      "uploadFailed": "Upload failed.",
+      "statusLabel": "Status",
+      "leaveLabel": "Leave type",
+      "statusForbidden": "Only Admin or HR can change status.",
+      "statusFailed": "Could not update status.",
+      "sourceSs": "From the extract",
+      "sourceUser": "Set here",
+      "sourceHrms": "From HRMS",
+      "conflict": "The latest extract disagrees. Status was not overwritten.",
+      "status": {
+        "ACTIVE": "Active",
+        "ON_LEAVE": "On leave",
+        "TERMINATED": "Terminated"
+      },
+      "leave": {
+        "PARENTAL": "Parental",
+        "SICKNESS": "Sickness",
+        "UNPAID": "Unpaid",
+        "OTHER": "Other"
+      }
     },
     "declarationsCrumb": "Declarations",
     "declarations": {
@@ -310,7 +329,8 @@
       "CONTRACT_UPLOADED": "A contract was uploaded",
       "CONTRACT_REVIEWED": "Contract review finished",
       "CONTRACT_SS_MISMATCH": "Contract does not match the extract",
-      "CONTRACT_REVIEW_FAILED": "Contract review failed"
+      "CONTRACT_REVIEW_FAILED": "Contract review failed",
+      "EMPLOYEE_STATUS_OVERRIDE": "Someone updated a person’s status"
     }
   }
 }

@@ -6,12 +6,19 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellAppBar } from "@/components/shell/shell-app-bar";
-import { listPeople, uploadPersonContract } from "@/lib/api/workspace-client";
+import { getMe, listPeople, patchPersonStatus, uploadPersonContract } from "@/lib/api/workspace-client";
 import type { PersonOut } from "@/lib/api/workspace";
+import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
 
-function statusLabel(status: string | null, t: (key: string) => string): string {
+const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
+const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
+
+const selectClass =
+  "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
+
+function reviewLabel(status: string | null, t: (key: string) => string): string {
   if (!status) {
     return t("people.noFile");
   }
@@ -24,11 +31,25 @@ function statusLabel(status: string | null, t: (key: string) => string): string 
   return t("people.received");
 }
 
+function sourceLabel(source: string, t: (key: string) => string): string {
+  if (source === "USER" || source === "ADMIN") {
+    return t("people.sourceUser");
+  }
+  if (source === "HRMS") {
+    return t("people.sourceHrms");
+  }
+  return t("people.sourceSs");
+}
+
 export function PeoplePage() {
   const t = useTranslations("workspace");
   const [rows, setRows] = useState<PersonOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [canOverride, setCanOverride] = useState(false);
+  const [leaveById, setLeaveById] = useState<Record<string, (typeof LEAVE_TYPES)[number]>>(
+    {},
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
 
@@ -39,7 +60,16 @@ export function PeoplePage() {
       setError(t("needSession"));
       return;
     }
-    const people = await listPeople({ idToken, companyId });
+    const [people, me] = await Promise.all([
+      listPeople({ idToken, companyId }),
+      getMe({ idToken }),
+    ]);
+    const membership = me.memberships.find((row) => row.company_id === companyId);
+    setCanOverride(
+      me.user_type === "BETAXED_STAFF" ||
+        membership?.role === "ADMIN" ||
+        membership?.role === "HR",
+    );
     setRows(people);
     setError(null);
   }
@@ -68,6 +98,37 @@ export function PeoplePage() {
     }
   }
 
+  async function onStatus(
+    employeeId: string,
+    status: (typeof STATUSES)[number],
+    leaveType?: (typeof LEAVE_TYPES)[number],
+  ) {
+    const idToken = await currentIdToken();
+    const companyId = loadCompanyId();
+    if (!idToken || !companyId) {
+      return;
+    }
+    setBusyId(employeeId);
+    try {
+      await patchPersonStatus(
+        employeeId,
+        status === "ON_LEAVE"
+          ? { status, leave_type: leaveType ?? leaveById[employeeId] ?? "OTHER" }
+          : { status },
+        { idToken, companyId },
+      );
+      await reload();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setError(t("people.statusForbidden"));
+      } else {
+        setError(t("people.statusFailed"));
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <>
       <ShellAppBar crumb={t("peopleCrumb")} />
@@ -89,28 +150,80 @@ export function PeoplePage() {
               rows.map((row) => (
                 <div
                   key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 py-2 last:border-0"
+                  className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 py-2 last:border-0"
                 >
-                  <div>
+                  <div className="min-w-40">
                     <div className="text-sm font-medium">
                       {row.display_name || t("people.unnamed")}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {statusLabel(row.review_status, t)}
+                      {reviewLabel(row.review_status, t)} · {sourceLabel(row.status_source, t)}
                     </div>
+                    {row.has_source_conflict ? (
+                      <div className="text-xs text-destructive">{t("people.conflict")}</div>
+                    ) : null}
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busyId === row.id}
-                    onClick={() => {
-                      setTargetId(row.id);
-                      inputRef.current?.click();
-                    }}
-                  >
-                    {t("people.upload")}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canOverride ? (
+                      <>
+                        <select
+                          className={selectClass}
+                          aria-label={t("people.statusLabel")}
+                          value={row.status}
+                          disabled={busyId === row.id}
+                          onChange={(event) => {
+                            const next = event.target.value as (typeof STATUSES)[number];
+                            void onStatus(row.id, next);
+                          }}
+                        >
+                          {STATUSES.map((status) => (
+                            <option key={status} value={status}>
+                              {t(`people.status.${status}`)}
+                            </option>
+                          ))}
+                        </select>
+                        {row.status === "ON_LEAVE" ? (
+                          <select
+                            className={selectClass}
+                            aria-label={t("people.leaveLabel")}
+                            value={leaveById[row.id] ?? row.leave_type ?? "OTHER"}
+                            disabled={busyId === row.id}
+                            onChange={(event) => {
+                              const leave = event.target
+                                .value as (typeof LEAVE_TYPES)[number];
+                              setLeaveById((current) => ({
+                                ...current,
+                                [row.id]: leave,
+                              }));
+                              void onStatus(row.id, "ON_LEAVE", leave);
+                            }}
+                          >
+                            {LEAVE_TYPES.map((leave) => (
+                              <option key={leave} value={leave}>
+                                {t(`people.leave.${leave}`)}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {t(`people.status.${row.status}`)}
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === row.id}
+                      onClick={() => {
+                        setTargetId(row.id);
+                        inputRef.current?.click();
+                      }}
+                    >
+                      {t("people.upload")}
+                    </Button>
+                  </div>
                 </div>
               ))
             )}

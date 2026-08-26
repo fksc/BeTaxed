@@ -33,7 +33,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-002 | 2026-08-20 | resolved | 2026-08-26 | Company monthly SS upload API (workspace loop) |
 | SL-003 | 2026-08-20 | resolved | 2026-08-26 | `company_headcount_month` write path |
 | SL-004 | 2026-08-20 | open | — | Leave events from monthly remunerations files |
-| SL-005 | 2026-08-20 | open | — | Public employee status override (`PATCH`) |
+| SL-005 | 2026-08-20 | resolved | 2026-08-26 | Public employee status override (`PATCH`) |
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
 | SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
 | SL-008 | 2026-08-21 | resolved | 2026-08-25 | Contract PDF vs SS row (override after teaser) |
@@ -90,12 +90,13 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 ### SL-005 — Public employee status override (`PATCH`)
 - **Opened:** 2026-08-20
-- **Status:** open
-- **Resolved-date:** —
+- **Status:** resolved
+- **Resolved-date:** 2026-08-26
 - **Related:** DEV-834 (parked), DEV-837, `KB/10_product_flow.md`, `KB/40_permissions.md` (Admin/HR override status), `employment_event` `STATUS_OVERRIDE` / `SOURCE_CONFLICT`
 - **Context:** Company users may set `ACTIVE` / `ON_LEAVE` / `TERMINATED` until HRMS exists. If a later SS apply disagrees, emit `SOURCE_CONFLICT` and **do not** auto-overwrite `status` when `status_source` is `USER`/`ADMIN`. 834 should implement that apply rule; it does not need the HTTP override in the same PR.
 - **Why later:** Apply/diff can be tested by writing `status_source` in the DB. Permissions matrix wants the company API separately.
 - **Pickup:** `PATCH` (or equivalent) with explicit `X-Company-Id`, emit `STATUS_OVERRIDE`, set `status_source = USER`. Next SS apply must conflict rather than clobber.
+- **Resolution:** DEV-837 `PATCH /v1/people/{id}` (Admin/HR/staff). `STATUS_OVERRIDE` + `LEAVE_STARTED`/`LEAVE_ENDED` for the ledger. `status_source = USER` (staff: `ADMIN`). Apply already emits `SOURCE_CONFLICT` and does not clobber. People UI status control; no initiator/reason legal list (SL-006 / DEV-851).
 
 ---
 

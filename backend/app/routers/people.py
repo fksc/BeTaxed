@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.deps.context import CompanyContext, get_company_context
-from app.schemas.contracts import ContractUploadOut, PersonOut
+from app.schemas.contracts import ContractUploadOut, PersonOut, StatusOverrideIn
 from app.services.contracts import list_company_people, upload_employment_contract
+from app.services.employee_status import override_employee_status
 
 router = APIRouter(prefix="/v1", tags=["people"])
 
@@ -22,6 +23,31 @@ async def get_people(
 ) -> list[PersonOut]:
     rows = await list_company_people(db, ctx)
     return [PersonOut.model_validate(row) for row in rows]
+
+
+@router.patch("/people/{employee_id}", response_model=PersonOut)
+async def patch_person_status(
+    employee_id: uuid.UUID,
+    body: StatusOverrideIn,
+    ctx: CompanyContext = Depends(get_company_context),
+    db: AsyncSession = Depends(get_db),
+) -> PersonOut:
+    await override_employee_status(
+        db,
+        ctx,
+        employee_id=employee_id,
+        status_value=body.status,
+        effective_on=body.effective_on,
+        leave_type=body.leave_type,
+    )
+    await db.commit()
+    rows = await list_company_people(db, ctx)
+    match = next((row for row in rows if row["id"] == employee_id), None)
+    if match is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found."
+        )
+    return PersonOut.model_validate(match)
 
 
 @router.post(

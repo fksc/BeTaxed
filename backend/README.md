@@ -24,7 +24,8 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 
 - `GET /health` — process liveness (no DB)
 - `GET /ready` — PostgreSQL `SELECT 1`; Redis ping when `REDIS_URL` is set
-- `GET /v1/people` — company people (Admin/HR/staff). `X-Company-Id` required. No NISS, no recipe.
+- `GET /v1/people` — company people (any member/staff). `X-Company-Id` required. No NISS, no recipe. Includes `status`, `status_source`, `has_source_conflict`.
+- `PATCH /v1/people/{employee_id}` — Admin/HR/staff set `ACTIVE` / `ON_LEAVE` / `TERMINATED`. Emits `STATUS_OVERRIDE` plus `LEAVE_STARTED`/`LEAVE_ENDED`. Sets `status_source` to `USER` (or `ADMIN` for staff). Finance 403. Does not invent a termination legal list.
 - `POST /v1/ss-batches` — company monthly SS extract (`files` + `period_year_month`). Admin/HR/staff. Parses, fail-closed on employer NISS mismatch (409), then applies and upserts `company_headcount_month` (`SS_BATCH`).
 - `GET /v1/ss-batches` — period, parse status, event **counts** only (no names, rates, or pay).
 - `GET /v1/headcount-months` / `PUT /v1/headcount-months` — SS_BATCH and USER rows. USER does not overwrite SS_BATCH. Admin/HR/staff on PUT.

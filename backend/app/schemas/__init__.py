@@ -4,6 +4,7 @@ from app.schemas.contracts import (
     NotificationListOut,
     NotificationOut,
     PersonOut,
+    StatusOverrideIn,
 )
 from app.schemas.intake import (
     ConvertIntakeIn,
@@ -27,4 +28,5 @@ __all__ = [
     "NotificationListOut",
     "NotificationOut",
     "PersonOut",
+    "StatusOverrideIn",
 ]
