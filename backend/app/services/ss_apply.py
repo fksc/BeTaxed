@@ -130,8 +130,10 @@ async def delete_company_employment_spine(
 ) -> None:
     emp_ids = select(Employee.id).where(Employee.company_id == company_id)
     empl_ids = select(Employment.id).where(Employment.company_id == company_id)
+    from app.services.billing import delete_company_billing_spine
     from app.services.benefit_engine import delete_company_benefit_spine
 
+    await delete_company_billing_spine(session, company_id)
     await delete_company_benefit_spine(session, company_id)
     await session.execute(
         delete(CompanyHeadcountMonth).where(

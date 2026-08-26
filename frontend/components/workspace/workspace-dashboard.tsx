@@ -112,6 +112,9 @@ export function WorkspaceDashboard() {
                 <Link href={paths.companiesDeclarations} className="text-primary underline">
                   {t("next.openDeclarations")}
                 </Link>
+                <Link href={paths.companiesInvoices} className="text-primary underline">
+                  {t("next.openBilling")}
+                </Link>
               </div>
             </CardContent>
           </Card>

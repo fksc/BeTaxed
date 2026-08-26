@@ -50,10 +50,10 @@ export function WorkspaceSidebar() {
       soon: false,
     },
     {
-      href: paths.companiesDashboard,
+      href: paths.companiesInvoices,
       label: t("nav.billing"),
       icon: CreditCard,
-      soon: true,
+      soon: false,
     },
   ];
 

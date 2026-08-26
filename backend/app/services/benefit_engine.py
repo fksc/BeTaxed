@@ -35,7 +35,6 @@ from app.services.teaser import (
     age_on,
     remaining_benefit_months,
 )
-from app.settings import get_default_fee_percent
 
 _MONEY = Decimal("0.01")
 _TERM = frozenset({"TERMO_CERTO", "TERMO_INCERTO"})
@@ -73,13 +72,6 @@ def month_iter(start: date, end: date) -> list[date]:
         out.append(cursor)
         cursor = add_months(cursor, 1)
     return out
-
-
-def fee_percent() -> Decimal:
-    raw = get_default_fee_percent()
-    if not raw:
-        return Decimal("0")
-    return Decimal(raw)
 
 
 def leave_covers_month(intervals: list[tuple[date, date | None]], month: date) -> bool:
@@ -397,7 +389,8 @@ async def _sync_months(
     if employee.status == "ON_LEAVE" and not any(right is None for _left, right in intervals):
         intervals.append((as_of, None))
     rate = regime.employer_rate * regime.reduction_factor
-    percent = fee_percent()
+    from app.services.billing import fee_percent_for
+
     months = month_iter(case.benefit_starts_on, case.window_ends_on)
     existing = (
         (
@@ -417,6 +410,7 @@ async def _sync_months(
             employment.ended_on is None or first_of_month(employment.ended_on) <= month
         )
         billable = not on_leave and not terminated and case.state not in {"CLAWBACK", "CEASED"}
+        percent = await fee_percent_for(session, case.company_id, month)
         saving = money(salary * rate)
         fee = money(saving * percent)
         if row is None:

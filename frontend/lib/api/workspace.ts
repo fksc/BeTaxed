@@ -106,3 +106,52 @@ export type CertificateOut = {
   valid_until_overridden: boolean;
   created_at: string;
 };
+
+export type CompanyInvoiceLineOut = {
+  description: string;
+  fee_amount: string | number;
+};
+
+export type CompanyInvoiceOut = {
+  id: string;
+  company_id: string;
+  period_from: string;
+  period_to: string;
+  status: string;
+  currency: string;
+  subtotal: string | number;
+  tax_amount: string | number;
+  total: string | number;
+  issued_on: string | null;
+  due_on: string | null;
+  paid_on: string | null;
+  legal_invoice_number: string | null;
+  lines: CompanyInvoiceLineOut[];
+};
+
+export type StaffInvoiceLineOut = {
+  id: string;
+  description: string;
+  fee_amount: string | number;
+  saving_amount: string | number | null;
+  employee_id: string | null;
+  benefit_case_id: string | null;
+};
+
+export type StaffInvoiceOut = {
+  id: string;
+  company_id: string;
+  period_from: string;
+  period_to: string;
+  status: string;
+  currency: string;
+  subtotal: string | number;
+  tax_amount: string | number;
+  total: string | number;
+  issued_on: string | null;
+  due_on: string | null;
+  paid_on: string | null;
+  legal_invoice_number: string | null;
+  stripe_invoice_id: string | null;
+  lines: StaffInvoiceLineOut[];
+};

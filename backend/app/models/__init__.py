@@ -19,6 +19,13 @@ from app.models.benefit import (
     IncentiveRegime,
     SavingMonth,
 )
+from app.models.billing import (
+    CommercialTerms,
+    Invoice,
+    InvoiceLine,
+    InvoiceStatusEvent,
+    Payment,
+)
 from app.models.ss_ingest import (
     CompanyHeadcountMonth,
     SsBatch,
@@ -30,6 +37,7 @@ from app.models.ss_ingest import (
 __all__ = [
     "Base",
     "BenefitCase",
+    "CommercialTerms",
     "Company",
     "CompanyApplication",
     "CompanyCertificate",
@@ -43,8 +51,12 @@ __all__ = [
     "EmploymentDocument",
     "EmploymentEvent",
     "IncentiveRegime",
+    "Invoice",
+    "InvoiceLine",
+    "InvoiceStatusEvent",
     "Intake",
     "Notification",
+    "Payment",
     "SsBatch",
     "SsBatchFile",
     "SsRawContrato",

@@ -146,9 +146,10 @@
       "lead": "Os mesmos totais da leitura. O resto do ciclo vem em tickets posteriores.",
       "people": "Pessoas — estado até existir HRMS, e contratos em Pessoas.",
       "declarations": "Ficheiros mensais da Segurança Social — envie-os em Declarações.",
-      "billing": "Faturas — ainda não neste ecrã.",
+      "billing": "Faturas — totais e estado. Admin e Finance.",
       "openPeople": "Abrir Pessoas",
-      "openDeclarations": "Abrir Declarações"
+      "openDeclarations": "Abrir Declarações",
+      "openBilling": "Abrir faturação"
     },
     "activity": {
       "title": "Atividade recente",
@@ -169,6 +170,17 @@
       "uploadFailed": "O envio falhou.",
       "forbidden": "Só Admin ou Finance podem enviar certificados.",
       "empty": "Ainda sem certificados."
+    },
+    "invoices": {
+      "crumb": "Faturação",
+      "title": "Faturas",
+      "lead": "Só totais e estado. Não listamos pessoas nem a conta da poupança.",
+      "empty": "Ainda sem faturas.",
+      "forbidden": "Só Admin ou Finance podem ver faturas.",
+      "needAuth": "Não foi possível carregar as faturas.",
+      "issued": "Emitida",
+      "due": "Vencimento",
+      "paid": "Paga"
     },
     "peopleCrumb": "Pessoas",
     "people": {
@@ -248,6 +260,7 @@
       "overview": "Visão geral",
       "flags": "Alertas de contrato",
       "cases": "Processos",
+      "invoices": "Faturas",
       "companies": "Empresas",
       "intakes": "Leituras"
     },
@@ -295,6 +308,22 @@
       "submit": "Registar candidatura",
       "submitFailed": "Não foi possível submeter.",
       "needAuth": "Não foi possível carregar os processos."
+    },
+    "invoices": {
+      "crumb": "Faturas",
+      "title": "Faturas internas",
+      "lead": "Só staff. Emita rascunhos, resolva pagamentos bancários, anule erros.",
+      "empty": "Ainda sem faturas. Crie um rascunho depois de haver meses faturáveis.",
+      "needAuth": "Não foi possível carregar as faturas.",
+      "companyId": "Id da empresa",
+      "period": "Período",
+      "draft": "Criar rascunho",
+      "issue": "Emitir",
+      "resolve": "Marcar resolvida",
+      "reason": "Motivo",
+      "draftFailed": "Não foi possível criar o rascunho.",
+      "issueFailed": "Não foi possível emitir.",
+      "resolveFailed": "Não foi possível resolver."
     }
   },
   "marketing": {

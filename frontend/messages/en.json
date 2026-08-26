@@ -146,9 +146,10 @@
       "lead": "Same totals as the reading. The rest of the loop comes in later tickets.",
       "people": "People — status until HRMS, and signed contracts in People.",
       "declarations": "Monthly Segurança Social files — upload them in Declarations.",
-      "billing": "Invoices — not in this screen yet.",
+      "billing": "Invoices — totals and status only. Admin and Finance.",
       "openPeople": "Open People",
-      "openDeclarations": "Open Declarations"
+      "openDeclarations": "Open Declarations",
+      "openBilling": "Open Billing"
     },
     "activity": {
       "title": "Recent activity",
@@ -169,6 +170,17 @@
       "uploadFailed": "Upload failed.",
       "forbidden": "Only Admin or Finance can upload certificates.",
       "empty": "No certificates yet."
+    },
+    "invoices": {
+      "crumb": "Billing",
+      "title": "Invoices",
+      "lead": "Totals and status only. We do not list people or savings math here.",
+      "empty": "No invoices yet.",
+      "forbidden": "Only Admin or Finance can see invoices.",
+      "needAuth": "Could not load invoices.",
+      "issued": "Issued",
+      "due": "Due",
+      "paid": "Paid"
     },
     "peopleCrumb": "People",
     "people": {
@@ -248,6 +260,7 @@
       "overview": "Overview",
       "flags": "Contract flags",
       "cases": "Benefit cases",
+      "invoices": "Invoices",
       "companies": "Companies",
       "intakes": "Readings"
     },
@@ -295,6 +308,22 @@
       "submit": "Snapshot application",
       "submitFailed": "Could not submit.",
       "needAuth": "Could not load cases."
+    },
+    "invoices": {
+      "crumb": "Invoices",
+      "title": "Internal invoices",
+      "lead": "Staff only. Issue drafts, resolve bank payments, void mistakes.",
+      "empty": "No invoices yet. Draft one after a company has billable months.",
+      "needAuth": "Could not load invoices.",
+      "companyId": "Company id",
+      "period": "Period",
+      "draft": "Create draft",
+      "issue": "Issue",
+      "resolve": "Mark resolved",
+      "reason": "Reason",
+      "draftFailed": "Could not create a draft.",
+      "issueFailed": "Could not issue.",
+      "resolveFailed": "Could not resolve."
     }
   },
   "marketing": {

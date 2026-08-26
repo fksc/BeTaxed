@@ -174,6 +174,7 @@ async def convert_intake(
 
     await attach_employment_company(session, intake.id, company.id)
     await upsert_headcount_for_company_applied_batches(session, company.id)
+    from app.services.billing import seed_commercial_terms
     from app.services.benefit_engine import rebuild_company_ledger
 
     latest = (
@@ -185,6 +186,7 @@ async def convert_intake(
         )
     ).scalar_one_or_none()
     as_of = latest.period_year_month if latest is not None else date.today()
+    await seed_commercial_terms(session, company.id, as_of)
     await rebuild_company_ledger(session, company.id, as_of)
 
     await _rekey_intake_to_company(session, intake.id, company)
