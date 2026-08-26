@@ -16,6 +16,7 @@ from app.models import (
     Employment,
     EmploymentDocument,
     EmploymentEvent,
+    SsBatch,
     StoredFile,
 )
 from app.security.dek_store import get_or_create_pii_crypto
@@ -100,25 +101,31 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
         latest_doc.setdefault(doc.employee_id, doc)
 
     hide_mismatch = ctx.user.user_type != "BETAXED_STAFF"
-    events = (
-        (
-            await session.execute(
-                select(EmploymentEvent)
-                .where(
-                    EmploymentEvent.employee_id.in_(ids),
-                    EmploymentEvent.event_type.in_(
-                        ("SOURCE_CONFLICT", "STATUS_OVERRIDE")
-                    ),
-                )
-                .order_by(EmploymentEvent.created_at.desc())
+    latest_batch_id = (
+        await session.execute(
+            select(SsBatch.id)
+            .where(
+                SsBatch.company_id == ctx.company.id,
+                SsBatch.parse_status == "APPLIED",
             )
+            .order_by(SsBatch.period_year_month.desc(), SsBatch.uploaded_at.desc())
         )
-        .scalars()
-        .all()
-    )
-    latest_conflict_kind: dict[uuid.UUID, str] = {}
-    for event in events:
-        latest_conflict_kind.setdefault(event.employee_id, event.event_type)
+    ).scalars().first()
+    conflict_ids: set[uuid.UUID] = set()
+    if latest_batch_id is not None:
+        conflict_ids = set(
+            (
+                await session.execute(
+                    select(EmploymentEvent.employee_id).where(
+                        EmploymentEvent.ss_batch_id == latest_batch_id,
+                        EmploymentEvent.event_type == "SOURCE_CONFLICT",
+                        EmploymentEvent.employee_id.in_(ids),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     leave_events = (
         (
@@ -152,8 +159,7 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
                 "display_name": _display_name(crypto, employee),
                 "status": employee.status,
                 "status_source": employee.status_source,
-                "has_source_conflict": latest_conflict_kind.get(employee.id)
-                == "SOURCE_CONFLICT",
+                "has_source_conflict": employee.id in conflict_ids,
                 "leave_type": (
                     latest_leave.get(employee.id)
                     if employee.status == "ON_LEAVE"

@@ -200,6 +200,15 @@ def test_status_override_leave_events_conflict_and_finance(
                 assert match["status_source"] == "USER"
                 assert match["has_source_conflict"] is True
 
+                keep = await client.patch(
+                    f"/v1/people/{employee_id}",
+                    headers=auth,
+                    json={"status": "ON_LEAVE", "leave_type": "SICKNESS"},
+                )
+                assert keep.status_code == 200
+                assert keep.json()["has_source_conflict"] is True
+                assert keep.json()["status"] == "ON_LEAVE"
+
                 async with AsyncSessionLocal() as session:
                     events = (
                         await session.execute(
@@ -209,7 +218,7 @@ def test_status_override_leave_events_conflict_and_finance(
                         )
                     ).scalars().all()
                     types = [event.event_type for event in events]
-                    assert types.count("STATUS_OVERRIDE") == 3
+                    assert types.count("STATUS_OVERRIDE") == 4
                     assert "LEAVE_STARTED" in types
                     assert "LEAVE_ENDED" in types
                     assert "SOURCE_CONFLICT" in types
