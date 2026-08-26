@@ -212,7 +212,7 @@ class Intake(Base):
         CHAR(3), nullable=False, server_default=text("'EUR'")
     )
     teaser_regime_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        UUID(as_uuid=True), ForeignKey("incentive_regime.id"), nullable=True
     )
     converted_company_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("company.id"), nullable=True

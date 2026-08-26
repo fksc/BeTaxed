@@ -1,5 +1,5 @@
-import { CompaniesSettingsPage } from "@/components/shell/settings-stub";
+import { CompaniesSettingsPage } from "@/components/workspace/companies-settings";
 
-export default function Page() {
+export default function CompaniesSettingsRoute() {
   return <CompaniesSettingsPage />;
 }

@@ -32,6 +32,9 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `POST /v1/people/{employee_id}/contracts` — PDF upload; emits `CONTRACT_UPLOADED` then stub/Gemini review (`CONTRACT_LLM`).
 - `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
 - `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.
+- `GET /v1/ops/benefit-cases` — staff-only internal cases (state, remaining months, monthly saving). Never on company APIs.
+- `POST /v1/ops/companies/{id}/applications` — snapshot headcount trailing-12, SS/AT cert caches, mark DETECTED cases SUBMITTED.
+- `GET/POST /v1/certificates` — SS/AT no-debt PDFs. Admin/Finance/staff. HR 403.
 - `POST /v1/ops/employment-documents/{id}/apply` — staff copies paper fields onto employment (`source = CONTRACT`).
 - `GET /v1/me` — Firebase Bearer token; upserts `user_base` (`COMPANY_STAFF` on first login; `BETAXED_STAFF` is a DB promotion)
 - `GET /v1/me/company` — requires `X-Company-Id` (never inferred). Staff: any company, no membership. Company users: active member.

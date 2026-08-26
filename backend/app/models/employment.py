@@ -291,7 +291,7 @@ class StoredFile(Base):
         CheckConstraint(
             "kind IN ("
             "'SS_EXPORT', 'EMPLOYMENT_CONTRACT', 'CONVERSION_DECLARATION', "
-            "'AT_NO_DEBT', 'INVOICE_PDF', 'PROFORMA', 'OTHER'"
+            "'SS_NO_DEBT', 'AT_NO_DEBT', 'INVOICE_PDF', 'PROFORMA', 'OTHER'"
             ")",
             name="ck_stored_file_kind",
         ),

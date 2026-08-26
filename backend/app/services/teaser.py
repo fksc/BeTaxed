@@ -16,7 +16,14 @@ from cryptography.exceptions import InvalidTag
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import CompensationPeriod, Employee, Employment, Intake, SsBatch
+from app.models import (
+    CompensationPeriod,
+    Employee,
+    Employment,
+    IncentiveRegime,
+    Intake,
+    SsBatch,
+)
 from app.security.dek_store import get_or_create_pii_crypto
 
 # KB/20 working values. Do not expose on the teaser API.
@@ -107,8 +114,23 @@ async def persist_intake_teaser(
     intake.teaser_potential_monthly = figures.potential_monthly
     intake.teaser_potential_window = figures.potential_window
     intake.teaser_currency = "EUR"
+    intake.teaser_regime_id = await _teaser_regime_id(session, as_of)
     await session.flush()
     return figures
+
+
+async def _teaser_regime_id(session: AsyncSession, as_of: date) -> uuid.UUID | None:
+    row = (
+        await session.execute(
+            select(IncentiveRegime)
+            .where(
+                IncentiveRegime.code == "PT_SS_YOUNG_FIRST_PERMANENT",
+                IncentiveRegime.valid_from <= as_of,
+            )
+            .order_by(IncentiveRegime.valid_from.desc())
+        )
+    ).scalars().first()
+    return row.id if row is not None else None
 
 
 async def persist_intake_teaser_if_missing(

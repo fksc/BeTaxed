@@ -70,3 +70,39 @@ export type HeadcountMonthOut = {
   source: string;
   source_batch_id: string | null;
 };
+
+export type BenefitCaseOut = {
+  id: string;
+  company_id: string;
+  company_name: string | null;
+  employee_id: string;
+  display_name: string | null;
+  state: string;
+  ineligibility_code: string | null;
+  sem_termo_on: string | null;
+  window_ends_on: string | null;
+  remaining_months: number | null;
+  monthly_saving: string | number | null;
+};
+
+export type CompanyApplicationOut = {
+  id: string;
+  company_id: string;
+  submitted_on: string | null;
+  decision: string;
+  headcount_current: number | null;
+  headcount_trailing_12_avg: string | number | null;
+  headcount_test_pass: boolean | null;
+  ss_regularized_at_submit: boolean | null;
+  at_regularized_at_submit: boolean | null;
+  payroll_not_in_arrears_at_submit: boolean | null;
+};
+
+export type CertificateOut = {
+  id: string;
+  kind: string;
+  issued_on: string;
+  valid_until: string;
+  valid_until_overridden: boolean;
+  created_at: string;
+};

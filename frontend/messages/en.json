@@ -157,7 +157,18 @@
     "settings": {
       "crumb": "Settings",
       "title": "Company settings",
-      "lead": "Members, billing, and preferences — not on this screen yet."
+      "lead": "Upload SS and AT no-debt certificates. Admin and Finance only.",
+      "certsTitle": "No-debt certificates",
+      "certsHint": "Each file is valid for four months from the issue date unless we override it.",
+      "kind": "Kind",
+      "issuedOn": "Issued on",
+      "validUntil": "Valid until",
+      "ss": "SS no-debt",
+      "at": "AT no-debt",
+      "upload": "Upload PDF",
+      "uploadFailed": "Upload failed.",
+      "forbidden": "Only Admin or Finance can upload certificates.",
+      "empty": "No certificates yet."
     },
     "peopleCrumb": "People",
     "people": {
@@ -236,6 +247,7 @@
     "nav": {
       "overview": "Overview",
       "flags": "Contract flags",
+      "cases": "Benefit cases",
       "companies": "Companies",
       "intakes": "Readings"
     },
@@ -270,6 +282,19 @@
       "applied": "Applied to employment.",
       "needAuth": "Could not load flags.",
       "applyFailed": "Could not apply."
+    },
+    "cases": {
+      "crumb": "Benefit cases",
+      "title": "Internal benefit cases",
+      "lead": "Staff only. This is the filing spine, not a company-facing recipe.",
+      "hint": "Leave months are not billable. Headcount is tested at submit.",
+      "table": "Cases",
+      "empty": "No cases yet. Convert a workspace first.",
+      "unnamed": "Person",
+      "remaining": "{count} months left",
+      "submit": "Snapshot application",
+      "submitFailed": "Could not submit.",
+      "needAuth": "Could not load cases."
     }
   },
   "marketing": {

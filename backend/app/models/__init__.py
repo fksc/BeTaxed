@@ -12,6 +12,13 @@ from app.models.employment import (
     StoredFile,
     Workplace,
 )
+from app.models.benefit import (
+    BenefitCase,
+    CompanyApplication,
+    CompanyCertificate,
+    IncentiveRegime,
+    SavingMonth,
+)
 from app.models.ss_ingest import (
     CompanyHeadcountMonth,
     SsBatch,
@@ -22,7 +29,10 @@ from app.models.ss_ingest import (
 
 __all__ = [
     "Base",
+    "BenefitCase",
     "Company",
+    "CompanyApplication",
+    "CompanyCertificate",
     "CompanyHeadcountMonth",
     "CompanyMembership",
     "CompensationPeriod",
@@ -32,11 +42,13 @@ __all__ = [
     "Employment",
     "EmploymentDocument",
     "EmploymentEvent",
+    "IncentiveRegime",
     "Intake",
     "Notification",
     "SsBatch",
     "SsBatchFile",
     "SsRawContrato",
+    "SavingMonth",
     "SsRawVinculo",
     "StoredFile",
     "TenantCryptoKey",
