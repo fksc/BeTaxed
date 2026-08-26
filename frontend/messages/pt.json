@@ -144,7 +144,7 @@
     "next": {
       "title": "A seguir no espaço",
       "lead": "Os mesmos totais da leitura. O resto do ciclo vem em tickets posteriores.",
-      "people": "Pessoas e contratos — envie os ficheiros em Pessoas.",
+      "people": "Pessoas — estado até existir HRMS, e contratos em Pessoas.",
       "declarations": "Ficheiros mensais da Segurança Social — envie-os em Declarações.",
       "billing": "Faturas — ainda não neste ecrã.",
       "openPeople": "Abrir Pessoas",
@@ -161,9 +161,9 @@
     },
     "peopleCrumb": "Pessoas",
     "people": {
-      "title": "Contratos",
-      "lead": "Carregue o contrato de cada pessoa. Nós comparamos com o extrato do nosso lado.",
-      "hint": "Este ecrã não ensina o regime.",
+      "title": "Pessoas",
+      "lead": "Defina o estado até existir um HRMS e envie o contrato de cada pessoa. Nós comparamos o ficheiro com o extrato do nosso lado.",
+      "hint": "Este ecrã não ensina o regime nem a lista legal de cessação.",
       "empty": "Ainda não há pessoas neste espaço.",
       "unnamed": "Pessoa",
       "noFile": "Ainda sem contrato",
@@ -171,7 +171,26 @@
       "received": "Recebido",
       "failed": "Não foi possível ler o ficheiro",
       "upload": "Enviar PDF",
-      "uploadFailed": "O envio falhou."
+      "uploadFailed": "O envio falhou.",
+      "statusLabel": "Estado",
+      "leaveLabel": "Tipo de ausência",
+      "statusForbidden": "Só Admin ou HR podem alterar o estado.",
+      "statusFailed": "Não foi possível atualizar o estado.",
+      "sourceSs": "Do extrato",
+      "sourceUser": "Definido aqui",
+      "sourceHrms": "Do HRMS",
+      "conflict": "O último extrato discorda. O estado não foi substituído.",
+      "status": {
+        "ACTIVE": "Ativo",
+        "ON_LEAVE": "De baixa",
+        "TERMINATED": "Cessado"
+      },
+      "leave": {
+        "PARENTAL": "Parental",
+        "SICKNESS": "Doença",
+        "UNPAID": "Não remunerada",
+        "OTHER": "Outra"
+      }
     },
     "declarationsCrumb": "Declarações",
     "declarations": {
@@ -310,7 +329,8 @@
       "CONTRACT_UPLOADED": "Foi enviado um contrato",
       "CONTRACT_REVIEWED": "Revisão do contrato concluída",
       "CONTRACT_SS_MISMATCH": "O contrato não coincide com o extrato",
-      "CONTRACT_REVIEW_FAILED": "A revisão do contrato falhou"
+      "CONTRACT_REVIEW_FAILED": "A revisão do contrato falhou",
+      "EMPLOYEE_STATUS_OVERRIDE": "Alguém atualizou o estado de uma pessoa"
     }
   }
 }

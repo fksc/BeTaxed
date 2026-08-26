@@ -15,6 +15,9 @@ export type PersonOut = {
   id: string;
   display_name: string | null;
   status: string;
+  status_source: string;
+  has_source_conflict: boolean;
+  leave_type: string | null;
   employment_id: string | null;
   has_contract: boolean;
   review_status: string | null;

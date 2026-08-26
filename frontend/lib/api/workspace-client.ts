@@ -16,6 +16,26 @@ export async function listPeople(opts: AuthOpts): Promise<PersonOut[]> {
   return apiJson<PersonOut[]>("/v1/people", { method: "GET" }, opts);
 }
 
+export async function patchPersonStatus(
+  employeeId: string,
+  body: {
+    status: "ACTIVE" | "ON_LEAVE" | "TERMINATED";
+    leave_type?: "PARENTAL" | "SICKNESS" | "UNPAID" | "OTHER";
+    effective_on?: string;
+  },
+  opts: AuthOpts,
+): Promise<PersonOut> {
+  return apiJson<PersonOut>(
+    `/v1/people/${employeeId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
 export async function uploadPersonContract(
   employeeId: string,
   file: File,

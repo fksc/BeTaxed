@@ -100,6 +100,44 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
         latest_doc.setdefault(doc.employee_id, doc)
 
     hide_mismatch = ctx.user.user_type != "BETAXED_STAFF"
+    events = (
+        (
+            await session.execute(
+                select(EmploymentEvent)
+                .where(
+                    EmploymentEvent.employee_id.in_(ids),
+                    EmploymentEvent.event_type.in_(
+                        ("SOURCE_CONFLICT", "STATUS_OVERRIDE")
+                    ),
+                )
+                .order_by(EmploymentEvent.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    latest_conflict_kind: dict[uuid.UUID, str] = {}
+    for event in events:
+        latest_conflict_kind.setdefault(event.employee_id, event.event_type)
+
+    leave_events = (
+        (
+            await session.execute(
+                select(EmploymentEvent)
+                .where(
+                    EmploymentEvent.employee_id.in_(ids),
+                    EmploymentEvent.event_type == "LEAVE_STARTED",
+                )
+                .order_by(EmploymentEvent.created_at.desc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    latest_leave: dict[uuid.UUID, str | None] = {}
+    for event in leave_events:
+        latest_leave.setdefault(event.employee_id, event.leave_type)
+
     out: list[dict] = []
     for employee in employees:
         current = _current_employment(by_emp.get(employee.id, []))
@@ -113,6 +151,14 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
                 "id": employee.id,
                 "display_name": _display_name(crypto, employee),
                 "status": employee.status,
+                "status_source": employee.status_source,
+                "has_source_conflict": latest_conflict_kind.get(employee.id)
+                == "SOURCE_CONFLICT",
+                "leave_type": (
+                    latest_leave.get(employee.id)
+                    if employee.status == "ON_LEAVE"
+                    else None
+                ),
                 "employment_id": current.id if current else None,
                 "has_contract": doc is not None,
                 "review_status": public_status,
