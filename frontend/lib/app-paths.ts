@@ -10,10 +10,12 @@ export const paths = {
   companiesDashboard: "/companies/dashboard",
   companiesPeople: "/companies/people",
   companiesDeclarations: "/companies/declarations",
+  companiesInvoices: "/companies/invoices",
   companiesSettings: "/companies/settings",
   admins: "/admins",
   adminsDashboard: "/admins/dashboard",
   adminsFlags: "/admins/flags",
   adminsCases: "/admins/cases",
+  adminsInvoices: "/admins/invoices",
   adminsSettings: "/admins/settings",
 } as const;

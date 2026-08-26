@@ -33,6 +33,11 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
 - `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.
 - `GET /v1/ops/benefit-cases` — staff-only internal cases (state, remaining months, monthly saving). Never on company APIs.
+- `GET /v1/invoices` — Admin/Finance/staff. Totals and generic lines. No employee recipe.
+- `POST /v1/ops/companies/{id}/invoices` — staff draft from unlocked billable `saving_month` rows.
+- `POST /v1/ops/invoices/{id}/issue` / `resolve` / `void` — status ledger. Manual resolve stores actor + reason.
+- `POST /v1/webhooks/stripe` — marks PAID when `stripe_invoice_id` matches. SEPA collection is a later ticket.
+- `GET/POST /v1/ops/companies/{id}/commercial-terms` — staff fee % override. Convert seeds from `DEFAULT_FEE_PERCENT`.
 - `POST /v1/ops/companies/{id}/applications` — snapshot headcount trailing-12, SS/AT cert caches, mark DETECTED cases SUBMITTED.
 - `GET/POST /v1/certificates` — SS/AT no-debt PDFs. Admin/Finance/staff. HR 403.
 - `POST /v1/ops/employment-documents/{id}/apply` — staff copies paper fields onto employment (`source = CONTRACT`).

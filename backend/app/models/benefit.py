@@ -242,5 +242,5 @@ class SavingMonth(Base):
         DateTime(timezone=True), nullable=True
     )
     invoice_line_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), nullable=True
+        UUID(as_uuid=True), ForeignKey("invoice_line.id"), nullable=True
     )

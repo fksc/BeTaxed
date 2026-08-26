@@ -3,12 +3,14 @@ import type {
   BenefitCaseOut,
   CertificateOut,
   CompanyApplicationOut,
+  CompanyInvoiceOut,
   HeadcountMonthOut,
   MeOut,
   MismatchFlag,
   NotificationList,
   PersonOut,
   SsBatchOut,
+  StaffInvoiceOut,
 } from "@/lib/api/workspace";
 
 export async function getMe(opts: AuthOpts): Promise<MeOut> {
@@ -146,4 +148,52 @@ export async function uploadCertificate(
   body.set("issued_on", issuedOn);
   body.set("file", file);
   return apiJson<CertificateOut>("/v1/certificates", { method: "POST", body }, opts);
+}
+
+export async function listCompanyInvoices(opts: AuthOpts): Promise<CompanyInvoiceOut[]> {
+  return apiJson<CompanyInvoiceOut[]>("/v1/invoices", { method: "GET" }, opts);
+}
+
+export async function listOpsInvoices(opts: AuthOpts): Promise<StaffInvoiceOut[]> {
+  return apiJson<StaffInvoiceOut[]>("/v1/ops/invoices", { method: "GET" }, opts);
+}
+
+export async function createDraftInvoice(
+  companyId: string,
+  yearMonth: string,
+  opts: AuthOpts,
+): Promise<StaffInvoiceOut> {
+  return apiJson<StaffInvoiceOut>(
+    `/v1/ops/companies/${companyId}/invoices`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year_month: yearMonth }),
+    },
+    opts,
+  );
+}
+
+export async function issueInvoice(invoiceId: string, opts: AuthOpts): Promise<StaffInvoiceOut> {
+  return apiJson<StaffInvoiceOut>(
+    `/v1/ops/invoices/${invoiceId}/issue`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function resolveInvoice(
+  invoiceId: string,
+  reason: string,
+  opts: AuthOpts,
+): Promise<StaffInvoiceOut> {
+  return apiJson<StaffInvoiceOut>(
+    `/v1/ops/invoices/${invoiceId}/resolve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    },
+    opts,
+  );
 }

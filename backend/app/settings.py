@@ -75,6 +75,12 @@ def get_default_fee_percent() -> str | None:
     return raw or None
 
 
+def get_stripe_webhook_secret() -> str | None:
+    """Shared secret for POST /v1/webhooks/stripe. Real Stripe signatures land on DEV-842."""
+    raw = os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
+    return raw or None
+
+
 _DEMO_FIREBASE_PROJECT_ID = "demo-betaxed"
 
 

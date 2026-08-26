@@ -17,11 +17,13 @@ from app.redis_util import ping as redis_ping, set_app_redis
 from app.routers import (
     certificates_router,
     intakes_router,
+    invoices_router,
     me_router,
     notifications_router,
     ops_router,
     people_router,
     ss_batches_router,
+    webhooks_router,
 )
 from app.settings import get_cors_origins, get_redis_url
 
@@ -58,8 +60,10 @@ app.include_router(intakes_router)
 app.include_router(people_router)
 app.include_router(ss_batches_router)
 app.include_router(certificates_router)
+app.include_router(invoices_router)
 app.include_router(notifications_router)
 app.include_router(ops_router)
+app.include_router(webhooks_router)
 
 
 @app.get("/health")
