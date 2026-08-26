@@ -40,7 +40,7 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 | Employment | One vínculo. Rehire = new row, same employee. |
 | CompensationPeriod | Salary / rendimento period on an employment. |
 | EmploymentEvent | Hire, fire, leave, raise, conversion, rate change, user override. |
-| SsBatch | One SS declaration upload (one xlsx or two files, xlsx or csv). |
+| SsBatch | One SS declaration upload (combined xlsx, vínculos+contratos, optional remunerações leave file). |
 | StoredFile | GCS object (SS export, contract, certificate, proforma). |
 | IncentiveRegime | Versioned legal/commercial parameters (internal). |
 | BenefitCase | Per-employee 5-year file for a regime (**internal**). |

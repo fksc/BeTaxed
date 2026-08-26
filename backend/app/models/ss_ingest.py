@@ -7,6 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -78,6 +79,9 @@ class SsBatch(Base):
     )
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     export_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leave_declared: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
 
     files: Mapped[list[SsBatchFile]] = relationship(
         back_populates="batch",
@@ -91,13 +95,17 @@ class SsBatch(Base):
         back_populates="batch",
         cascade="all, delete-orphan",
     )
+    leaves: Mapped[list[SsRawLeave]] = relationship(
+        back_populates="batch",
+        cascade="all, delete-orphan",
+    )
 
 
 class SsBatchFile(Base):
     __tablename__ = "ss_batch_file"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('COMBINED_XLSX', 'VINCULOS', 'CONTRATOS', 'OTHER')",
+            "kind IN ('COMBINED_XLSX', 'VINCULOS', 'CONTRATOS', 'REMUNERACOES', 'OTHER')",
             name="ck_ss_batch_file_kind",
         ),
     )
@@ -191,6 +199,39 @@ class SsRawContrato(Base):
     leftover: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[SsBatch] = relationship(back_populates="contratos")
+
+
+class SsRawLeave(Base):
+    """BeTaxed remunerações leave sheet. Not official SS DR headers (KB/03)."""
+
+    __tablename__ = "ss_raw_leave"
+    __table_args__ = (
+        CheckConstraint(
+            "leave_type IN ('PARENTAL', 'SICKNESS', 'UNPAID', 'OTHER')",
+            name="ck_ss_raw_leave_type",
+        ),
+        Index("idx_ss_raw_leave_batch_niss", "batch_id", "niss_hash"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("ss_batch.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source_row: Mapped[int] = mapped_column(Integer, nullable=False)
+    niss_hash: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
+    niss_enc: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
+    leave_type: Mapped[str] = mapped_column(String(24), nullable=False)
+    started_on: Mapped[date] = mapped_column(Date, nullable=False)
+    ended_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    leftover: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    batch: Mapped[SsBatch] = relationship(back_populates="leaves")
 
 
 class CompanyHeadcountMonth(Base):

@@ -32,7 +32,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-001 | 2026-08-20 | resolved | 2026-08-26 | Convert drops leftover JSONB `niss_hash` instead of re-HMAC |
 | SL-002 | 2026-08-20 | resolved | 2026-08-26 | Company monthly SS upload API (workspace loop) |
 | SL-003 | 2026-08-20 | resolved | 2026-08-26 | `company_headcount_month` write path |
-| SL-004 | 2026-08-20 | open | — | Leave events from monthly remunerations files |
+| SL-004 | 2026-08-20 | resolved | 2026-08-26 | Leave events from monthly remunerations files |
 | SL-005 | 2026-08-20 | resolved | 2026-08-26 | Public employee status override (`PATCH`) |
 | SL-006 | 2026-08-20 | open | — | Termination initiator/reason legal list |
 | SL-007 | 2026-08-20 | resolved | 2026-08-21 | Pass 1 teaser figures stay null (engine) |
@@ -80,12 +80,13 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 ### SL-004 — Leave events from monthly remunerations files
 - **Opened:** 2026-08-20
-- **Status:** open
-- **Resolved-date:** —
+- **Status:** resolved
+- **Resolved-date:** 2026-08-26
 - **Related:** DEV-834 (parked), DEV-849, DEV-837, DEV-838, `KB/03_schema_ss_ingest.md#apply-and-diff`, `KB/02_schema_employment.md` (`LEAVE_STARTED` / `LEAVE_ENDED`), OD-4 leave not billable
 - **Context:** Sample SS extract (vínculos + contratos) does not carry parental/sickness leave. Event types exist in the KB enum. Until a monthly remunerations/DR raw table exists, leave is `USER` (or future file) as `source`. Apply/diff v1 must not fake `LEAVE_*` from the current xlsx.
 - **Why later:** No source columns in the current parser. Billing must still treat leave months as not billable once we know them (OD-4) — that is ledger work, not this stub’s parser.
 - **Pickup:** New raw table + parser when the file exists; emit `LEAVE_*` with `source = SS_DIFF`. Until then, a status override API (SL-005) is how `ON_LEAVE` gets onto `employee.status`.
+- **Resolution:** DEV-849 `ss_raw_leave` + remunerações leave parser (BeTaxed headers: NISS, tipo de ausência, início ausência — not official SS DR columns). Apply emits `LEAVE_*` `source = SS_DIFF` when the sheet/file is present; vínculos/contratos still do not invent leave. USER/ADMIN status is not clobbered (`SOURCE_CONFLICT`). Company Declarations shows leave started/ended counts only.
 
 ---
 

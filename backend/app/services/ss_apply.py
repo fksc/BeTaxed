@@ -1,7 +1,8 @@
 """Apply a PARSED SS batch onto canonical employment (KB/02, KB/03, DEV-834).
 
 Writes company_headcount_month when the batch is company-scoped (DEV-835).
-Does not invent leave from the current extract (SL-004 / DEV-849).
+Leave events come only from a remunerações leave sheet (DEV-849 / SL-004),
+never from vínculos/contratos.
 Never sets first_permanent_* from SS.
 """
 
@@ -25,6 +26,7 @@ from app.models import (
     EmploymentEvent,
     SsBatch,
     SsRawContrato,
+    SsRawLeave,
     SsRawVinculo,
     Workplace,
 )
@@ -61,6 +63,7 @@ async def apply_ss_batch(session: AsyncSession, batch_id: uuid.UUID) -> SsApplyR
             .options(
                 selectinload(SsBatch.vinculos),
                 selectinload(SsBatch.contratos),
+                selectinload(SsBatch.leaves),
             )
             .where(SsBatch.id == batch_id)
         )
@@ -89,6 +92,8 @@ async def apply_ss_batch(session: AsyncSession, batch_id: uuid.UUID) -> SsApplyR
         if niss_hash in current or not snap.is_active:
             continue
         event_types.extend(await _apply_missing(session, batch, snap))
+
+    event_types.extend(await _apply_leave(session, batch, previous_batch))
 
     batch.parse_status = "APPLIED"
     await upsert_ss_batch_headcount(session, batch)
@@ -257,6 +262,7 @@ async def _previous_applied(session: AsyncSession, batch: SsBatch) -> SsBatch | 
         .options(
             selectinload(SsBatch.vinculos),
             selectinload(SsBatch.contratos),
+            selectinload(SsBatch.leaves),
         )
         .where(
             SsBatch.parse_status == "APPLIED",
@@ -438,6 +444,152 @@ async def _apply_missing(
             batch.period_year_month,
         )
     ]
+
+
+def _open_leaves(rows: list[SsRawLeave]) -> dict[bytes, SsRawLeave]:
+    out: dict[bytes, SsRawLeave] = {}
+    for row in rows:
+        if row.ended_on is not None:
+            continue
+        out[row.niss_hash] = row
+    return out
+
+
+async def _latest_leave_type(
+    session: AsyncSession, employee_id: uuid.UUID
+) -> str | None:
+    row = (
+        await session.execute(
+            select(EmploymentEvent.leave_type)
+            .where(
+                EmploymentEvent.employee_id == employee_id,
+                EmploymentEvent.event_type == "LEAVE_STARTED",
+            )
+            .order_by(EmploymentEvent.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return row
+
+
+async def _employees_on_leave(
+    session: AsyncSession, batch: SsBatch
+) -> list[Employee]:
+    stmt = select(Employee).where(
+        Employee.status == "ON_LEAVE", Employee.deleted_at.is_(None)
+    )
+    if batch.company_id is not None:
+        stmt = stmt.where(Employee.company_id == batch.company_id)
+    else:
+        stmt = stmt.where(
+            Employee.intake_id == batch.intake_id, Employee.company_id.is_(None)
+        )
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def _apply_leave(
+    session: AsyncSession,
+    batch: SsBatch,
+    previous_batch: SsBatch | None,
+) -> list[str]:
+    """Emit LEAVE_* from remunerações rows only. Never from vínculos."""
+    if not batch.leave_declared:
+        return []
+    current_open = _open_leaves(batch.leaves)
+    previous_open = (
+        _open_leaves(previous_batch.leaves)
+        if previous_batch is not None and previous_batch.leave_declared
+        else {}
+    )
+    closed_now = {
+        row.niss_hash: row for row in batch.leaves if row.ended_on is not None
+    }
+    on_leave_people = await _employees_on_leave(session, batch)
+    events: list[str] = []
+
+    for niss_hash, row in current_open.items():
+        employee = await _find_employee(session, batch, niss_hash)
+        if employee is None or employee.status == "TERMINATED":
+            continue
+        open_emp = await _open_employment(session, employee.id)
+        current_type = (
+            await _latest_leave_type(session, employee.id)
+            if employee.status == "ON_LEAVE"
+            else None
+        )
+        if employee.status == "ON_LEAVE" and current_type == row.leave_type:
+            continue
+        protected = employee.status_source in _USER_OWNED
+        if protected:
+            events.append(
+                _conflict(session, batch, employee, open_emp, employee.status, "ON_LEAVE")
+            )
+            continue
+        if employee.status == "ON_LEAVE" and current_type != row.leave_type:
+            events.append(
+                _emit(
+                    session,
+                    batch,
+                    employee,
+                    open_emp,
+                    "LEAVE_ENDED",
+                    batch.period_year_month,
+                    leave_type=current_type,
+                    old_status="ON_LEAVE",
+                    new_status="ON_LEAVE",
+                )
+            )
+        events.append(
+            _emit(
+                session,
+                batch,
+                employee,
+                open_emp,
+                "LEAVE_STARTED",
+                row.started_on,
+                leave_type=row.leave_type,
+                old_status=employee.status,
+                new_status="ON_LEAVE",
+            )
+        )
+        _set_ss_status(employee, "ON_LEAVE")
+
+    to_end = (
+        set(previous_open) | {person.niss_hash for person in on_leave_people}
+    ) - set(current_open)
+    for niss_hash in to_end:
+        employee = await _find_employee(session, batch, niss_hash)
+        if employee is None or employee.status != "ON_LEAVE":
+            continue
+        open_emp = await _open_employment(session, employee.id)
+        protected = employee.status_source in _USER_OWNED
+        if protected:
+            events.append(
+                _conflict(
+                    session, batch, employee, open_emp, "ON_LEAVE", "ACTIVE"
+                )
+            )
+            continue
+        ended_on = (
+            closed_now[niss_hash].ended_on
+            if niss_hash in closed_now and closed_now[niss_hash].ended_on is not None
+            else batch.period_year_month
+        )
+        events.append(
+            _emit(
+                session,
+                batch,
+                employee,
+                open_emp,
+                "LEAVE_ENDED",
+                ended_on,
+                leave_type=await _latest_leave_type(session, employee.id),
+                old_status="ON_LEAVE",
+                new_status="ACTIVE",
+            )
+        )
+        _set_ss_status(employee, "ACTIVE")
+    return events
 
 
 async def _diff_open(
@@ -679,6 +831,7 @@ def _emit(
         new_rate_pct=extra.get("new_rate_pct"),  # type: ignore[arg-type]
         old_status=extra.get("old_status"),  # type: ignore[arg-type]
         new_status=extra.get("new_status"),  # type: ignore[arg-type]
+        leave_type=extra.get("leave_type"),  # type: ignore[arg-type]
     )
     session.add(row)
     return event_type

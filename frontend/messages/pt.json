@@ -228,7 +228,7 @@
     "declarationsCrumb": "Declarações",
     "declarations": {
       "lead": "Envie a declaração mensal da Segurança Social. Mostramos só as contagens do último ficheiro aplicado.",
-      "hint": "Sem nomes, taxas ou valores neste ecrã.",
+      "hint": "Vínculos + contratos, ou o livro combinado. Opcionalmente uma folha de remunerações/ausências (NISS, tipo, início). Sem nomes, taxas ou valores neste ecrã.",
       "uploadTitle": "Ficheiro do mês",
       "month": "Mês",
       "upload": "Enviar xlsx ou csv",
@@ -245,6 +245,8 @@
       "taxa": "Taxa",
       "missing": "Em falta",
       "conflicts": "Conflitos",
+      "leaveStarted": "Ausências iniciadas",
+      "leaveEnded": "Ausências terminadas",
       "statusApplied": "Aplicado",
       "statusFailed": "Falhou",
       "statusParsed": "Lido",

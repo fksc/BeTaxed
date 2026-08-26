@@ -20,6 +20,8 @@ from tests.ss_xlsx_fixtures import (
     combined_workbook,
     contratos_only_csv,
     contratos_only_workbook,
+    leave_row,
+    remuneracoes_only_workbook,
     unnamed_sheet_workbooks,
     vinculos_only_csv,
     vinculos_only_workbook,
@@ -177,3 +179,49 @@ def test_csv_cp1252_headers() -> None:
         ]
     )
     assert parsed.vinculos[0].workplace_ss_label == "Sede"
+
+
+def test_combined_without_remuneracoes_does_not_declare_leave() -> None:
+    parsed = parse_ss_files(
+        [SsSourceFile("combined.xlsx", combined_workbook())]
+    )
+    assert parsed.leave_declared is False
+    assert parsed.leaves == []
+
+
+def test_combined_remuneracoes_sheet_parses_leave() -> None:
+    parsed = parse_ss_files(
+        [
+            SsSourceFile(
+                "combined.xlsx",
+                combined_workbook(leave_rows=[leave_row(PERSON_A, leave_type="Doença")]),
+            )
+        ]
+    )
+    assert parsed.leave_declared is True
+    assert parsed.file_kinds == ["COMBINED_XLSX"]
+    assert len(parsed.leaves) == 1
+    row = parsed.leaves[0]
+    assert row.niss == PERSON_A
+    assert row.leave_type == "SICKNESS"
+    assert row.started_on == date(2026, 3, 1)
+    assert row.ended_on is None
+
+
+def test_three_files_vinculos_contratos_remuneracoes() -> None:
+    parsed = parse_ss_files(
+        [
+            SsSourceFile("vinculos.xlsx", vinculos_only_workbook()),
+            SsSourceFile("contratos.xlsx", contratos_only_workbook()),
+            SsSourceFile("ausencias.xlsx", remuneracoes_only_workbook()),
+        ]
+    )
+    assert set(parsed.file_kinds) == {"VINCULOS", "CONTRATOS", "REMUNERACOES"}
+    assert parsed.leave_declared is True
+    assert parsed.leaves[0].leave_type == "PARENTAL"
+
+
+def test_unknown_leave_type_fails_closed() -> None:
+    content = combined_workbook(leave_rows=[leave_row(PERSON_A, leave_type="21")])
+    with pytest.raises(SsParseError, match="Unknown leave type"):
+        parse_ss_files([SsSourceFile("combined.xlsx", content)])

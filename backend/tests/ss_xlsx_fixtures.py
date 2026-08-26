@@ -132,12 +132,31 @@ def build_xlsx(sheets: dict[str, list[list[Any]]]) -> bytes:
     return buffer.getvalue()
 
 
+LEAVE_HEADERS = [
+    "NISS",
+    "Tipo de ausência",
+    "Início ausência",
+    "Fim ausência",
+]
+
+
+def leave_row(
+    niss: str,
+    *,
+    leave_type: str = "PARENTAL",
+    started: date = date(2026, 3, 1),
+    ended: date | None = None,
+) -> list[Any]:
+    return [niss, leave_type, started, ended]
+
+
 def combined_workbook(
     *,
     extra_vinculo_headers: list[str] | None = None,
     extra_vinculo_values: list[Any] | None = None,
     include_closed_pay: bool = True,
     vinculo_headers: list[str] | None = None,
+    leave_rows: list[list[Any]] | None = None,
 ) -> bytes:
     v_headers = list(vinculo_headers or VINCULO_HEADERS)
     if extra_vinculo_headers:
@@ -177,12 +196,18 @@ def combined_workbook(
             salary=2000,
         )
     )
-    return build_xlsx(
-        {
-            "Vínculos": [v_headers, person_a, person_b],
-            "Contratos": contratos,
-        }
-    )
+    sheets: dict[str, list[list[Any]]] = {
+        "Vínculos": [v_headers, person_a, person_b],
+        "Contratos": contratos,
+    }
+    if leave_rows is not None:
+        sheets["Remunerações"] = [LEAVE_HEADERS, *leave_rows]
+    return build_xlsx(sheets)
+
+
+def remuneracoes_only_workbook(rows: list[list[Any]] | None = None) -> bytes:
+    data = rows if rows is not None else [leave_row(PERSON_A)]
+    return build_xlsx({"Ausências": [LEAVE_HEADERS, *data]})
 
 
 def vinculos_only_workbook() -> bytes:

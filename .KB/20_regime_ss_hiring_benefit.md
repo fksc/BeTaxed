@@ -50,7 +50,7 @@ Schema implication: `employment_event` on termination stores `initiator` + `reas
 
 **Gives:** employer NISS (in query metadata), employee NISS, DOB, vínculo dates, taxa %, workplace, contract modality, profession, rendimento periods and base pay.
 
-**Does not give:** first-job at another employer (company onboarding / ops flag — still file), trailing-12 headcount if we have no history, who initiated a termination, parental-leave codes (those likely live on monthly remunerations declarations — ingest when we have that file type). AT/SS no-debt PDFs are **separate uploads**, not the extract.
+**Does not give:** first-job at another employer (company onboarding / ops flag — still file), trailing-12 headcount if we have no history, who initiated a termination, official remunerações/DR leave **codes** (samples have no DR file; BeTaxed leave ingest uses documented NISS + tipo de ausência + início ausência, DEV-849). AT/SS no-debt PDFs are **separate uploads**, not the extract.
 
 **Can be wrong:** modality and dates on Direct are what the employer (or a previous declaration) sent. Worked example (Aug 2026 extract, no names in this doc): two people coded **sem termo** from early 2021 → engine remaining months = 0. Paper contracts were **termo certo** starting Feb 2022 and May 2022 → clock from those dates still has months left. Pass 1 cannot see that. After workspace, check each contract vs the CSV (`KB/10`, `KB/04`). `source = CONTRACT` wins on modality/`signed_on` when ops mark `MISMATCH`.
 

@@ -6,17 +6,18 @@
 
 ## Overview
 
-Companies declare to Segurança Social every month (two files, usually csv). They upload the same (or the combined Excel export) here.
+Companies declare to Segurança Social every month (two files, usually csv). They upload the same (or the combined Excel export) here. Parental/sickness leave is **not** on the sample vínculos+contratos extract. When present, a remunerações **leave** sheet or third file is stored on `ss_raw_leave` (DEV-849).
 
 ```
 ss_batch (one upload / one month)
   ├── stored files (GCS)
   ├── ss_raw_vinculo  (immutable)
   ├── ss_raw_contrato (immutable)
+  ├── ss_raw_leave    (immutable; optional remunerações leave sheet)
   └── apply → employee / employment / compensation_period + employment_event
 ```
 
-Ignore analyst-only columns (idade, fee/ano, VLOOKUP). Parser maps official headers only (`KB/20`).
+Ignore analyst-only columns (idade, fee/ano, VLOOKUP). Parser maps official vínculos/contratos headers (`KB/20`). Leave uses the BeTaxed ingest headers below — **not** official SS Declaração de Remunerações column names (no sample).
 
 ---
 
@@ -35,6 +36,7 @@ CREATE TABLE ss_batch (
         CHECK (parse_status IN ('PENDING', 'PARSED', 'FAILED', 'APPLIED', 'DISCARDED')),
     parse_error TEXT,
     export_label TEXT,                      -- e.g. query name 25157…_vinculos_2026_08_12
+    leave_declared BOOLEAN NOT NULL DEFAULT FALSE,
     CHECK (company_id IS NOT NULL OR intake_id IS NOT NULL)
 );
 
@@ -56,11 +58,11 @@ CREATE TABLE ss_batch_file (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     batch_id UUID NOT NULL REFERENCES ss_batch(id) ON DELETE CASCADE,
     file_id UUID NOT NULL,                  -- stored_file.id
-    kind VARCHAR(16) NOT NULL CHECK (kind IN ('COMBINED_XLSX', 'VINCULOS', 'CONTRATOS', 'OTHER'))
+    kind VARCHAR(16) NOT NULL CHECK (kind IN ('COMBINED_XLSX', 'VINCULOS', 'CONTRATOS', 'REMUNERACOES', 'OTHER'))
 );
 ```
 
-One combined xlsx (sample) or two files (xlsx or csv) — same batch.
+One combined xlsx (sample) or two files (xlsx or csv), optionally plus a remunerações leave file — same batch. `leave_declared` is true when that sheet/file was present (including empty of rows), so apply can end SS leave. Omitting the file does **not** invent `LEAVE_ENDED`.
 
 ---
 
@@ -75,6 +77,27 @@ Minimum contrato columns: niss_hash, modality raw, work mode, contract start/end
 Exact CREATE TABLE column lists can match parser structs; **do not** invent fee columns.
 
 Re-parse is allowed: new raw rows from the same file bytes, or `DISCARDED` + new batch. Do not mutate applied canonical history; emit correcting events.
+
+---
+
+## Table: ss_raw_leave
+
+BeTaxed remunerações **leave** ingest (DEV-849). Required folded headers: `niss`, `tipo de ausencia` (aliases: `tipo de baixa`, `leave type`), `inicio ausencia` (aliases: `data inicio ausencia`, `started on`). Optional `fim ausencia`. Leave type cells map to `PARENTAL` | `SICKNESS` | `UNPAID` | `OTHER` (Portuguese aliases: doença, licença parental, não remunerada, outra). Unknown values fail closed. **Do not** treat these names as official Segurança Social DR columns; map official headers here when a sample exists.
+
+```sql
+CREATE TABLE ss_raw_leave (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    batch_id UUID NOT NULL REFERENCES ss_batch(id) ON DELETE CASCADE,
+    source_row INTEGER NOT NULL,
+    niss_hash BYTEA NOT NULL,
+    niss_enc BYTEA NOT NULL,
+    leave_type VARCHAR(24) NOT NULL
+        CHECK (leave_type IN ('PARENTAL', 'SICKNESS', 'UNPAID', 'OTHER')),
+    started_on DATE NOT NULL,
+    ended_on DATE,
+    leftover JSONB
+);
+```
 
 ---
 
@@ -98,8 +121,10 @@ Diff mapping (v1 from vínculos + contratos):
 | Taxa changed | `TSU_RATE_CHANGED` |
 | Present last month, absent this month | `MISSING_FROM_DECLARATION` |
 | User status ≠ SS | `SOURCE_CONFLICT` (do not auto-overwrite user) |
+| Remunerações open leave (`ended_on` empty) | `LEAVE_STARTED`, `source = SS_DIFF`, `employee.status = ON_LEAVE` |
+| Remunerações file present and person no longer on leave | `LEAVE_ENDED`, `source = SS_DIFF` |
 
-Leave types: not in the sample extract. When monthly remunerations files exist, add a raw table and `LEAVE_*` events. Until then, `USER` can set `ON_LEAVE`.
+Vínculos + contratos must **not** fake `LEAVE_*`. USER/ADMIN `status_source` still wins: disagreeing remunerações emits `SOURCE_CONFLICT` and does not clobber.
 
 ---
 
