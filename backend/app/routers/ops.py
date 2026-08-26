@@ -16,6 +16,7 @@ from app.schemas.billing import (
     CommercialTermsIn,
     CommercialTermsOut,
     DraftInvoiceIn,
+    InvoicingMethodIn,
     ResolveInvoiceIn,
     StaffInvoiceOut,
 )
@@ -29,6 +30,7 @@ from app.services.billing import (
     list_all_invoices,
     list_commercial_terms,
     resolve_invoice,
+    set_invoicing_method,
     staff_invoice_dict,
     void_invoice,
 )
@@ -208,3 +210,24 @@ async def post_commercial_terms(
     await db.commit()
     await db.refresh(row)
     return CommercialTermsOut.model_validate(row)
+
+
+@router.post("/companies/{company_id}/invoicing")
+async def post_invoicing_method(
+    company_id: uuid.UUID,
+    body: InvoicingMethodIn,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str | None]:
+    company = await set_invoicing_method(
+        db,
+        company_id,
+        invoicing_method=body.invoicing_method,
+        certified_vendor_name=body.certified_vendor_name,
+        update_vendor_name="certified_vendor_name" in body.model_fields_set,
+    )
+    await db.commit()
+    return {
+        "invoicing_method": company.invoicing_method,
+        "certified_vendor_name": company.certified_vendor_name,
+    }

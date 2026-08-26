@@ -180,7 +180,13 @@
       "needAuth": "Could not load invoices.",
       "issued": "Issued",
       "due": "Due",
-      "paid": "Paid"
+      "paid": "Paid",
+      "legalNumber": "Fatura number",
+      "atcud": "ATCUD",
+      "attachLegal": "Attach certified PDF",
+      "proforma": "Proforma",
+      "legalPdf": "Legal PDF",
+      "attachFailed": "Could not attach the file."
     },
     "peopleCrumb": "People",
     "people": {
@@ -323,7 +329,15 @@
       "reason": "Reason",
       "draftFailed": "Could not create a draft.",
       "issueFailed": "Could not issue.",
-      "resolveFailed": "Could not resolve."
+      "resolveFailed": "Could not resolve.",
+      "method": "Invoicing method",
+      "vendor": "Certified vendor",
+      "saveMethod": "Save method",
+      "methodFailed": "Could not save invoicing method.",
+      "vendorId": "Vendor record id",
+      "atcud": "ATCUD",
+      "proforma": "Proforma",
+      "legalPdf": "Legal PDF"
     }
   },
   "marketing": {

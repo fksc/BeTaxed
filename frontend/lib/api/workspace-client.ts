@@ -197,3 +197,69 @@ export async function resolveInvoice(
     opts,
   );
 }
+
+export async function uploadProforma(
+  invoiceId: string,
+  file: File,
+  opts: AuthOpts,
+): Promise<CompanyInvoiceOut> {
+  const body = new FormData();
+  body.set("file", file);
+  return apiJson<CompanyInvoiceOut>(
+    `/v1/invoices/${invoiceId}/proforma`,
+    { method: "POST", body },
+    opts,
+  );
+}
+
+export async function uploadLegalPdf(
+  invoiceId: string,
+  file: File,
+  fields: {
+    legalNumber?: string;
+    atcud?: string;
+    certifiedExternalId?: string;
+    dueOn?: string;
+  },
+  opts: AuthOpts,
+): Promise<CompanyInvoiceOut> {
+  const body = new FormData();
+  body.set("file", file);
+  if (fields.legalNumber) {
+    body.set("legal_invoice_number", fields.legalNumber);
+  }
+  if (fields.atcud) {
+    body.set("atcud", fields.atcud);
+  }
+  if (fields.certifiedExternalId) {
+    body.set("certified_external_id", fields.certifiedExternalId);
+  }
+  if (fields.dueOn) {
+    body.set("due_on", fields.dueOn);
+  }
+  return apiJson<CompanyInvoiceOut>(
+    `/v1/invoices/${invoiceId}/legal-pdf`,
+    { method: "POST", body },
+    opts,
+  );
+}
+
+export async function setCompanyInvoicing(
+  companyId: string,
+  invoicingMethod: string,
+  certifiedVendorName: string,
+  opts: AuthOpts,
+): Promise<{ invoicing_method: string | null; certified_vendor_name: string | null }> {
+  return apiJson(
+    `/v1/ops/companies/${companyId}/invoicing`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        invoicing_method: invoicingMethod,
+        certified_vendor_name: certifiedVendorName || null,
+      }),
+    },
+    opts,
+  );
+}

@@ -33,7 +33,9 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
 - `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.
 - `GET /v1/ops/benefit-cases` — staff-only internal cases (state, remaining months, monthly saving). Never on company APIs.
-- `GET /v1/invoices` — Admin/Finance/staff. Totals and generic lines. No employee recipe.
+- `GET /v1/invoices` — Admin/Finance/staff. Totals and generic lines. No employee recipe. No `certified_external_id`.
+- `POST /v1/invoices/{id}/proforma` / `legal-pdf` — Admin/Finance/staff attach PROFORMA and certified fatura PDF (`INVOICE_PDF`). Stores `legal_invoice_number` / `atcud`. Staff may set `certified_external_id`. No vendor API (choice still open).
+- `POST /v1/ops/companies/{id}/invoicing` — staff set `CERTIFIED_SOFTWARE` or `STRIPE_SEPA` plus optional `certified_vendor_name`.
 - `POST /v1/ops/companies/{id}/invoices` — staff draft from unlocked billable `saving_month` rows.
 - `POST /v1/ops/invoices/{id}/issue` / `resolve` / `void` — status ledger. Manual resolve stores actor + reason.
 - `POST /v1/webhooks/stripe` — marks PAID when `stripe_invoice_id` matches. SEPA collection is a later ticket.

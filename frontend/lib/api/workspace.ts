@@ -126,6 +126,9 @@ export type CompanyInvoiceOut = {
   due_on: string | null;
   paid_on: string | null;
   legal_invoice_number: string | null;
+  atcud: string | null;
+  has_proforma: boolean;
+  has_legal_pdf: boolean;
   lines: CompanyInvoiceLineOut[];
 };
 
@@ -152,6 +155,10 @@ export type StaffInvoiceOut = {
   due_on: string | null;
   paid_on: string | null;
   legal_invoice_number: string | null;
+  atcud: string | null;
+  certified_external_id: string | null;
   stripe_invoice_id: string | null;
+  has_proforma: boolean;
+  has_legal_pdf: boolean;
   lines: StaffInvoiceLineOut[];
 };

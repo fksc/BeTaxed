@@ -12,6 +12,7 @@ import {
   issueInvoice,
   listOpsInvoices,
   resolveInvoice,
+  setCompanyInvoicing,
 } from "@/lib/api/workspace-client";
 import type { StaffInvoiceOut } from "@/lib/api/workspace";
 import { currentIdToken } from "@/lib/firebase";
@@ -29,6 +30,8 @@ export function OpsInvoicesPage() {
   const [companyId, setCompanyId] = useState("");
   const [period, setPeriod] = useState(currentMonthFirst);
   const [reason, setReason] = useState("Bank transfer received");
+  const [method, setMethod] = useState("CERTIFIED_SOFTWARE");
+  const [vendor, setVendor] = useState("");
 
   async function reload() {
     const idToken = await currentIdToken();
@@ -56,6 +59,22 @@ export function OpsInvoicesPage() {
       await reload();
     } catch {
       setError(t("draftFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onMethod() {
+    const idToken = await currentIdToken();
+    if (!idToken || !companyId) {
+      return;
+    }
+    setBusy("method");
+    try {
+      await setCompanyInvoicing(companyId, method, vendor, { idToken });
+      await reload();
+    } catch {
+      setError(t("methodFailed"));
     } finally {
       setBusy(null);
     }
@@ -131,6 +150,41 @@ export function OpsInvoicesPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("method")}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-2 pt-1">
+            <label className="text-xs">
+              {t("method")}
+              <select
+                className="mt-1 block h-9 rounded-md border border-input bg-background px-2 text-sm"
+                value={method}
+                onChange={(event) => setMethod(event.target.value)}
+              >
+                <option value="CERTIFIED_SOFTWARE">CERTIFIED_SOFTWARE</option>
+                <option value="STRIPE_SEPA">STRIPE_SEPA</option>
+              </select>
+            </label>
+            <label className="text-xs">
+              {t("vendor")}
+              <Input
+                className="mt-1 w-56"
+                value={vendor}
+                onChange={(event) => setVendor(event.target.value)}
+              />
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy === "method"}
+              onClick={() => void onMethod()}
+            >
+              {t("saveMethod")}
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("title")}</CardTitle>
             <CardDescription className="text-xs">{t("lead")}</CardDescription>
           </CardHeader>
@@ -153,10 +207,17 @@ export function OpsInvoicesPage() {
                 >
                   <div>
                     <div className="text-sm font-medium">
-                      {row.company_id.slice(0, 8)} · {row.status} · {row.total}
+                      {row.legal_invoice_number || row.company_id.slice(0, 8)} · {row.status} ·{" "}
+                      {row.total}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {row.period_from} → {row.period_to}
+                      {row.atcud ? ` · ${t("atcud")} ${row.atcud}` : ""}
+                      {row.certified_external_id
+                        ? ` · ${t("vendorId")} ${row.certified_external_id}`
+                        : ""}
+                      {row.has_proforma ? ` · ${t("proforma")}` : ""}
+                      {row.has_legal_pdf ? ` · ${t("legalPdf")}` : ""}
                       {row.lines.some((line) => line.saving_amount != null)
                         ? ` · ${row.lines.length} lines`
                         : ""}
