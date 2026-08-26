@@ -40,7 +40,7 @@ from app.services.intake import (
 )
 from app.services.ss_apply import apply_ss_batch
 from app.services.ss_ingest import ingest_ss_export
-from app.services.ss_parser import SsSourceFile
+from app.services.ss_upload import parse_period_year_month, read_ss_upload_files
 from app.services.teaser import compute_verbose_people, persist_intake_teaser
 from app.settings import HEADER_INTAKE_SESSION, verbose_people_enabled
 
@@ -93,8 +93,8 @@ async def post_intake_upload(
     intake = await load_intake_or_404(db, intake_id)
     require_intake_access(intake, user, session_token)
     require_open(intake)
-    sources = await _read_sources(files)
-    period = _parse_period(period_year_month)
+    sources = await read_ss_upload_files(files)
+    period = parse_period_year_month(period_year_month)
     result = await ingest_ss_export(
         db,
         files=sources,
@@ -207,41 +207,3 @@ async def _created_out(
 ) -> IntakeCreatedOut:
     base = await _intake_out(db, intake, latest)
     return IntakeCreatedOut(**base.model_dump(), session_token=plaintext)
-
-
-async def _read_sources(files: list[UploadFile]) -> list[SsSourceFile]:
-    if not files:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one SS export file is required.",
-        )
-    sources: list[SsSourceFile] = []
-    for item in files:
-        content = await item.read()
-        if not content:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Uploaded file is empty.",
-            )
-        sources.append(SsSourceFile(item.filename or "upload.xlsx", content))
-    return sources
-
-
-def _parse_period(raw: str) -> date:
-    value = raw.strip()
-    try:
-        if len(value) == 7 and value[4] == "-":
-            parsed = date(int(value[:4]), int(value[5:7]), 1)
-        else:
-            parsed = date.fromisoformat(value)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="period_year_month must be YYYY-MM or YYYY-MM-DD.",
-        ) from exc
-    if parsed.day != 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="period_year_month must be the first of the month.",
-        )
-    return parsed

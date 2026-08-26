@@ -10,7 +10,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.dev.example .env
-alembic upgrade head   # … DEV-832 intake; DEV-834 employment apply/diff
+alembic upgrade head   # … DEV-832 intake; DEV-834 employment apply/diff; DEV-835 headcount
 uvicorn app.main:app --reload --port 8080
 ```
 
@@ -25,6 +25,9 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `GET /health` — process liveness (no DB)
 - `GET /ready` — PostgreSQL `SELECT 1`; Redis ping when `REDIS_URL` is set
 - `GET /v1/people` — company people (Admin/HR/staff). `X-Company-Id` required. No NISS, no recipe.
+- `POST /v1/ss-batches` — company monthly SS extract (`files` + `period_year_month`). Admin/HR/staff. Parses, fail-closed on employer NISS mismatch (409), then applies and upserts `company_headcount_month` (`SS_BATCH`).
+- `GET /v1/ss-batches` — period, parse status, event **counts** only (no names, rates, or pay).
+- `GET /v1/headcount-months` / `PUT /v1/headcount-months` — SS_BATCH and USER rows. USER does not overwrite SS_BATCH. Admin/HR/staff on PUT.
 - `POST /v1/people/{employee_id}/contracts` — PDF upload; emits `CONTRACT_UPLOADED` then stub/Gemini review (`CONTRACT_LLM`).
 - `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
 - `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.

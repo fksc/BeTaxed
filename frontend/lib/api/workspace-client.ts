@@ -1,5 +1,12 @@
 import { apiJson, type AuthOpts } from "@/lib/api/http";
-import type { MeOut, MismatchFlag, NotificationList, PersonOut } from "@/lib/api/workspace";
+import type {
+  HeadcountMonthOut,
+  MeOut,
+  MismatchFlag,
+  NotificationList,
+  PersonOut,
+  SsBatchOut,
+} from "@/lib/api/workspace";
 
 export async function getMe(opts: AuthOpts): Promise<MeOut> {
   return apiJson<MeOut>("/v1/me", { method: "GET" }, opts);
@@ -45,6 +52,43 @@ export async function applyContractDocument(
   await apiJson(
     `/v1/ops/employment-documents/${documentId}/apply`,
     { method: "POST" },
+    opts,
+  );
+}
+
+export async function listSsBatches(opts: AuthOpts): Promise<SsBatchOut[]> {
+  return apiJson<SsBatchOut[]>("/v1/ss-batches", { method: "GET" }, opts);
+}
+
+export async function uploadCompanySs(
+  files: File[],
+  periodYearMonth: string,
+  opts: AuthOpts,
+): Promise<SsBatchOut> {
+  const body = new FormData();
+  body.set("period_year_month", periodYearMonth);
+  for (const file of files) {
+    body.append("files", file);
+  }
+  return apiJson<SsBatchOut>("/v1/ss-batches", { method: "POST", body }, opts);
+}
+
+export async function listHeadcountMonths(opts: AuthOpts): Promise<HeadcountMonthOut[]> {
+  return apiJson<HeadcountMonthOut[]>("/v1/headcount-months", { method: "GET" }, opts);
+}
+
+export async function putUserHeadcount(
+  yearMonth: string,
+  headcount: number,
+  opts: AuthOpts,
+): Promise<HeadcountMonthOut> {
+  return apiJson<HeadcountMonthOut>(
+    "/v1/headcount-months",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year_month: yearMonth, headcount }),
+    },
     opts,
   );
 }

@@ -44,10 +44,10 @@ export function WorkspaceSidebar() {
       soon: false,
     },
     {
-      href: paths.companiesDashboard,
+      href: paths.companiesDeclarations,
       label: t("nav.declarations"),
       icon: FileSpreadsheet,
-      soon: true,
+      soon: false,
     },
     {
       href: paths.companiesDashboard,

@@ -145,9 +145,10 @@
       "title": "A seguir no espaço",
       "lead": "Os mesmos totais da leitura. O resto do ciclo vem em tickets posteriores.",
       "people": "Pessoas e contratos — envie os ficheiros em Pessoas.",
-      "declarations": "Ficheiros mensais da Segurança Social — ainda não neste ecrã.",
+      "declarations": "Ficheiros mensais da Segurança Social — envie-os em Declarações.",
       "billing": "Faturas — ainda não neste ecrã.",
-      "openPeople": "Abrir Pessoas"
+      "openPeople": "Abrir Pessoas",
+      "openDeclarations": "Abrir Declarações"
     },
     "activity": {
       "title": "Atividade recente",
@@ -171,6 +172,39 @@
       "failed": "Não foi possível ler o ficheiro",
       "upload": "Enviar PDF",
       "uploadFailed": "O envio falhou."
+    },
+    "declarationsCrumb": "Declarações",
+    "declarations": {
+      "lead": "Envie a declaração mensal da Segurança Social. Mostramos só as contagens do último ficheiro aplicado.",
+      "hint": "Sem nomes, taxas ou valores neste ecrã.",
+      "uploadTitle": "Ficheiro do mês",
+      "month": "Mês",
+      "upload": "Enviar xlsx ou csv",
+      "uploadFailed": "O envio falhou.",
+      "forbidden": "Só Admin ou HR podem enviar declarações.",
+      "nissMismatch": "O NISS da entidade não corresponde a esta empresa.",
+      "empty": "Ainda sem declarações neste espaço.",
+      "batchesTitle": "Ficheiros anteriores",
+      "joiners": "Entradas",
+      "leavers": "Saídas",
+      "rehires": "Readmissões",
+      "pay": "Remuneração",
+      "modality": "Modalidade",
+      "taxa": "Taxa",
+      "missing": "Em falta",
+      "conflicts": "Conflitos",
+      "statusApplied": "Aplicado",
+      "statusFailed": "Falhou",
+      "statusParsed": "Lido",
+      "statusPending": "Pendente",
+      "headcountTitle": "Efetivos",
+      "headcountLead": "Até existirem 12 meses de ficheiros SS, pode indicar efetivos à mão. O número da Segurança Social não é substituído.",
+      "ssHeadcount": "SS {month}: {count}",
+      "userHeadcount": "Efetivos (utilizador)",
+      "saveUser": "Guardar",
+      "userSaved": "Valor do utilizador neste mês: {count}",
+      "headcountInvalid": "Indique um número igual ou superior a zero.",
+      "headcountFailed": "Não foi possível guardar os efetivos."
     }
   },
   "admins": {

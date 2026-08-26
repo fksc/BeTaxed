@@ -9,6 +9,7 @@ export const paths = {
   companies: "/companies",
   companiesDashboard: "/companies/dashboard",
   companiesPeople: "/companies/people",
+  companiesDeclarations: "/companies/declarations",
   companiesSettings: "/companies/settings",
   admins: "/admins",
   adminsDashboard: "/admins/dashboard",

@@ -3,6 +3,7 @@ from app.routers.me import router as me_router
 from app.routers.notifications import router as notifications_router
 from app.routers.ops import router as ops_router
 from app.routers.people import router as people_router
+from app.routers.ss_batches import router as ss_batches_router
 
 __all__ = [
     "intakes_router",
@@ -10,4 +11,5 @@ __all__ = [
     "notifications_router",
     "ops_router",
     "people_router",
+    "ss_batches_router",
 ]

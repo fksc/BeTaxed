@@ -16,6 +16,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
     text,
 )
@@ -190,3 +191,47 @@ class SsRawContrato(Base):
     leftover: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     batch: Mapped[SsBatch] = relationship(back_populates="contratos")
+
+
+class CompanyHeadcountMonth(Base):
+    __tablename__ = "company_headcount_month"
+    __table_args__ = (
+        CheckConstraint(
+            "source IN ('SS_BATCH', 'USER')",
+            name="ck_company_headcount_month_source",
+        ),
+        CheckConstraint(
+            "EXTRACT(DAY FROM year_month) = 1",
+            name="ck_company_headcount_month_first_of_month",
+        ),
+        CheckConstraint(
+            "headcount >= 0",
+            name="ck_company_headcount_month_nonneg",
+        ),
+        UniqueConstraint(
+            "company_id",
+            "year_month",
+            "source",
+            name="uq_company_headcount_month_company_year_source",
+        ),
+        Index("idx_company_headcount_month_company", "company_id", "year_month"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("company.id"),
+        nullable=False,
+    )
+    year_month: Mapped[date] = mapped_column(Date, nullable=False)
+    headcount: Mapped[int] = mapped_column(Integer, nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("ss_batch.id", ondelete="SET NULL"),
+        nullable=True,
+    )

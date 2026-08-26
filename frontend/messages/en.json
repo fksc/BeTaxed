@@ -145,9 +145,10 @@
       "title": "Next in the workspace",
       "lead": "Same totals as the reading. The rest of the loop comes in later tickets.",
       "people": "People and contracts — upload signed files in People.",
-      "declarations": "Monthly Segurança Social files — not in this screen yet.",
+      "declarations": "Monthly Segurança Social files — upload them in Declarations.",
       "billing": "Invoices — not in this screen yet.",
-      "openPeople": "Open People"
+      "openPeople": "Open People",
+      "openDeclarations": "Open Declarations"
     },
     "activity": {
       "title": "Recent activity",
@@ -171,6 +172,39 @@
       "failed": "Could not read the file",
       "upload": "Upload PDF",
       "uploadFailed": "Upload failed."
+    },
+    "declarationsCrumb": "Declarations",
+    "declarations": {
+      "lead": "Upload the monthly Segurança Social extract. We show counts from the latest applied file only.",
+      "hint": "No names, rates, or pay amounts on this screen.",
+      "uploadTitle": "This month’s file",
+      "month": "Month",
+      "upload": "Upload xlsx or csv",
+      "uploadFailed": "Upload failed.",
+      "forbidden": "Only Admin or HR can upload declarations.",
+      "nissMismatch": "The employer NISS does not match this company.",
+      "empty": "No declarations in this workspace yet.",
+      "batchesTitle": "Previous files",
+      "joiners": "Joiners",
+      "leavers": "Leavers",
+      "rehires": "Rehires",
+      "pay": "Pay",
+      "modality": "Modality",
+      "taxa": "Rate",
+      "missing": "Missing",
+      "conflicts": "Conflicts",
+      "statusApplied": "Applied",
+      "statusFailed": "Failed",
+      "statusParsed": "Parsed",
+      "statusPending": "Pending",
+      "headcountTitle": "Headcount",
+      "headcountLead": "Until there are 12 months of SS files, you can enter headcount by hand. The SS figure is not overwritten.",
+      "ssHeadcount": "SS {month}: {count}",
+      "userHeadcount": "Headcount (user)",
+      "saveUser": "Save",
+      "userSaved": "User value for this month: {count}",
+      "headcountInvalid": "Enter a number of zero or more.",
+      "headcountFailed": "Could not save headcount."
     }
   },
   "admins": {

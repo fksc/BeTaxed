@@ -12,11 +12,18 @@ from app.models.employment import (
     StoredFile,
     Workplace,
 )
-from app.models.ss_ingest import SsBatch, SsBatchFile, SsRawContrato, SsRawVinculo
+from app.models.ss_ingest import (
+    CompanyHeadcountMonth,
+    SsBatch,
+    SsBatchFile,
+    SsRawContrato,
+    SsRawVinculo,
+)
 
 __all__ = [
     "Base",
     "Company",
+    "CompanyHeadcountMonth",
     "CompanyMembership",
     "CompensationPeriod",
     "DomainEvent",

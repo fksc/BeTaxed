@@ -51,3 +51,19 @@ export type MismatchFlag = {
   ops_confirmed_at: string | null;
   created_at: string;
 };
+
+export type SsBatchOut = {
+  id: string;
+  period_year_month: string;
+  parse_status: string;
+  parse_error: string | null;
+  uploaded_at: string;
+  event_counts: Record<string, number>;
+};
+
+export type HeadcountMonthOut = {
+  year_month: string;
+  headcount: number;
+  source: string;
+  source_batch_id: string | null;
+};
