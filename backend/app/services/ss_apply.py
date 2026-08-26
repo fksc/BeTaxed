@@ -92,6 +92,12 @@ async def apply_ss_batch(session: AsyncSession, batch_id: uuid.UUID) -> SsApplyR
 
     batch.parse_status = "APPLIED"
     await upsert_ss_batch_headcount(session, batch)
+    if batch.company_id is not None:
+        from app.services.benefit_engine import rebuild_company_ledger
+
+        await rebuild_company_ledger(
+            session, batch.company_id, batch.period_year_month
+        )
     await session.flush()
     return SsApplyResult(batch=batch, event_types=event_types)
 
@@ -124,6 +130,9 @@ async def delete_company_employment_spine(
 ) -> None:
     emp_ids = select(Employee.id).where(Employee.company_id == company_id)
     empl_ids = select(Employment.id).where(Employment.company_id == company_id)
+    from app.services.benefit_engine import delete_company_benefit_spine
+
+    await delete_company_benefit_spine(session, company_id)
     await session.execute(
         delete(CompanyHeadcountMonth).where(
             CompanyHeadcountMonth.company_id == company_id

@@ -157,7 +157,18 @@
     "settings": {
       "crumb": "Definições",
       "title": "Definições da empresa",
-      "lead": "Membros, faturação e preferências — ainda não neste ecrã."
+      "lead": "Envie as declarações de não dívida SS e AT. Só Admin e Finance.",
+      "certsTitle": "Declarações de não dívida",
+      "certsHint": "Cada ficheiro vale quatro meses a partir da data de emissão, salvo override.",
+      "kind": "Tipo",
+      "issuedOn": "Emitido em",
+      "validUntil": "Válido até",
+      "ss": "SS sem dívida",
+      "at": "AT sem dívida",
+      "upload": "Enviar PDF",
+      "uploadFailed": "O envio falhou.",
+      "forbidden": "Só Admin ou Finance podem enviar certificados.",
+      "empty": "Ainda sem certificados."
     },
     "peopleCrumb": "Pessoas",
     "people": {
@@ -236,6 +247,7 @@
     "nav": {
       "overview": "Visão geral",
       "flags": "Alertas de contrato",
+      "cases": "Processos",
       "companies": "Empresas",
       "intakes": "Leituras"
     },
@@ -270,6 +282,19 @@
       "applied": "Aplicado ao emprego.",
       "needAuth": "Não foi possível carregar os alertas.",
       "applyFailed": "Não foi possível aplicar."
+    },
+    "cases": {
+      "crumb": "Processos",
+      "title": "Processos internos",
+      "lead": "Só staff. Esta é a espinha de submissão, não uma receita para a empresa.",
+      "hint": "Meses de baixa não são faturáveis. O headcount testa-se na submissão.",
+      "table": "Processos",
+      "empty": "Ainda sem processos. Converta um espaço primeiro.",
+      "unnamed": "Pessoa",
+      "remaining": "{count} meses em falta",
+      "submit": "Registar candidatura",
+      "submitFailed": "Não foi possível submeter.",
+      "needAuth": "Não foi possível carregar os processos."
     }
   },
   "marketing": {

@@ -126,6 +126,10 @@ async def override_employee_status(
         )
 
     await session.flush()
+    if employee.company_id is not None:
+        from app.services.benefit_engine import rebuild_company_ledger
+
+        await rebuild_company_ledger(session, employee.company_id, date.today())
     await emit_domain_event(
         session,
         event_type="EMPLOYEE_STATUS_OVERRIDE",

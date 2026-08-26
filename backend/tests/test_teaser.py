@@ -195,7 +195,7 @@ def test_teaser_persists_now_and_potential_only(db_session) -> None:
                 assert intake.teaser_potential_monthly == potential_monthly
                 assert intake.teaser_potential_window == potential_window
                 assert intake.teaser_currency == "EUR"
-                assert intake.teaser_regime_id is None
+                assert intake.teaser_regime_id is not None
 
                 employees = (
                     await session.execute(

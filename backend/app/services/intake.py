@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -174,6 +174,18 @@ async def convert_intake(
 
     await attach_employment_company(session, intake.id, company.id)
     await upsert_headcount_for_company_applied_batches(session, company.id)
+    from app.services.benefit_engine import rebuild_company_ledger
+
+    latest = (
+        await session.execute(
+            select(SsBatch)
+            .where(SsBatch.company_id == company.id)
+            .order_by(SsBatch.period_year_month.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    as_of = latest.period_year_month if latest is not None else date.today()
+    await rebuild_company_ledger(session, company.id, as_of)
 
     await _rekey_intake_to_company(session, intake.id, company)
 

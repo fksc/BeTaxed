@@ -38,6 +38,12 @@ export function AdminsSidebar() {
       soon: false,
     },
     {
+      href: paths.adminsCases,
+      label: t("nav.cases"),
+      icon: FileInput,
+      soon: false,
+    },
+    {
       href: paths.adminsDashboard,
       label: t("nav.companies"),
       icon: Building2,

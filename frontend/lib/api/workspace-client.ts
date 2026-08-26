@@ -1,5 +1,8 @@
 import { apiJson, type AuthOpts } from "@/lib/api/http";
 import type {
+  BenefitCaseOut,
+  CertificateOut,
+  CompanyApplicationOut,
   HeadcountMonthOut,
   MeOut,
   MismatchFlag,
@@ -111,4 +114,36 @@ export async function putUserHeadcount(
     },
     opts,
   );
+}
+
+export async function listBenefitCases(opts: AuthOpts): Promise<BenefitCaseOut[]> {
+  return apiJson<BenefitCaseOut[]>("/v1/ops/benefit-cases", { method: "GET" }, opts);
+}
+
+export async function submitCompanyApplication(
+  companyId: string,
+  opts: AuthOpts,
+): Promise<CompanyApplicationOut> {
+  return apiJson<CompanyApplicationOut>(
+    `/v1/ops/companies/${companyId}/applications`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function listCertificates(opts: AuthOpts): Promise<CertificateOut[]> {
+  return apiJson<CertificateOut[]>("/v1/certificates", { method: "GET" }, opts);
+}
+
+export async function uploadCertificate(
+  kind: "SS_NO_DEBT" | "AT_NO_DEBT",
+  issuedOn: string,
+  file: File,
+  opts: AuthOpts,
+): Promise<CertificateOut> {
+  const body = new FormData();
+  body.set("kind", kind);
+  body.set("issued_on", issuedOn);
+  body.set("file", file);
+  return apiJson<CertificateOut>("/v1/certificates", { method: "POST", body }, opts);
 }
