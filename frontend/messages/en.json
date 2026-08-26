@@ -158,7 +158,7 @@
     "settings": {
       "crumb": "Settings",
       "title": "Company settings",
-      "lead": "Upload SS and AT no-debt certificates. Admin and Finance only.",
+      "lead": "Upload SS and AT no-debt certificates. Invite company users (Admin). Admin and Finance for certificates.",
       "certsTitle": "No-debt certificates",
       "certsHint": "Each file is valid for four months from the issue date unless we override it.",
       "kind": "Kind",
@@ -278,7 +278,7 @@
     },
     "kpi": {
       "companies": "Companies",
-      "companiesHint": "Client workspaces — no API on this screen yet",
+      "companiesHint": "Client workspaces",
       "intakes": "Open readings",
       "intakesHint": "Pass 1 not yet converted — no API on this screen yet",
       "flags": "Flags",
@@ -287,7 +287,7 @@
     "next": {
       "title": "Next in operations",
       "lead": "This screen is the internal shell. Real ops tools come in later tickets.",
-      "companies": "Company list — not on this screen yet.",
+      "companies": "Open the company list to create a workspace and invite the admin.",
       "intakes": "In-flight readings — not on this screen yet."
     },
     "settings": {
@@ -346,6 +346,46 @@
       "legalPdf": "Legal PDF",
       "collect": "Collect SEPA",
       "collectFailed": "Could not start SEPA collection."
+    },
+    "companies": {
+      "crumb": "Companies",
+      "title": "Companies",
+      "lead": "Sales-led create, or workspaces that continued from a reading.",
+      "new": "Invite a company",
+      "empty": "No companies yet.",
+      "needAuth": "Could not load companies.",
+      "seats": "{used} of {max} seats",
+      "fromIntake": "From a reading",
+      "salesLed": "Sales-led",
+      "noTrading": "No trading name"
+    },
+    "companyNew": {
+      "crumb": "New company",
+      "back": "All companies",
+      "title": "Create a company and invite the admin",
+      "lead": "Required: legal name and the admin’s email. They set a password from the invite.",
+      "legalName": "Legal name",
+      "tradingName": "Trading name",
+      "locale": "Locale",
+      "nif": "NIF",
+      "optional": "Optional",
+      "adminEmail": "Admin email",
+      "submit": "Create and send invite",
+      "saving": "Creating…",
+      "failed": "Could not create the company.",
+      "needAuth": "Sign in as staff first."
+    },
+    "companyDetail": {
+      "crumb": "Company",
+      "back": "All companies",
+      "title": "Company",
+      "lead": "Override the seat cap and invite company users.",
+      "capTitle": "Seat limit",
+      "capHint": "Default is 3. Do not set this below seats already in use.",
+      "saveCap": "Save limit",
+      "capInvalid": "Enter a whole number of 1 or more.",
+      "saveFailed": "Could not save the limit.",
+      "needAuth": "Could not load this company."
     }
   },
   "marketing": {
@@ -406,7 +446,59 @@
       "CONTRACT_REVIEWED": "Contract review finished",
       "CONTRACT_SS_MISMATCH": "Contract does not match the extract",
       "CONTRACT_REVIEW_FAILED": "Contract review failed",
-      "EMPLOYEE_STATUS_OVERRIDE": "Someone updated a person’s status"
+      "EMPLOYEE_STATUS_OVERRIDE": "Someone updated a person’s status",
+      "COMPANY_MEMBER_INVITED": "Someone was invited to a company"
     }
+  },
+  "members": {
+    "title": "People with login",
+    "seats": "{used} of {max} seats in use",
+    "maxMembers": "Seat limit",
+    "email": "Email",
+    "role": "Role",
+    "invite": "Send invite",
+    "resend": "Resend",
+    "cancel": "Cancel",
+    "inviteFailed": "Could not send the invite.",
+    "resendFailed": "Could not resend.",
+    "cancelFailed": "Could not cancel.",
+    "linkCopied": "Invite link copied.",
+    "membersTitle": "Members",
+    "membersEmpty": "No members yet.",
+    "invitesTitle": "Open invites",
+    "invitesEmpty": "No open invites.",
+    "active": "Active",
+    "pendingAccept": "Waiting to set a password",
+    "roles": {
+      "ADMIN": "Admin",
+      "HR": "HR",
+      "FINANCE": "Finance"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "FAILED": "Send failed",
+      "EXPIRED": "Expired",
+      "ACCEPTED": "Accepted",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "invite": {
+    "kicker": "Invitation",
+    "title": "Join your company workspace",
+    "loading": "Loading the invite…",
+    "lead": "You were invited to {company} as {role}.",
+    "password": "Password",
+    "confirm": "Confirm password",
+    "setPassword": "Set password and continue",
+    "accept": "Join workspace",
+    "working": "Working…",
+    "existing": "This email already has an account. Enter your password to join.",
+    "needSignIn": "Already have a password?",
+    "signIn": "Sign in",
+    "passwordShort": "Use at least 8 characters.",
+    "passwordMismatch": "The passwords do not match.",
+    "failed": "Could not accept this invite.",
+    "missing": "This invite was not found.",
+    "askResend": "This invite is no longer valid. Ask an admin to send it again."
   }
 }

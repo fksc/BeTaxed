@@ -51,7 +51,9 @@ export function AdminsDashboard() {
             <CardDescription className="text-xs">{t("next.lead")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 pt-1 text-sm text-muted-foreground">
-            <p>{t("next.companies")}</p>
+            <Link href={paths.adminsCompanies} className="text-primary underline">
+              {t("nav.companies")}
+            </Link>
             <p>{t("next.intakes")}</p>
             <Link href={paths.adminsFlags} className="text-primary underline">
               {t("nav.flags")}

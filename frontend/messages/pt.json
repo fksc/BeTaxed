@@ -158,7 +158,7 @@
     "settings": {
       "crumb": "Definições",
       "title": "Definições da empresa",
-      "lead": "Envie as declarações de não dívida SS e AT. Só Admin e Finance.",
+      "lead": "Envie as declarações de não dívida SS e AT. Convide utilizadores da empresa (Admin). Certificados: Admin e Finance.",
       "certsTitle": "Declarações de não dívida",
       "certsHint": "Cada ficheiro vale quatro meses a partir da data de emissão, salvo override.",
       "kind": "Tipo",
@@ -278,7 +278,7 @@
     },
     "kpi": {
       "companies": "Empresas",
-      "companiesHint": "Clientes no espaço — ainda sem API neste ecrã",
+      "companiesHint": "Espaços de clientes",
       "intakes": "Leituras abertas",
       "intakesHint": "Pass 1 ainda por converter — ainda sem API neste ecrã",
       "flags": "Alertas",
@@ -287,7 +287,7 @@
     "next": {
       "title": "A seguir nas operações",
       "lead": "Este ecrã organiza o lado interno. Ferramentas reais vêm em tickets posteriores.",
-      "companies": "Lista de empresas — ainda não neste ecrã.",
+      "companies": "Abra a lista de empresas para criar um espaço e convidar o admin.",
       "intakes": "Leituras em curso — ainda não neste ecrã."
     },
     "settings": {
@@ -346,6 +346,46 @@
       "legalPdf": "PDF legal",
       "collect": "Cobrar SEPA",
       "collectFailed": "Não foi possível iniciar a cobrança SEPA."
+    },
+    "companies": {
+      "crumb": "Empresas",
+      "title": "Empresas",
+      "lead": "Criação comercial, ou espaços que continuaram a partir de uma leitura.",
+      "new": "Convidar empresa",
+      "empty": "Ainda sem empresas.",
+      "needAuth": "Não foi possível carregar as empresas.",
+      "seats": "{used} de {max} lugares",
+      "fromIntake": "A partir de uma leitura",
+      "salesLed": "Via comercial",
+      "noTrading": "Sem nome comercial"
+    },
+    "companyNew": {
+      "crumb": "Nova empresa",
+      "back": "Todas as empresas",
+      "title": "Criar empresa e convidar o admin",
+      "lead": "Obrigatório: denominação e email do admin. A palavra-passe é definida no convite.",
+      "legalName": "Denominação",
+      "tradingName": "Nome comercial",
+      "locale": "Idioma",
+      "nif": "NIF",
+      "optional": "Opcional",
+      "adminEmail": "Email do admin",
+      "submit": "Criar e enviar convite",
+      "saving": "A criar…",
+      "failed": "Não foi possível criar a empresa.",
+      "needAuth": "Entre primeiro como staff."
+    },
+    "companyDetail": {
+      "crumb": "Empresa",
+      "back": "Todas as empresas",
+      "title": "Empresa",
+      "lead": "Altere o limite de lugares e convide utilizadores da empresa.",
+      "capTitle": "Limite de lugares",
+      "capHint": "O padrão é 3. Não coloque abaixo dos lugares já em uso.",
+      "saveCap": "Guardar limite",
+      "capInvalid": "Indique um número inteiro de 1 ou mais.",
+      "saveFailed": "Não foi possível guardar o limite.",
+      "needAuth": "Não foi possível carregar esta empresa."
     }
   },
   "marketing": {
@@ -406,7 +446,59 @@
       "CONTRACT_REVIEWED": "Revisão do contrato concluída",
       "CONTRACT_SS_MISMATCH": "O contrato não coincide com o extrato",
       "CONTRACT_REVIEW_FAILED": "A revisão do contrato falhou",
-      "EMPLOYEE_STATUS_OVERRIDE": "Alguém atualizou o estado de uma pessoa"
+      "EMPLOYEE_STATUS_OVERRIDE": "Alguém atualizou o estado de uma pessoa",
+      "COMPANY_MEMBER_INVITED": "Alguém foi convidado para uma empresa"
     }
+  },
+  "members": {
+    "title": "Pessoas com acesso",
+    "seats": "{used} de {max} lugares em uso",
+    "maxMembers": "Limite de lugares",
+    "email": "Email",
+    "role": "Função",
+    "invite": "Enviar convite",
+    "resend": "Reenviar",
+    "cancel": "Cancelar",
+    "inviteFailed": "Não foi possível enviar o convite.",
+    "resendFailed": "Não foi possível reenviar.",
+    "cancelFailed": "Não foi possível cancelar.",
+    "linkCopied": "Link do convite copiado.",
+    "membersTitle": "Membros",
+    "membersEmpty": "Ainda sem membros.",
+    "invitesTitle": "Convites em aberto",
+    "invitesEmpty": "Sem convites em aberto.",
+    "active": "Ativo",
+    "pendingAccept": "A aguardar palavra-passe",
+    "roles": {
+      "ADMIN": "Admin",
+      "HR": "HR",
+      "FINANCE": "Finance"
+    },
+    "status": {
+      "PENDING": "Pendente",
+      "FAILED": "Envio falhou",
+      "EXPIRED": "Expirado",
+      "ACCEPTED": "Aceite",
+      "CANCELLED": "Cancelado"
+    }
+  },
+  "invite": {
+    "kicker": "Convite",
+    "title": "Entre no espaço da empresa",
+    "loading": "A carregar o convite…",
+    "lead": "Foi convidado para {company} como {role}.",
+    "password": "Palavra-passe",
+    "confirm": "Confirmar palavra-passe",
+    "setPassword": "Definir palavra-passe e continuar",
+    "accept": "Entrar no espaço",
+    "working": "A trabalhar…",
+    "existing": "Este email já tem conta. Introduza a palavra-passe para entrar.",
+    "needSignIn": "Já tem palavra-passe?",
+    "signIn": "Entrar",
+    "passwordShort": "Use pelo menos 8 caracteres.",
+    "passwordMismatch": "As palavras-passe não coincidem.",
+    "failed": "Não foi possível aceitar este convite.",
+    "missing": "Este convite não foi encontrado.",
+    "askResend": "Este convite já não é válido. Peça a um admin para o reenviar."
   }
 }

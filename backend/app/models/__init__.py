@@ -1,6 +1,6 @@
 from app.models.base import Base
 from app.models.communications import DomainEvent, Notification
-from app.models.core import Company, CompanyMembership, Intake, UserBase
+from app.models.core import Company, CompanyInvite, CompanyMembership, Intake, UserBase
 from app.models.crypto import TenantCryptoKey
 from app.models.employment import (
     CompensationPeriod,
@@ -42,7 +42,7 @@ __all__ = [
     "Company",
     "CompanyApplication",
     "CompanyCertificate",
-    "CompanyHeadcountMonth",
+    "CompanyInvite",
     "CompanyMembership",
     "CompensationPeriod",
     "DomainEvent",

@@ -35,7 +35,21 @@ from app.services.billing import (
     staff_invoice_dict,
     void_invoice,
 )
+from app.schemas.members import (
+    CompanyPatchIn,
+    OpsCompanyDetailOut,
+    OpsCompanyListOut,
+    SalesCompanyIn,
+    SalesCompanyOut,
+)
 from app.services.contracts import apply_contract_to_employment, list_mismatch_flags
+from app.services.members import (
+    create_sales_company,
+    get_company_or_404,
+    list_ops_companies,
+    ops_company_detail,
+    patch_ops_company,
+)
 
 router = APIRouter(prefix="/v1/ops", tags=["ops"])
 
@@ -244,3 +258,73 @@ async def post_invoicing_method(
         "invoicing_method": company.invoicing_method,
         "certified_vendor_name": company.certified_vendor_name,
     }
+
+
+@router.get("/companies", response_model=list[OpsCompanyListOut])
+async def get_ops_companies(
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> list[OpsCompanyListOut]:
+    rows = await list_ops_companies(db)
+    return [OpsCompanyListOut.model_validate(row) for row in rows]
+
+
+@router.post(
+    "/companies",
+    response_model=SalesCompanyOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def post_ops_company(
+    body: SalesCompanyIn,
+    user: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> SalesCompanyOut:
+    company, invite, url = await create_sales_company(
+        db,
+        actor=user,
+        legal_name=body.legal_name,
+        trading_name=body.trading_name,
+        locale=body.locale,
+        nif=body.nif,
+        admin_email=body.admin_email,
+        admin_role=body.admin_role,
+    )
+    await db.commit()
+    await db.refresh(company)
+    await db.refresh(invite)
+    detail = await ops_company_detail(db, company)
+    out = SalesCompanyOut.model_validate(detail)
+    return out.model_copy(update={"invite_url": url})
+
+
+@router.get("/companies/{company_id}", response_model=OpsCompanyDetailOut)
+async def get_ops_company(
+    company_id: uuid.UUID,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> OpsCompanyDetailOut:
+    company = await get_company_or_404(db, company_id)
+    detail = await ops_company_detail(db, company)
+    return OpsCompanyDetailOut.model_validate(detail)
+
+
+@router.patch("/companies/{company_id}", response_model=OpsCompanyDetailOut)
+async def patch_ops_company_route(
+    company_id: uuid.UUID,
+    body: CompanyPatchIn,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> OpsCompanyDetailOut:
+    company = await get_company_or_404(db, company_id)
+    await patch_ops_company(
+        db,
+        company,
+        legal_name=body.legal_name,
+        trading_name=body.trading_name,
+        locale=body.locale,
+        max_members=body.max_members,
+    )
+    await db.commit()
+    await db.refresh(company)
+    detail = await ops_company_detail(db, company)
+    return OpsCompanyDetailOut.model_validate(detail)

@@ -21,6 +21,45 @@ def get_public_app_url() -> str:
     return os.environ.get("PUBLIC_APP_URL", "http://localhost:3000").strip().rstrip("/")
 
 
+def get_invite_ttl_hours() -> int:
+    raw = os.environ.get("INVITE_TTL_HOURS", "72").strip()
+    try:
+        hours = int(raw)
+    except ValueError:
+        return 72
+    return hours if hours >= 1 else 72
+
+
+def get_email_provider() -> str | None:
+    """resend | brevo | None (link-only). EMAIL_PROVIDER wins; else first set API key."""
+    raw = os.environ.get("EMAIL_PROVIDER", "").strip().lower()
+    if raw in {"resend", "brevo"}:
+        return raw
+    if os.environ.get("RESEND_API_KEY", "").strip():
+        return "resend"
+    if os.environ.get("BREVO_API_KEY", "").strip():
+        return "brevo"
+    return None
+
+
+def get_resend_api_key() -> str | None:
+    raw = os.environ.get("RESEND_API_KEY", "").strip()
+    return raw or None
+
+
+def get_brevo_api_key() -> str | None:
+    raw = os.environ.get("BREVO_API_KEY", "").strip()
+    return raw or None
+
+
+def get_email_from() -> str:
+    raw = (
+        os.environ.get("EMAIL_FROM", "").strip()
+        or os.environ.get("SMTP_FROM", "").strip()
+    )
+    return raw or "BeTaxed <noreply@localhost>"
+
+
 @lru_cache
 def get_cors_origins() -> list[str]:
     raw = os.environ.get("CORS_ORIGINS", "http://localhost:3000").strip()

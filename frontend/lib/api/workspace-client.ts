@@ -6,10 +6,15 @@ import type {
   CompanyApplicationOut,
   CompanyInvoiceOut,
   HeadcountMonthOut,
+  InviteOut,
+  MembersBundleOut,
   MeOut,
   MismatchFlag,
   NotificationList,
+  OpsCompanyDetailOut,
+  OpsCompanyListOut,
   PersonOut,
+  PublicInviteOut,
   SsBatchOut,
   StaffInvoiceOut,
 } from "@/lib/api/workspace";
@@ -291,6 +296,116 @@ export async function collectOpsInvoice(
   return apiJson<StaffInvoiceOut>(
     `/v1/ops/invoices/${invoiceId}/collect`,
     { method: "POST" },
+    opts,
+  );
+}
+
+export async function listOpsCompanies(opts: AuthOpts): Promise<OpsCompanyListOut[]> {
+  return apiJson<OpsCompanyListOut[]>("/v1/ops/companies", { method: "GET" }, opts);
+}
+
+export async function getOpsCompany(
+  companyId: string,
+  opts: AuthOpts,
+): Promise<OpsCompanyDetailOut> {
+  return apiJson<OpsCompanyDetailOut>(`/v1/ops/companies/${companyId}`, { method: "GET" }, opts);
+}
+
+export async function createOpsCompany(
+  body: {
+    legal_name: string;
+    trading_name?: string;
+    locale?: string;
+    nif?: string;
+    admin_email: string;
+    admin_role?: string;
+  },
+  opts: AuthOpts,
+): Promise<OpsCompanyDetailOut> {
+  return apiJson<OpsCompanyDetailOut>(
+    "/v1/ops/companies",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function patchOpsCompany(
+  companyId: string,
+  body: {
+    legal_name?: string;
+    trading_name?: string;
+    locale?: string;
+    max_members?: number;
+  },
+  opts: AuthOpts,
+): Promise<OpsCompanyDetailOut> {
+  return apiJson<OpsCompanyDetailOut>(
+    `/v1/ops/companies/${companyId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function listMembers(opts: AuthOpts): Promise<MembersBundleOut> {
+  return apiJson<MembersBundleOut>("/v1/members", { method: "GET" }, opts);
+}
+
+export async function inviteMember(
+  email: string,
+  role: string,
+  opts: AuthOpts,
+): Promise<InviteOut> {
+  return apiJson<InviteOut>(
+    "/v1/members/invites",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    },
+    opts,
+  );
+}
+
+export async function resendInvite(inviteId: string, opts: AuthOpts): Promise<InviteOut> {
+  return apiJson<InviteOut>(
+    `/v1/members/invites/${inviteId}/resend`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function cancelInvite(inviteId: string, opts: AuthOpts): Promise<InviteOut> {
+  return apiJson<InviteOut>(
+    `/v1/members/invites/${inviteId}/cancel`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function getPublicInvite(token: string): Promise<PublicInviteOut> {
+  return apiJson<PublicInviteOut>(`/v1/invites/${token}`, { method: "GET" }, {});
+}
+
+export async function acceptInvite(
+  token: string,
+  body: { password?: string },
+  opts: AuthOpts = {},
+): Promise<{ status: string; email: string; company_id: string }> {
+  return apiJson(
+    `/v1/invites/${token}/accept`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
     opts,
   );
 }

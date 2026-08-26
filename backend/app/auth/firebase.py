@@ -86,3 +86,79 @@ def verify_id_token(id_token: str) -> FirebaseIdentity:
             detail="Firebase token missing uid or email.",
         )
     return FirebaseIdentity(uid=str(uid), email=str(email).strip().lower())
+
+
+@dataclass(frozen=True)
+class FirebaseUserRecord:
+    uid: str
+    email: str
+    has_password: bool
+
+
+def get_user_by_email(email: str) -> FirebaseUserRecord | None:
+    """Look up a Firebase Auth user. Tests patch this."""
+    try:
+        from firebase_admin import auth as firebase_auth
+
+        _get_firebase_app()
+        record = firebase_auth.get_user_by_email(email.strip().lower())
+    except HTTPException:
+        raise
+    except Exception as exc:
+        from firebase_admin.auth import UserNotFoundError
+
+        if isinstance(exc, UserNotFoundError):
+            return None
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase user lookup failed.",
+        ) from exc
+    return FirebaseUserRecord(
+        uid=str(record.uid),
+        email=str(record.email or email).strip().lower(),
+        has_password=bool(getattr(record, "password_hash", None)),
+    )
+
+
+def create_email_user(email: str) -> FirebaseUserRecord:
+    """Create a Firebase user with no password (set on invite accept). Tests patch this."""
+    normalized = email.strip().lower()
+    try:
+        from firebase_admin import auth as firebase_auth
+
+        _get_firebase_app()
+        record = firebase_auth.create_user(email=normalized)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        from firebase_admin.auth import EmailAlreadyExistsError
+
+        if isinstance(exc, EmailAlreadyExistsError):
+            existing = get_user_by_email(normalized)
+            if existing is not None:
+                return existing
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase user create failed.",
+        ) from exc
+    return FirebaseUserRecord(
+        uid=str(record.uid),
+        email=str(record.email or normalized).strip().lower(),
+        has_password=False,
+    )
+
+
+def set_user_password(uid: str, password: str) -> None:
+    """Set or replace the Firebase password. Tests patch this."""
+    try:
+        from firebase_admin import auth as firebase_auth
+
+        _get_firebase_app()
+        firebase_auth.update_user(uid, password=password, email_verified=True)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Firebase password update failed.",
+        ) from exc

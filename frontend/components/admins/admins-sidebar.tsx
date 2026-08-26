@@ -50,10 +50,10 @@ export function AdminsSidebar() {
       soon: false,
     },
     {
-      href: paths.adminsDashboard,
+      href: paths.adminsCompanies,
       label: t("nav.companies"),
       icon: Building2,
-      soon: true,
+      soon: false,
     },
     {
       href: paths.adminsDashboard,

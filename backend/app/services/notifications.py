@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 STAFF_ONLY = frozenset(
     {"CONTRACT_REVIEWED", "CONTRACT_SS_MISMATCH", "CONTRACT_REVIEW_FAILED"}
 )
-COMPANY_AND_STAFF = frozenset({"CONTRACT_UPLOADED", "EMPLOYEE_STATUS_OVERRIDE"})
+COMPANY_AND_STAFF = frozenset(
+    {"CONTRACT_UPLOADED", "EMPLOYEE_STATUS_OVERRIDE", "COMPANY_MEMBER_INVITED"}
+)
 
 
 async def fanout_domain_event(session: AsyncSession, event_id: uuid.UUID) -> int:

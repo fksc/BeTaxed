@@ -13,8 +13,10 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
+    Text,
     UniqueConstraint,
     func,
     text,
@@ -79,6 +81,7 @@ class Company(Base):
             "('STRIPE_SEPA', 'CERTIFIED_SOFTWARE')",
             name="ck_company_invoicing_method",
         ),
+        CheckConstraint("max_members >= 1", name="ck_company_max_members"),
         Index(
             "idx_company_employer_niss_hash",
             "employer_niss_hash",
@@ -113,6 +116,9 @@ class Company(Base):
     certified_vendor_name: Mapped[str | None] = mapped_column(
         String(128), nullable=True
     )
+    max_members: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("3"), default=3
+    )
     created_from_intake_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("intake.id"),
@@ -126,6 +132,9 @@ class Company(Base):
     )
 
     memberships: Mapped[list[CompanyMembership]] = relationship(
+        back_populates="company"
+    )
+    invites: Mapped[list[CompanyInvite]] = relationship(
         back_populates="company"
     )
     created_from_intake: Mapped[Intake | None] = relationship(
@@ -170,6 +179,71 @@ class CompanyMembership(Base):
 
     user: Mapped[UserBase] = relationship(back_populates="memberships")
     company: Mapped[Company] = relationship(back_populates="memberships")
+    invites: Mapped[list[CompanyInvite]] = relationship(
+        back_populates="membership"
+    )
+
+
+class CompanyInvite(Base):
+    __tablename__ = "company_invite"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('ADMIN', 'HR', 'FINANCE')",
+            name="ck_company_invite_role",
+        ),
+        CheckConstraint(
+            "status IN ('PENDING', 'ACCEPTED', 'EXPIRED', 'FAILED', 'CANCELLED')",
+            name="ck_company_invite_status",
+        ),
+        UniqueConstraint("token_hash", name="uq_company_invite_token_hash"),
+        Index("idx_company_invite_company", "company_id"),
+        Index("idx_company_invite_email", "company_id", "email"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.id"), nullable=False
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    token_hash: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
+    invited_by_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=True
+    )
+    membership_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company_membership.id"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'PENDING'")
+    )
+    needs_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("TRUE"), default=True
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    company: Mapped[Company] = relationship(back_populates="invites")
+    membership: Mapped[CompanyMembership | None] = relationship(
+        back_populates="invites"
+    )
 
 
 class Intake(Base):

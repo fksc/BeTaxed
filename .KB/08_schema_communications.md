@@ -1,6 +1,6 @@
 # KB/08_schema_communications.md — Domain events and notifications
 **Depends on:** `KB/00_mother_doc.md`, `KB/01_schema_core.md`, `KB/04_schema_documents.md`
-**Shape:** Talent Journey V2 communications — BeTaxed-sized. No chat, no email in v1.
+**Shape:** Talent Journey V2 communications — BeTaxed-sized. No chat. **No general email product** in v1 — exception: company **invite** mail (DEV-852, SMTP or copy-link).
 
 ---
 
@@ -35,6 +35,7 @@ v1 event types:
 | `CONTRACT_REVIEWED` | `employment_document` | Staff (match / reviewed) |
 | `CONTRACT_SS_MISMATCH` | `employment_document` | Staff only (non-optional) |
 | `CONTRACT_REVIEW_FAILED` | `employment_document` | Staff only |
+| `COMPANY_MEMBER_INVITED` | `company_invite` | Company Admin + all `BETAXED_STAFF` |
 
 Payload may include ids, filename, and (staff events) SS vs paper fields. Never NISS, rates, remaining months, or “convert this contract”.
 
@@ -65,4 +66,4 @@ Live UI: SSE `GET /v1/notifications/stream` (direct to FastAPI, ~50s then client
 
 Local / unset Cloud Tasks: inline after commit (same as TJ fallback).
 
-Parked: Cloud Tasks queues so the HTTP upload does not wait on Vertex (`KB/90` SL-010). Email delivery is not in v1.
+Parked: Cloud Tasks queues so the HTTP upload does not wait on Vertex (`KB/90` SL-010). Email delivery is not a general v1 channel. **Invite mail** (DEV-852) is the exception: Resend or Brevo when an API key is set (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `BREVO_API_KEY`, `EMAIL_FROM`); otherwise the sender receives `invite_url` to copy. Do not build a notification-email product here.
