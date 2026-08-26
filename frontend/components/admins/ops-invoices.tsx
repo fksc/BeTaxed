@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ShellAppBar } from "@/components/shell/shell-app-bar";
 import {
   createDraftInvoice,
+  collectOpsInvoice,
   issueInvoice,
   listOpsInvoices,
   resolveInvoice,
@@ -107,6 +108,22 @@ export function OpsInvoicesPage() {
       await reload();
     } catch {
       setError(t("resolveFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onCollect(id: string) {
+    const idToken = await currentIdToken();
+    if (!idToken) {
+      return;
+    }
+    setBusy(id);
+    try {
+      await collectOpsInvoice(id, { idToken });
+      await reload();
+    } catch {
+      setError(t("collectFailed"));
     } finally {
       setBusy(null);
     }
@@ -236,15 +253,26 @@ export function OpsInvoicesPage() {
                       </Button>
                     ) : null}
                     {row.status === "ISSUED" || row.status === "DUE" || row.status === "LATE" ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy === row.id}
-                        onClick={() => void onResolve(row.id)}
-                      >
-                        {t("resolve")}
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === row.id}
+                          onClick={() => void onCollect(row.id)}
+                        >
+                          {t("collect")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === row.id}
+                          onClick={() => void onResolve(row.id)}
+                        >
+                          {t("resolve")}
+                        </Button>
+                      </>
                     ) : null}
                   </div>
                 </div>

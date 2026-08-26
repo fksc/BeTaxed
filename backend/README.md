@@ -38,7 +38,10 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `POST /v1/ops/companies/{id}/invoicing` — staff set `CERTIFIED_SOFTWARE` or `STRIPE_SEPA` plus optional `certified_vendor_name`.
 - `POST /v1/ops/companies/{id}/invoices` — staff draft from unlocked billable `saving_month` rows.
 - `POST /v1/ops/invoices/{id}/issue` / `resolve` / `void` — status ledger. Manual resolve stores actor + reason.
-- `POST /v1/webhooks/stripe` — marks PAID when `stripe_invoice_id` matches. SEPA collection is a later ticket.
+- `GET /v1/billing` — Admin/Finance/staff. `invoicing_method` and `has_stripe_customer`. No Stripe ids.
+- `POST /v1/invoices/sepa-checkout` — Admin/Finance/staff. Stripe Checkout setup mode for a SEPA mandate.
+- `POST /v1/invoices/{id}/sepa-collect` / `POST /v1/ops/invoices/{id}/collect` — create a Stripe Invoice for collection.
+- `POST /v1/webhooks/stripe` — HMAC (`Stripe-Signature`). `invoice.paid` → PAID; `invoice.payment_failed` → LATE (never silent PAID). Unknown Stripe ids return 200 ignored.
 - `GET/POST /v1/ops/companies/{id}/commercial-terms` — staff fee % override. Convert seeds from `DEFAULT_FEE_PERCENT`.
 - `POST /v1/ops/companies/{id}/applications` — snapshot headcount trailing-12, SS/AT cert caches, mark DETECTED cases SUBMITTED.
 - `GET/POST /v1/certificates` — SS/AT no-debt PDFs. Admin/Finance/staff. HR 403.

@@ -96,6 +96,15 @@ class InvoicingMethodIn(BaseModel):
     certified_vendor_name: str | None = None
 
 
+class BillingSettingsOut(BaseModel):
+    invoicing_method: str | None
+    has_stripe_customer: bool
+
+
+class CheckoutOut(BaseModel):
+    url: str
+
+
 class InvoiceStatusEventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

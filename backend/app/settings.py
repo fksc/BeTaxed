@@ -76,8 +76,14 @@ def get_default_fee_percent() -> str | None:
 
 
 def get_stripe_webhook_secret() -> str | None:
-    """Shared secret for POST /v1/webhooks/stripe. Real Stripe signatures land on DEV-842."""
+    """Signing secret for POST /v1/webhooks/stripe (Stripe HMAC)."""
     raw = os.environ.get("STRIPE_WEBHOOK_SECRET", "").strip()
+    return raw or None
+
+
+def get_stripe_secret_key() -> str | None:
+    """API key for Checkout and Invoice collection. Empty disables outbound Stripe calls."""
+    raw = os.environ.get("STRIPE_SECRET_KEY", "").strip()
     return raw or None
 
 
