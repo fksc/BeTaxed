@@ -20,6 +20,7 @@ from app.models import (
 )
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.benefit_engine import (
+    _cert_covers,
     add_calendar_months,
     current_regime,
     first_of_month,
@@ -185,8 +186,8 @@ async def upload_certificate(
         valid_until_overridden=valid_until is not None,
     )
     session.add(cert)
-    today = date.today()
-    covering = issued_on <= today <= until
+    await session.flush()
+    covering = await _cert_covers(session, ctx.company.id, kind, date.today())
     if kind == "SS_NO_DEBT":
         ctx.company.ss_regularized = covering
     else:

@@ -33,18 +33,31 @@ export function CompaniesSettingsPage() {
       setError(t("lead"));
       return;
     }
-    const [certs, me] = await Promise.all([
-      listCertificates({ idToken, companyId }),
-      getMe({ idToken }),
-    ]);
-    const membership = me.memberships.find((row) => row.company_id === companyId);
-    setCanUpload(
-      me.user_type === "BETAXED_STAFF" ||
+    try {
+      const me = await getMe({ idToken });
+      const membership = me.memberships.find((row) => row.company_id === companyId);
+      const allowed =
+        me.user_type === "BETAXED_STAFF" ||
         membership?.role === "ADMIN" ||
-        membership?.role === "FINANCE",
-    );
-    setRows(certs);
-    setError(null);
+        membership?.role === "FINANCE";
+      setCanUpload(allowed);
+      if (!allowed) {
+        setRows([]);
+        setError(null);
+        return;
+      }
+      const certs = await listCertificates({ idToken, companyId });
+      setRows(certs);
+      setError(null);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setCanUpload(false);
+        setRows([]);
+        setError(t("forbidden"));
+        return;
+      }
+      setError(t("lead"));
+    }
   }
 
   useEffect(() => {

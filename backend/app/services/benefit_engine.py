@@ -11,6 +11,7 @@ import uuid
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from fastapi import HTTPException, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -185,6 +186,36 @@ async def rebuild_company_ledger(
     return count
 
 
+async def _dob_pay_events(
+    session: AsyncSession,
+    employee: Employee,
+    current: Employment,
+    crypto,
+) -> tuple[date | None, Decimal, list[EmploymentEvent]]:
+    dob = _decrypt_dob(crypto, employee.dob_enc)
+    pay = (
+        await session.execute(
+            select(CompensationPeriod).where(
+                CompensationPeriod.employment_id == current.id,
+                CompensationPeriod.period_to.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    salary = Decimal(pay.base_salary) if pay is not None else Decimal("0")
+    events = (
+        (
+            await session.execute(
+                select(EmploymentEvent)
+                .where(EmploymentEvent.employee_id == employee.id)
+                .order_by(EmploymentEvent.effective_on, EmploymentEvent.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return dob, salary, events
+
+
 async def _rebuild_employee(
     session: AsyncSession,
     company: Company,
@@ -216,30 +247,8 @@ async def _rebuild_employee(
             )
         )
     ).scalar_one_or_none()
-    if existing is not None and existing.state in _LOCKED_STATES:
-        await _refresh_unlocked_months(session, existing, employee, current, regime, as_of)
-        return 0
-
-    dob = _decrypt_dob(crypto, employee.dob_enc)
-    pay = (
-        await session.execute(
-            select(CompensationPeriod).where(
-                CompensationPeriod.employment_id == current.id,
-                CompensationPeriod.period_to.is_(None),
-            )
-        )
-    ).scalar_one_or_none()
-    salary = Decimal(pay.base_salary) if pay is not None else Decimal("0")
-    events = (
-        (
-            await session.execute(
-                select(EmploymentEvent)
-                .where(EmploymentEvent.employee_id == employee.id)
-                .order_by(EmploymentEvent.effective_on, EmploymentEvent.created_at)
-            )
-        )
-        .scalars()
-        .all()
+    dob, salary, events = await _dob_pay_events(
+        session, employee, current, crypto
     )
     state, code, sem_termo_on = _classify(
         employee=employee,
@@ -250,6 +259,12 @@ async def _rebuild_employee(
         regime=regime,
         events=events,
     )
+    if existing is not None and existing.state in _LOCKED_STATES:
+        if existing.state in {"SUBMITTED", "GRANTED"} and state in {"CEASED", "CLAWBACK"}:
+            existing.state = state
+            existing.ineligibility_code = code
+        await _refresh_unlocked_months(session, existing, employee, current, regime, as_of)
+        return 0
     age_value = None
     window_ends = None
     starts = None
@@ -261,6 +276,7 @@ async def _rebuild_employee(
         starts = first_of_month(sem_termo_on)
         if (as_of - sem_termo_on).days > regime.apply_within_days:
             starts = add_months(first_of_month(as_of), 1)
+    previous_state = existing.state if existing is not None else None
     if existing is None:
         existing = BenefitCase(
             company_id=company.id,
@@ -277,7 +293,25 @@ async def _rebuild_employee(
     existing.benefit_starts_on = starts
     existing.age_at_sem_termo = age_value
     await session.flush()
+    keep_months = previous_state in {
+        "DETECTED",
+        "READY",
+        "SUBMITTED",
+        "GRANTED",
+        "CEASED",
+        "CLAWBACK",
+    }
     if state in {"DETECTED", "READY"} and starts is not None and window_ends is not None:
+        await _sync_months(
+            session,
+            existing,
+            employee,
+            current,
+            regime,
+            salary=salary if salary > 0 else Decimal("0"),
+            as_of=as_of,
+        )
+    elif state in {"CEASED", "CLAWBACK"} and keep_months:
         await _sync_months(
             session,
             existing,
@@ -479,6 +513,43 @@ async def submit_company_application(
     today = as_of
     ss_ok = await _cert_covers(session, company_id, "SS_NO_DEBT", today)
     at_ok = await _cert_covers(session, company_id, "AT_NO_DEBT", today)
+    cases = (
+        (
+            await session.execute(
+                select(BenefitCase).where(
+                    BenefitCase.company_id == company_id,
+                    BenefitCase.regime_id == regime.id,
+                    BenefitCase.state.in_(("DETECTED", "READY")),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not cases:
+        existing = (
+            (
+                await session.execute(
+                    select(CompanyApplication)
+                    .where(
+                        CompanyApplication.company_id == company_id,
+                        CompanyApplication.regime_id == regime.id,
+                    )
+                    .order_by(
+                        CompanyApplication.submitted_on.desc(),
+                        CompanyApplication.created_at.desc(),
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if existing is not None:
+            return existing
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No DETECTED benefit cases to submit.",
+        )
     app = CompanyApplication(
         company_id=company_id,
         regime_id=regime.id,
@@ -494,19 +565,6 @@ async def submit_company_application(
     )
     session.add(app)
     await session.flush()
-    cases = (
-        (
-            await session.execute(
-                select(BenefitCase).where(
-                    BenefitCase.company_id == company_id,
-                    BenefitCase.regime_id == regime.id,
-                    BenefitCase.state.in_(("DETECTED", "READY")),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
     for case in cases:
         employee = await session.get(Employee, case.employee_id)
         case.application_id = app.id

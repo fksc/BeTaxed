@@ -239,6 +239,8 @@ def test_benefit_cases_ops_only_leave_months_and_certs(
                     },
                 )
                 assert hr_upload.status_code == 403
+                hr_list = await client.get("/v1/certificates", headers=hr_auth)
+                assert hr_list.status_code == 403
 
                 ss_cert = await client.post(
                     "/v1/certificates",
@@ -273,6 +275,13 @@ def test_benefit_cases_ops_only_leave_months_and_certs(
                 assert snap["headcount_current"] == 2
                 assert snap["headcount_test_pass"] is False
                 assert snap["ss_regularized_at_submit"] is False
+                again = await client.post(
+                    f"/v1/ops/companies/{company_id}/applications"
+                    "?as_of=2026-08-26",
+                    headers=staff_headers,
+                )
+                assert again.status_code == 200, again.text
+                assert again.json()["id"] == snap["id"]
         finally:
             async with AsyncSessionLocal() as session:
                 if company_id is not None:

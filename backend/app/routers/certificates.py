@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.deps.context import CompanyContext, get_company_context
 from app.schemas.benefit import CertificateOut
-from app.services.benefit_ops import list_certificates, upload_certificate
+from app.services.benefit_ops import list_certificates, require_admin_or_finance, upload_certificate
 
 router = APIRouter(prefix="/v1", tags=["certificates"])
 
@@ -20,6 +20,7 @@ async def get_certificates(
     ctx: CompanyContext = Depends(get_company_context),
     db: AsyncSession = Depends(get_db),
 ) -> list[CertificateOut]:
+    require_admin_or_finance(ctx)
     rows = await list_certificates(db, ctx.company.id)
     return [CertificateOut.model_validate(row) for row in rows]
 
