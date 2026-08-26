@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import uuid
 from dataclasses import dataclass
@@ -249,12 +250,50 @@ def _leftover_for_storage(
         if value is None or value == "":
             continue
         if "niss" in fold_header(str(key)):
-            hashes = [_hash_hex(crypto, match) for match in _NISS_RE.findall(str(value))]
-            if hashes:
-                stored[key] = {"niss_hash": hashes}
+            matches = _NISS_RE.findall(str(value))
+            if matches:
+                stored[key] = {
+                    "niss_enc": [_enc_b64(crypto, match) for match in matches],
+                    "niss_hash": [_hash_hex(crypto, match) for match in matches],
+                }
             continue
         stored[key] = value
     return stored or None
+
+
+def rekey_leftover_niss(
+    leftover: dict[str, Any] | None,
+    intake_crypto: PiiCrypto,
+    company_crypto: PiiCrypto,
+) -> dict[str, Any] | None:
+    """Decrypt leftover NISS with intake DEK; re-encrypt and re-HMAC for company.
+
+    Hash-only leftovers (pre-DEV-848) cannot be re-HMAC'd and are dropped.
+    """
+    if not leftover:
+        return leftover
+    out: dict[str, Any] = {}
+    for key, value in leftover.items():
+        if not isinstance(value, dict) or (
+            "niss_enc" not in value and "niss_hash" not in value
+        ):
+            out[key] = value
+            continue
+        encs = value.get("niss_enc") or []
+        if not encs:
+            continue
+        niss_enc: list[str] = []
+        niss_hash: list[str] = []
+        for blob in encs:
+            niss = intake_crypto.decrypt_niss(base64.b64decode(blob))
+            niss_enc.append(_enc_b64(company_crypto, niss))
+            niss_hash.append(_hash_hex(company_crypto, niss))
+        out[key] = {"niss_enc": niss_enc, "niss_hash": niss_hash}
+    return out or None
+
+
+def _enc_b64(crypto: PiiCrypto, niss: str) -> str:
+    return base64.b64encode(crypto.encrypt_niss(niss)).decode("ascii")
 
 
 def _hash_hex(crypto: PiiCrypto, niss: str) -> str:

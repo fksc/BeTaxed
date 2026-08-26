@@ -29,7 +29,7 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 | ID | Opened | Status | Resolved-date | Title |
 |---|---|---|---|---|
-| SL-001 | 2026-08-20 | open | — | Convert drops leftover JSONB `niss_hash` instead of re-HMAC |
+| SL-001 | 2026-08-20 | resolved | 2026-08-26 | Convert drops leftover JSONB `niss_hash` instead of re-HMAC |
 | SL-002 | 2026-08-20 | resolved | 2026-08-26 | Company monthly SS upload API (workspace loop) |
 | SL-003 | 2026-08-20 | resolved | 2026-08-26 | `company_headcount_month` write path |
 | SL-004 | 2026-08-20 | open | — | Leave events from monthly remunerations files |
@@ -44,12 +44,13 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 
 ### SL-001 — Convert drops leftover JSONB `niss_hash` instead of re-HMAC
 - **Opened:** 2026-08-20
-- **Status:** open
-- **Resolved-date:** —
-- **Related:** DEV-832, DEV-848, `KB/07_security_encryption.md`, `app/services/intake.py` (`_drop_leftover_niss_hashes`), `app/services/ss_ingest.py` (`_leftover_for_storage`)
+- **Status:** resolved
+- **Resolved-date:** 2026-08-26
+- **Related:** DEV-832, DEV-848, `KB/07_security_encryption.md`, `app/services/intake.py`, `app/services/ss_ingest.py` (`_leftover_for_storage`, `rekey_leftover_niss`)
 - **Context:** SS leftover columns that look like NISS are stored as `{ "niss_hash": ["…hex"] }` scoped to the **intake** HMAC key. On convert, HMAC tenant-scope becomes the **company** id, so those hashes would no longer match. Convert currently **deletes** leftover keys that contain `niss_hash` rather than re-hashing. Substitute-NISS extras on contratos are the usual case. Canonical `niss_enc` / `niss_hash` on raw rows **are** re-keyed.
 - **Why later:** Leftover hashes have no plaintext in the DB. Re-HMAC would need decrypt-from-elsewhere or keeping leftover as opaque non-join data. 832 chose drop over a fake re-hash.
 - **Pickup:** Either persist leftover NISS inside envelope encryption at ingest, or document leftover as non-join metadata and stop putting hashes there. Do not HMAC leftover with the wrong tenant-scope.
+- **Resolution:** DEV-848 stores leftover NISS as envelope `niss_enc` plus tenant-scoped `niss_hash` at ingest. Convert decrypts with the intake DEK and re-encrypts / re-HMACs under the company. Hash-only pre-848 leftovers are still dropped (no plaintext). Company APIs never return leftover JSONB.
 
 ---
 

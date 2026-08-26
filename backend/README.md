@@ -52,7 +52,7 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 - `POST /v1/intakes` — open a pass 1 intake. Bearer binds `user_id` (account-first). No auth mints `session_token` once (upload-first).
 - `POST /v1/intakes/{id}/uploads` — multipart SS extract (`files` + `period_year_month`; xlsx or csv). Parses then **applies** to `employee` / `employment` / pay / events when parse succeeds, then persists the four teaser figures (OD-2).
 - `GET /v1/intakes/{id}` — status, four teaser figures (now vs potential × monthly vs window), parse summary. No names, rates, or remaining months unless `ENV=DEV` and `VERBOSE=TRUE`, which adds `verbose_people`.
-- `POST /v1/intakes/{id}/convert` — Firebase required. Creates `company` + `ADMIN` membership; re-keys PII to company scope.
+- `POST /v1/intakes/{id}/convert` — Firebase required. Creates `company` + `ADMIN` membership; re-keys PII and leftover JSONB NISS (`niss_enc` + tenant HMAC) to company scope.
 - `POST /v1/intakes/{id}/decline` — wipe files + raw + hashes; intake tombstone `PURGED` with no PII.
 - Tests: `PYTHONPATH=. pytest`
 

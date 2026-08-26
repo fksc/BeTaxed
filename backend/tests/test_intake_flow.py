@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import uuid
 from pathlib import Path
@@ -33,7 +34,13 @@ from app.services.ss_apply import (
     delete_intake_employment_spine,
 )
 from app.settings import HEADER_INTAKE_ID, HEADER_INTAKE_SESSION
-from tests.ss_xlsx_fixtures import EMPLOYER_NISS, PERSON_A, PERSON_B, combined_workbook
+from tests.ss_xlsx_fixtures import (
+    EMPLOYER_NISS,
+    PERSON_A,
+    PERSON_B,
+    SUBSTITUTE_NISS,
+    combined_workbook,
+)
 
 
 @pytest.fixture
@@ -276,7 +283,19 @@ def test_upload_first_convert_and_session_me(
                         )
                     ).scalars().all()
                     leftover = json.dumps([row.leftover or {} for row in contratos])
-                    assert "niss_hash" not in leftover
+                    assert SUBSTITUTE_NISS not in leftover
+                    company_hex = company_crypto.niss_hash(SUBSTITUTE_NISS).hex()
+                    assert company_hex in leftover
+                    found_enc = False
+                    for row in contratos:
+                        for value in (row.leftover or {}).values():
+                            if isinstance(value, dict) and value.get("niss_enc"):
+                                niss = company_crypto.decrypt_niss(
+                                    base64.b64decode(value["niss_enc"][0])
+                                )
+                                assert niss == SUBSTITUTE_NISS
+                                found_enc = True
+                    assert found_enc
         finally:
             async with AsyncSessionLocal() as session:
                 await _cleanup_converted(
