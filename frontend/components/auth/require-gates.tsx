@@ -2,8 +2,8 @@
 
 import { useRouter } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
-import { getMe } from "@/lib/api/workspace-client";
-import { loadCompanyId, saveCompanyId } from "@/lib/company-session";
+import { getMe, getMeCompany } from "@/lib/api/workspace-client";
+import { loadCompanyId, saveCompanyId, saveWorkspaceName } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import { useEffect, useState, type ReactNode } from "react";
@@ -52,7 +52,14 @@ export function RequireCompany({ children }: { children: ReactNode }) {
         }
         const stored = loadCompanyId();
         const match = stored && active.some((m) => m.company_id === stored);
-        saveCompanyId(match ? stored : active[0].company_id);
+        const companyId = match ? stored : active[0].company_id;
+        saveCompanyId(companyId);
+        try {
+          const scope = await getMeCompany({ idToken, companyId });
+          saveWorkspaceName(scope.legal_name);
+        } catch {
+          /* name is filled on the dashboard if this call fails */
+        }
         setOk(true);
       } catch {
         router.replace(paths.login);

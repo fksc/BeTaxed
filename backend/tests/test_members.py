@@ -50,7 +50,7 @@ def _patch_invite_externals(monkeypatch: pytest.MonkeyPatch) -> dict:
     def get_user(email: str) -> FirebaseUserRecord | None:
         return users.get(email.strip().lower())
 
-    def create_user(email: str) -> FirebaseUserRecord:
+    def create_user(email: str, display_name: str | None = None) -> FirebaseUserRecord:
         rec = FirebaseUserRecord(
             uid=f"fb-{uuid.uuid4().hex[:12]}",
             email=email.strip().lower(),
@@ -73,6 +73,7 @@ def _patch_invite_externals(monkeypatch: pytest.MonkeyPatch) -> dict:
     monkeypatch.setattr("app.services.members.get_user_by_email", get_user)
     monkeypatch.setattr("app.services.members.create_email_user", create_user)
     monkeypatch.setattr("app.services.members.set_user_password", set_password)
+    monkeypatch.setattr("app.services.members.set_user_display_name", lambda *_a, **_k: None)
     monkeypatch.setattr("app.services.members.send_invite_email", send_mail)
     return {"users": users, "mail": mail}
 
@@ -110,6 +111,8 @@ def test_sales_led_invite_accept_and_seat_limit(
                     "trading_name": "Sales",
                     "locale": "en",
                     "admin_email": "owner@sales.test",
+                    "admin_given_name": "Ana",
+                    "admin_family_name": "Silva",
                     "admin_role": "ADMIN",
                 },
             )
@@ -122,10 +125,13 @@ def test_sales_led_invite_accept_and_seat_limit(
             token = payload["invite_url"].rsplit("/", 1)[-1]
             company_id = payload["id"]
             assert ext["mail"][0]["to"] == "owner@sales.test"
+            assert "Ana" in ext["mail"][0]["body"]
 
             preview = await client.get(f"/v1/invites/{token}")
             assert preview.status_code == 200
             assert preview.json()["email"] == "owner@sales.test"
+            assert preview.json()["given_name"] == "Ana"
+            assert preview.json()["family_name"] == "Silva"
             assert preview.json()["needs_password"] is True
 
             accepted = await client.post(

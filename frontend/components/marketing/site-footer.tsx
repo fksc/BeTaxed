@@ -12,7 +12,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-border">
       <div className="mx-auto grid w-full max-w-5xl gap-8 px-6 py-10 sm:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p className="font-heading text-base text-foreground">{t("brand")}</p>
+          <p className="font-editorial text-base text-foreground">{t("brand")}</p>
           <p>{t("email")}</p>
           <p className="whitespace-pre-line">{t("address")}</p>
         </div>

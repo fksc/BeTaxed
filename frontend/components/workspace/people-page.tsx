@@ -5,7 +5,14 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { getMe, listPeople, patchPersonStatus, uploadPersonContract } from "@/lib/api/workspace-client";
 import type { PersonOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
@@ -14,9 +21,6 @@ import { currentIdToken } from "@/lib/firebase";
 
 const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
 const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
-
-const selectClass =
-  "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50";
 
 function reviewLabel(status: string | null, t: (key: string) => string): string {
   if (!status) {
@@ -130,8 +134,7 @@ export function PeoplePage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("peopleCrumb")} />
+    <ShellPage crumb={t("peopleCrumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("nav.people")}</div>
         <p className="text-sm text-muted-foreground">{t("people.lead")}</p>
@@ -166,44 +169,66 @@ export function PeoplePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {canOverride ? (
                       <>
-                        <select
-                          className={selectClass}
-                          aria-label={t("people.statusLabel")}
+                        <Select
                           value={row.status}
                           disabled={busyId === row.id}
-                          onChange={(event) => {
-                            const next = event.target.value as (typeof STATUSES)[number];
-                            void onStatus(row.id, next);
+                          onValueChange={(value) => {
+                            if (!value) {
+                              return;
+                            }
+                            void onStatus(row.id, value as (typeof STATUSES)[number]);
                           }}
+                          items={Object.fromEntries(
+                            STATUSES.map((status) => [status, t(`people.status.${status}`)]),
+                          )}
                         >
-                          {STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {t(`people.status.${status}`)}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger
+                            className="w-36"
+                            aria-label={t("people.statusLabel")}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {t(`people.status.${status}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {row.status === "ON_LEAVE" ? (
-                          <select
-                            className={selectClass}
-                            aria-label={t("people.leaveLabel")}
+                          <Select
                             value={leaveById[row.id] ?? row.leave_type ?? "OTHER"}
                             disabled={busyId === row.id}
-                            onChange={(event) => {
-                              const leave = event.target
-                                .value as (typeof LEAVE_TYPES)[number];
+                            onValueChange={(value) => {
+                              if (!value) {
+                                return;
+                              }
+                              const leave = value as (typeof LEAVE_TYPES)[number];
                               setLeaveById((current) => ({
                                 ...current,
                                 [row.id]: leave,
                               }));
                               void onStatus(row.id, "ON_LEAVE", leave);
                             }}
+                            items={Object.fromEntries(
+                              LEAVE_TYPES.map((leave) => [leave, t(`people.leave.${leave}`)]),
+                            )}
                           >
-                            {LEAVE_TYPES.map((leave) => (
-                              <option key={leave} value={leave}>
-                                {t(`people.leave.${leave}`)}
-                              </option>
-                            ))}
-                          </select>
+                            <SelectTrigger
+                              className="w-36"
+                              aria-label={t("people.leaveLabel")}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LEAVE_TYPES.map((leave) => (
+                                <SelectItem key={leave} value={leave}>
+                                  {t(`people.leave.${leave}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : null}
                       </>
                     ) : (
@@ -243,6 +268,6 @@ export function PeoplePage() {
           }}
         />
       </div>
-    </>
+    </ShellPage>
   );
 }

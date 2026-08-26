@@ -209,6 +209,8 @@ class CompanyInvite(Base):
         UUID(as_uuid=True), ForeignKey("company.id"), nullable=False
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    given_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    family_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     token_hash: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
     invited_by_id: Mapped[uuid.UUID] = mapped_column(

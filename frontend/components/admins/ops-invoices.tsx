@@ -6,7 +6,16 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Field } from "@/components/intake/field";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import {
   createDraftInvoice,
   collectOpsInvoice,
@@ -130,8 +139,7 @@ export function OpsInvoicesPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("crumb")} />
+    <ShellPage crumb={t("crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("title")}</div>
         <p className="text-sm text-muted-foreground">{t("lead")}</p>
@@ -139,56 +147,55 @@ export function OpsInvoicesPage() {
       <div className="space-y-4 p-4 sm:p-6">
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("draft")}</CardTitle>
+          <CardHeader>
+            <CardTitle>{t("draft")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-2 pt-1">
-            <label className="text-xs">
-              {t("companyId")}
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <Field label={t("companyId")}>
               <Input
-                className="mt-1 w-72"
+                className="w-full sm:w-72"
                 value={companyId}
                 onChange={(event) => setCompanyId(event.target.value)}
               />
-            </label>
-            <label className="text-xs">
-              {t("period")}
-              <Input
-                type="date"
-                className="mt-1"
-                value={period}
-                onChange={(event) => setPeriod(event.target.value)}
-              />
-            </label>
+            </Field>
+            <Field label={t("period")}>
+              <DatePicker value={period} onChange={setPeriod} className="sm:w-44" />
+            </Field>
             <Button type="button" size="sm" disabled={busy === "draft"} onClick={() => void onDraft()}>
               {t("draft")}
             </Button>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("method")}</CardTitle>
+          <CardHeader>
+            <CardTitle>{t("method")}</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-2 pt-1">
-            <label className="text-xs">
-              {t("method")}
-              <select
-                className="mt-1 block h-9 rounded-md border border-input bg-background px-2 text-sm"
+          <CardContent className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+            <Field label={t("method")}>
+              <Select
                 value={method}
-                onChange={(event) => setMethod(event.target.value)}
+                onValueChange={(value) => setMethod(value ?? "CERTIFIED_SOFTWARE")}
+                items={{
+                  CERTIFIED_SOFTWARE: t("methodCertified"),
+                  STRIPE_SEPA: t("methodSepa"),
+                }}
               >
-                <option value="CERTIFIED_SOFTWARE">CERTIFIED_SOFTWARE</option>
-                <option value="STRIPE_SEPA">STRIPE_SEPA</option>
-              </select>
-            </label>
-            <label className="text-xs">
-              {t("vendor")}
+                <SelectTrigger className="w-full sm:w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CERTIFIED_SOFTWARE">{t("methodCertified")}</SelectItem>
+                  <SelectItem value="STRIPE_SEPA">{t("methodSepa")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label={t("vendor")}>
               <Input
-                className="mt-1 w-56"
+                className="w-full sm:w-56"
                 value={vendor}
                 onChange={(event) => setVendor(event.target.value)}
               />
-            </label>
+            </Field>
             <Button
               type="button"
               size="sm"
@@ -201,19 +208,17 @@ export function OpsInvoicesPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">{t("title")}</CardTitle>
-            <CardDescription className="text-xs">{t("lead")}</CardDescription>
+          <CardHeader>
+            <CardTitle>{t("title")}</CardTitle>
+            <CardDescription>{t("lead")}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 pt-1">
-            <label className="block text-xs">
-              {t("reason")}
+          <CardContent className="space-y-4">
+            <Field label={t("reason")}>
               <Input
-                className="mt-1"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
               />
-            </label>
+            </Field>
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("empty")}</p>
             ) : (
@@ -281,6 +286,6 @@ export function OpsInvoicesPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </ShellPage>
   );
 }

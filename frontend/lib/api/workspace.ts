@@ -11,6 +11,13 @@ export type MeOut = {
   memberships: Membership[];
 };
 
+export type CompanyScopeOut = {
+  company_id: string;
+  legal_name: string;
+  role: string | null;
+  actor: string;
+};
+
 export type PersonOut = {
   id: string;
   display_name: string | null;
@@ -219,6 +226,8 @@ export type OpsCompanyDetailOut = OpsCompanyListOut & {
 export type PublicInviteOut = {
   company_name: string;
   email: string;
+  given_name?: string | null;
+  family_name?: string | null;
   role: string;
   status: string;
   needs_password: boolean;

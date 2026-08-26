@@ -7,9 +7,9 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export function AdminsShell({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh min-h-0 overflow-hidden">
       <AdminsSidebar />
-      <SidebarInset>{children}</SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">{children}</SidebarInset>
     </SidebarProvider>
   );
 }

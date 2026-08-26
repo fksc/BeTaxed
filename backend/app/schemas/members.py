@@ -12,6 +12,8 @@ class SalesCompanyIn(BaseModel):
     locale: str = Field(default="pt", max_length=10)
     nif: str | None = Field(default=None, max_length=32)
     admin_email: str = Field(min_length=3, max_length=255)
+    admin_given_name: str = Field(min_length=1, max_length=100)
+    admin_family_name: str = Field(min_length=1, max_length=100)
     admin_role: str = "ADMIN"
 
 
@@ -85,6 +87,8 @@ class OpsCompanyDetailOut(OpsCompanyListOut):
 class PublicInviteOut(BaseModel):
     company_name: str
     email: str
+    given_name: str | None = None
+    family_name: str | None = None
     role: str
     status: str
     needs_password: bool

@@ -17,7 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { MonthPicker } from "@/components/ui/month-picker";
+import { ShellPage } from "@/components/shell/shell-app-bar";
+import { Field } from "@/components/intake/field";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
   listHeadcountMonths,
@@ -157,8 +159,7 @@ export function DeclarationsPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("declarationsCrumb")} />
+    <ShellPage crumb={t("declarationsCrumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("nav.declarations")}</div>
         <p className="text-sm text-muted-foreground">{t("declarations.lead")}</p>
@@ -172,18 +173,9 @@ export function DeclarationsPage() {
             <CardDescription className="text-xs">{t("declarations.hint")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3 pt-1">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground" htmlFor="ss-period">
-                {t("declarations.month")}
-              </label>
-              <Input
-                id="ss-period"
-                type="month"
-                value={period}
-                onChange={(event) => setPeriod(event.target.value)}
-                className="w-40"
-              />
-            </div>
+            <Field label={t("declarations.month")} className="w-56">
+              <MonthPicker id="ss-period" value={period} onChange={setPeriod} />
+            </Field>
             <Button
               type="button"
               size="sm"
@@ -295,31 +287,18 @@ export function DeclarationsPage() {
               })}
             </p>
             <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground" htmlFor="user-month">
-                  {t("declarations.month")}
-                </label>
-                <Input
-                  id="user-month"
-                  type="month"
-                  value={userMonth}
-                  onChange={(event) => setUserMonth(event.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground" htmlFor="user-count">
-                  {t("declarations.userHeadcount")}
-                </label>
+              <Field label={t("declarations.month")} className="w-56">
+                <MonthPicker id="user-month" value={userMonth} onChange={setUserMonth} />
+              </Field>
+              <Field label={t("declarations.userHeadcount")} className="w-32">
                 <Input
                   id="user-count"
                   type="number"
                   min={0}
                   value={userCount}
                   onChange={(event) => setUserCount(event.target.value)}
-                  className="w-28"
                 />
-              </div>
+              </Field>
               <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void onUserHeadcount()}>
                 {t("declarations.saveUser")}
               </Button>
@@ -332,6 +311,6 @@ export function DeclarationsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </ShellPage>
   );
 }

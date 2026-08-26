@@ -48,6 +48,10 @@ services:
     ports:
       - "9099:9099"
       - "4000:4000"
+    volumes:
+      - betaxed_firebase_auth_data:/emulator-data
+    # Export on SIGTERM can take a few seconds.
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://127.0.0.1:9099/"]
       interval: 5s
@@ -56,3 +60,4 @@ services:
 
 volumes:
   betaxed_pg_data:
+  betaxed_firebase_auth_data:

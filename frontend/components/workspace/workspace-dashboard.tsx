@@ -6,12 +6,15 @@ import { FileSpreadsheet, Flag, Users, Wallet } from "lucide-react";
 
 import { StatCard } from "@/components/workspace/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { Button } from "@/components/ui/button";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { getIntake } from "@/lib/api/intakes";
+import { getMeCompany } from "@/lib/api/workspace-client";
 import type { IntakeOut } from "@/lib/api/types";
 import { currentIdToken } from "@/lib/firebase";
 import { formatEur } from "@/lib/format-money";
-import { loadIntakeSession, loadWorkspaceName } from "@/lib/intake-session";
+import { loadIntakeSession } from "@/lib/intake-session";
+import { loadCompanyId, loadWorkspaceName, saveWorkspaceName } from "@/lib/company-session";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
 
@@ -24,21 +27,35 @@ export function WorkspaceDashboard() {
 
   useEffect(() => {
     setCompanyName(loadWorkspaceName());
-    const stored = loadIntakeSession();
-    if (!stored) {
-      setError(t("needSession"));
-      return;
-    }
     void (async () => {
+      const idToken = await currentIdToken();
+      const companyId = loadCompanyId();
+      if (!idToken || !companyId) {
+        setError(t("needSession"));
+        return;
+      }
       try {
-        const idToken = await currentIdToken();
-        const loaded = await getIntake(stored.intakeId, {
-          sessionToken: stored.sessionToken,
-          idToken,
-        });
-        setIntake(loaded);
+        const scope = await getMeCompany({ idToken, companyId });
+        saveWorkspaceName(scope.legal_name);
+        setCompanyName(scope.legal_name);
+        setError(null);
       } catch {
         setError(t("needSession"));
+        return;
+      }
+      const stored = loadIntakeSession();
+      if (!stored) {
+        return;
+      }
+      try {
+        setIntake(
+          await getIntake(stored.intakeId, {
+            sessionToken: stored.sessionToken,
+            idToken,
+          }),
+        );
+      } catch {
+        /* sales-led tenants have no intake; KPIs stay as dashes */
       }
     })();
   }, [t]);
@@ -46,9 +63,7 @@ export function WorkspaceDashboard() {
   const name = companyName || t("fallbackName");
 
   return (
-    <>
-      <ShellAppBar crumb={t("breadcrumb")} />
-
+    <ShellPage crumb={t("breadcrumb")}>
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
         <div>
           <div className="text-xs text-muted-foreground">
@@ -59,14 +74,7 @@ export function WorkspaceDashboard() {
       </div>
 
       <div className="space-y-5 p-4 sm:p-6">
-        {error ? (
-          <p className="text-sm text-destructive">
-            {error}{" "}
-            <Link href="/start" className="underline">
-              {t("backToStart")}
-            </Link>
-          </p>
-        ) : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
@@ -101,20 +109,23 @@ export function WorkspaceDashboard() {
               <CardTitle className="text-sm">{t("next.title")}</CardTitle>
               <CardDescription className="text-xs">{t("next.lead")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 pt-1 text-sm text-muted-foreground">
+            <CardContent className="space-y-3 pt-1 text-sm text-muted-foreground">
               <p>{t("next.people")}</p>
               <p>{t("next.declarations")}</p>
               <p>{t("next.billing")}</p>
-              <div className="flex flex-wrap gap-3">
-                <Link href={paths.companiesPeople} className="text-primary underline">
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button variant="outline" size="sm" render={<Link href={paths.companiesPeople} />}>
+                  <Users />
                   {t("next.openPeople")}
-                </Link>
-                <Link href={paths.companiesDeclarations} className="text-primary underline">
+                </Button>
+                <Button variant="outline" size="sm" render={<Link href={paths.companiesDeclarations} />}>
+                  <FileSpreadsheet />
                   {t("next.openDeclarations")}
-                </Link>
-                <Link href={paths.companiesInvoices} className="text-primary underline">
+                </Button>
+                <Button variant="outline" size="sm" render={<Link href={paths.companiesInvoices} />}>
+                  <Wallet />
                   {t("next.openBilling")}
-                </Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -128,6 +139,6 @@ export function WorkspaceDashboard() {
           </Card>
         </div>
       </div>
-    </>
+    </ShellPage>
   );
 }

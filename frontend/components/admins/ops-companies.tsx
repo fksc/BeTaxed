@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { listOpsCompanies } from "@/lib/api/workspace-client";
 import type { OpsCompanyListOut } from "@/lib/api/workspace";
 import { Link } from "@/i18n/navigation";
@@ -34,8 +34,7 @@ export function OpsCompaniesPage() {
   }, [t]);
 
   return (
-    <>
-      <ShellAppBar crumb={t("crumb")} />
+    <ShellPage crumb={t("crumb")}>
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
         <div>
           <div className="text-base font-semibold">{t("title")}</div>
@@ -70,6 +69,6 @@ export function OpsCompaniesPage() {
           ))
         )}
       </div>
-    </>
+    </ShellPage>
   );
 }

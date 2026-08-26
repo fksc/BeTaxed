@@ -5,7 +5,14 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { Field } from "@/components/intake/field";
 import { createOpsCompany } from "@/lib/api/workspace-client";
 import { ApiError } from "@/lib/api/types";
@@ -21,6 +28,8 @@ export function OpsCompanyNewPage() {
   const [locale, setLocale] = useState("pt");
   const [nif, setNif] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
+  const [adminGivenName, setAdminGivenName] = useState("");
+  const [adminFamilyName, setAdminFamilyName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -41,6 +50,8 @@ export function OpsCompanyNewPage() {
           locale,
           nif: nif.trim() || undefined,
           admin_email: adminEmail.trim(),
+          admin_given_name: adminGivenName.trim(),
+          admin_family_name: adminFamilyName.trim(),
           admin_role: "ADMIN",
         },
         { idToken },
@@ -57,8 +68,7 @@ export function OpsCompanyNewPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("crumb")} />
+    <ShellPage crumb={t("crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <Link href={paths.adminsCompanies} className="text-xs text-muted-foreground underline-offset-4 hover:underline">
           {t("back")}
@@ -75,30 +85,54 @@ export function OpsCompanyNewPage() {
           <Input value={tradingName} onChange={(event) => setTradingName(event.target.value)} />
         </Field>
         <Field label={t("locale")}>
-          <select
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+          <Select
             value={locale}
-            onChange={(event) => setLocale(event.target.value)}
+            onValueChange={(value) => setLocale(value ?? "pt")}
+            items={{ pt: "pt", en: "en" }}
           >
-            <option value="pt">pt</option>
-            <option value="en">en</option>
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pt">pt</SelectItem>
+              <SelectItem value="en">en</SelectItem>
+            </SelectContent>
+          </Select>
         </Field>
         <Field label={t("nif")} hint={t("optional")}>
           <Input value={nif} onChange={(event) => setNif(event.target.value)} />
         </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label={t("adminGivenName")}>
+            <Input
+              value={adminGivenName}
+              onChange={(event) => setAdminGivenName(event.target.value)}
+              required
+              autoComplete="given-name"
+            />
+          </Field>
+          <Field label={t("adminFamilyName")}>
+            <Input
+              value={adminFamilyName}
+              onChange={(event) => setAdminFamilyName(event.target.value)}
+              required
+              autoComplete="family-name"
+            />
+          </Field>
+        </div>
         <Field label={t("adminEmail")}>
           <Input
             type="email"
             value={adminEmail}
             onChange={(event) => setAdminEmail(event.target.value)}
             required
+            autoComplete="email"
           />
         </Field>
         <Button type="submit" disabled={pending}>
           {pending ? t("saving") : t("submit")}
         </Button>
       </form>
-    </>
+    </ShellPage>
   );
 }

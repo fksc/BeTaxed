@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SettingsStub({
@@ -15,8 +15,7 @@ export function SettingsStub({
   lead: string;
 }) {
   return (
-    <>
-      <ShellAppBar crumb={crumb} />
+    <ShellPage crumb={crumb}>
       <div className="p-4 sm:p-6">
         <Card>
           <CardHeader>
@@ -26,7 +25,7 @@ export function SettingsStub({
           <CardContent />
         </Card>
       </div>
-    </>
+    </ShellPage>
   );
 }
 

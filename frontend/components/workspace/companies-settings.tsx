@@ -3,19 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { getMe, listCertificates, listMembers, uploadCertificate } from "@/lib/api/workspace-client";
 import type { CertificateOut, MembersBundleOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
 import { MembersPanel } from "@/components/workspace/members-panel";
-
-const selectClass =
-  "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring";
 
 export function CompaniesSettingsPage() {
   const t = useTranslations("workspace.settings");
@@ -94,8 +99,7 @@ export function CompaniesSettingsPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("crumb")} />
+    <ShellPage crumb={t("crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("title")}</div>
         <p className="text-sm text-muted-foreground">{t("lead")}</p>
@@ -109,29 +113,30 @@ export function CompaniesSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-3 pt-1">
             {canUpload ? (
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="text-xs">
-                  {t("kind")}
-                  <select
-                    className={`${selectClass} mt-1 block`}
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label={t("kind")} className="w-48">
+                  <Select
                     value={kind}
-                    onChange={(event) =>
-                      setKind(event.target.value as "SS_NO_DEBT" | "AT_NO_DEBT")
+                    onValueChange={(value) =>
+                      setKind((value as "SS_NO_DEBT" | "AT_NO_DEBT") ?? "SS_NO_DEBT")
                     }
+                    items={{
+                      SS_NO_DEBT: t("ss"),
+                      AT_NO_DEBT: t("at"),
+                    }}
                   >
-                    <option value="SS_NO_DEBT">{t("ss")}</option>
-                    <option value="AT_NO_DEBT">{t("at")}</option>
-                  </select>
-                </label>
-                <label className="text-xs">
-                  {t("issuedOn")}
-                  <Input
-                    type="date"
-                    className="mt-1"
-                    value={issuedOn}
-                    onChange={(event) => setIssuedOn(event.target.value)}
-                  />
-                </label>
+                    <SelectTrigger aria-label={t("kind")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="SS_NO_DEBT">{t("ss")}</SelectItem>
+                      <SelectItem value="AT_NO_DEBT">{t("at")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label={t("issuedOn")} className="w-44">
+                  <DatePicker value={issuedOn} onChange={setIssuedOn} />
+                </Field>
                 <Button
                   type="button"
                   size="sm"
@@ -177,6 +182,6 @@ export function CompaniesSettingsPage() {
           />
         ) : null}
       </div>
-    </>
+    </ShellPage>
   );
 }

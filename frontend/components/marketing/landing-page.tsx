@@ -11,7 +11,7 @@ export function LandingPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-12 lg:py-16">
-      <h1 className="font-heading text-5xl tracking-tight text-balance sm:text-6xl">
+      <h1 className="font-editorial text-5xl tracking-tight text-balance sm:text-6xl">
         {t("headline")}
       </h1>
 
@@ -23,7 +23,7 @@ export function LandingPage() {
         <div className="absolute inset-y-8 left-[12%] w-px bg-primary-foreground/20" />
         <div className="absolute inset-y-8 right-[28%] w-px bg-primary-foreground/15" />
         <div className="absolute inset-x-10 bottom-[28%] h-px bg-primary-foreground/15" />
-        <p className="absolute right-8 bottom-8 max-w-xs text-right font-heading text-lg italic text-primary-foreground/90">
+        <p className="absolute right-8 bottom-8 max-w-xs text-right font-editorial text-lg italic text-primary-foreground/90">
           {t("heroCaption")}
         </p>
       </div>
