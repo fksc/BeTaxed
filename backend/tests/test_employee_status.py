@@ -137,6 +137,7 @@ def test_status_override_leave_events_conflict_and_finance(
                 assert rows[0]["status"] == "ACTIVE"
                 assert rows[0]["status_source"] == "SS"
                 assert rows[0]["has_source_conflict"] is False
+                assert "contract_modality" in rows[0]
 
                 forbidden = await client.patch(
                     f"/v1/people/{employee_id}",

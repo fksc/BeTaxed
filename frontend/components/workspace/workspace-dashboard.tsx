@@ -2,31 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { FileSpreadsheet, Flag, Users, Wallet } from "lucide-react";
+import { FileSpreadsheet, Flag, Settings, Users, Wallet } from "lucide-react";
 
 import { StatCard } from "@/components/workspace/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShellPage } from "@/components/shell/shell-app-bar";
-import { getIntake } from "@/lib/api/intakes";
 import { getMeCompany } from "@/lib/api/workspace-client";
-import type { IntakeOut } from "@/lib/api/types";
 import { currentIdToken } from "@/lib/firebase";
 import { formatEur } from "@/lib/format-money";
-import { loadIntakeSession } from "@/lib/intake-session";
 import { loadCompanyId, loadWorkspaceName, saveWorkspaceName } from "@/lib/company-session";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
+import { StatusDot, certTone } from "@/components/workspace/status-dot";
+import type { CompanyScopeOut } from "@/lib/api/workspace";
 
 export function WorkspaceDashboard() {
   const t = useTranslations("workspace");
+  const ts = useTranslations("workspace.settings");
   const locale = useLocale();
-  const [intake, setIntake] = useState<IntakeOut | null>(null);
-  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [scope, setScope] = useState<CompanyScopeOut | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setCompanyName(loadWorkspaceName());
     void (async () => {
       const idToken = await currentIdToken();
       const companyId = loadCompanyId();
@@ -35,32 +33,34 @@ export function WorkspaceDashboard() {
         return;
       }
       try {
-        const scope = await getMeCompany({ idToken, companyId });
-        saveWorkspaceName(scope.legal_name);
-        setCompanyName(scope.legal_name);
+        const loaded = await getMeCompany({ idToken, companyId });
+        saveWorkspaceName(loaded.legal_name);
+        setScope(loaded);
         setError(null);
       } catch {
         setError(t("needSession"));
-        return;
-      }
-      const stored = loadIntakeSession();
-      if (!stored) {
-        return;
-      }
-      try {
-        setIntake(
-          await getIntake(stored.intakeId, {
-            sessionToken: stored.sessionToken,
-            idToken,
-          }),
-        );
-      } catch {
-        /* sales-led tenants have no intake; KPIs stay as dashes */
       }
     })();
   }, [t]);
 
-  const name = companyName || t("fallbackName");
+  const name = scope?.legal_name || loadWorkspaceName() || t("fallbackName");
+  const hasEstimate = scope?.estimate_now_monthly != null;
+  const estimateBadge = hasEstimate && scope?.estimate_unconfirmed ? t("kpi.estimate") : undefined;
+  const estimateHint =
+    hasEstimate && scope && scope.contracts_missing > 0
+      ? `${t("kpi.estimateHint")} ${t("kpi.contractsMissing", { count: String(scope.contracts_missing) })}`
+      : undefined;
+
+  function certCaption(until: string | null | undefined): string {
+    const tone = certTone(until);
+    if (tone === "bad") {
+      return ts("statusBad");
+    }
+    const date = until
+      ? new Date(`${until}T00:00:00`).toLocaleDateString(locale === "pt" ? "pt-PT" : "en-GB")
+      : "—";
+    return ts(tone === "warn" ? "statusWarn" : "statusOk", { date });
+  }
 
   return (
     <ShellPage crumb={t("breadcrumb")}>
@@ -76,29 +76,54 @@ export function WorkspaceDashboard() {
       <div className="space-y-5 p-4 sm:p-6">
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("certs.title")}</CardTitle>
+            <CardDescription className="text-xs">{t("certs.hint")}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-6 pt-1">
+            <StatusDot
+              tone={certTone(scope?.ss_no_debt_valid_until)}
+              label={`${t("certs.ss")} — ${certCaption(scope?.ss_no_debt_valid_until)}`}
+            />
+            <StatusDot
+              tone={certTone(scope?.at_no_debt_valid_until)}
+              label={`${t("certs.at")} — ${certCaption(scope?.at_no_debt_valid_until)}`}
+            />
+            <Button variant="outline" size="sm" render={<Link href={paths.companiesSettings} />}>
+              <Settings />
+              {t("next.openSettings")}
+            </Button>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
             label={t("kpi.nowMonthly")}
-            value={formatEur(intake?.teaser_now_monthly, locale)}
-            hint={t("kpi.nowMonthlyHint")}
+            value={formatEur(scope?.estimate_now_monthly, locale)}
+            hint={estimateHint ?? t("kpi.nowMonthlyHint")}
+            badge={estimateBadge}
             icon={<Wallet size={14} />}
           />
           <StatCard
             label={t("kpi.nowWindow")}
-            value={formatEur(intake?.teaser_now_window, locale)}
-            hint={t("kpi.nowWindowHint")}
+            value={formatEur(scope?.estimate_now_window, locale)}
+            hint={estimateHint ?? t("kpi.nowWindowHint")}
+            badge={estimateBadge}
             icon={<Flag size={14} />}
           />
           <StatCard
             label={t("kpi.potentialMonthly")}
-            value={formatEur(intake?.teaser_potential_monthly, locale)}
-            hint={t("kpi.potentialMonthlyHint")}
+            value={formatEur(scope?.estimate_potential_monthly, locale)}
+            hint={estimateHint ?? t("kpi.potentialMonthlyHint")}
+            badge={estimateBadge}
             icon={<Users size={14} />}
           />
           <StatCard
             label={t("kpi.potentialWindow")}
-            value={formatEur(intake?.teaser_potential_window, locale)}
-            hint={t("kpi.potentialWindowHint")}
+            value={formatEur(scope?.estimate_potential_window, locale)}
+            hint={estimateHint ?? t("kpi.potentialWindowHint")}
+            badge={estimateBadge}
             icon={<FileSpreadsheet size={14} />}
           />
         </div>
@@ -125,6 +150,10 @@ export function WorkspaceDashboard() {
                 <Button variant="outline" size="sm" render={<Link href={paths.companiesInvoices} />}>
                   <Wallet />
                   {t("next.openBilling")}
+                </Button>
+                <Button variant="outline" size="sm" render={<Link href={paths.companiesSettings} />}>
+                  <Settings />
+                  {t("next.openSettings")}
                 </Button>
               </div>
             </CardContent>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { MonthPicker } from "@/components/ui/month-picker";
 import { ShellPage } from "@/components/shell/shell-app-bar";
+import { Dropzone } from "@/components/intake/dropzone";
 import { Field } from "@/components/intake/field";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
@@ -73,7 +74,8 @@ export function DeclarationsPage() {
   const [period, setPeriod] = useState(currentMonth);
   const [userMonth, setUserMonth] = useState(currentMonth);
   const [userCount, setUserCount] = useState("0");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [vinculos, setVinculos] = useState<File[]>([]);
+  const [contratos, setContratos] = useState<File[]>([]);
 
   async function reload() {
     const idToken = await currentIdToken();
@@ -103,8 +105,20 @@ export function DeclarationsPage() {
     (row) => row.source === "USER" && ym(row.year_month) === userMonth,
   );
 
-  async function onUpload(files: FileList | null) {
-    if (!files || files.length === 0) {
+  async function onUpload() {
+    const files = [...vinculos, ...contratos];
+    const unique = files.filter(
+      (file, index) => files.findIndex((other) => other.name === file.name && other.size === file.size) === index,
+    );
+    if (unique.length === 0) {
+      setError(t("declarations.needBoth"));
+      return;
+    }
+    const hasBoth = vinculos.length > 0 && contratos.length > 0;
+    const combinedOnly =
+      unique.length === 1 && unique[0].name.toLowerCase().endsWith(".xlsx");
+    if (!hasBoth && !combinedOnly) {
+      setError(t("declarations.needBoth"));
       return;
     }
     const idToken = await currentIdToken();
@@ -114,7 +128,9 @@ export function DeclarationsPage() {
     }
     setBusy(true);
     try {
-      await uploadCompanySs(Array.from(files), period, { idToken, companyId });
+      await uploadCompanySs(unique, period, { idToken, companyId });
+      setVinculos([]);
+      setContratos([]);
       await reload();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -126,9 +142,6 @@ export function DeclarationsPage() {
       }
     } finally {
       setBusy(false);
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
     }
   }
 
@@ -172,26 +185,32 @@ export function DeclarationsPage() {
             <CardTitle className="text-sm">{t("declarations.uploadTitle")}</CardTitle>
             <CardDescription className="text-xs">{t("declarations.hint")}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-3 pt-1">
+          <CardContent className="space-y-4 pt-1">
             <Field label={t("declarations.month")} className="w-56">
               <MonthPicker id="ss-period" value={period} onChange={setPeriod} />
             </Field>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => fileRef.current?.click()}
-            >
+            <p className="text-sm text-muted-foreground">{t("declarations.needBoth")}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Dropzone
+                files={vinculos}
+                disabled={busy}
+                multiple={false}
+                title={t("declarations.vinculosTitle")}
+                hint={t("declarations.vinculosHint")}
+                onFiles={setVinculos}
+              />
+              <Dropzone
+                files={contratos}
+                disabled={busy}
+                multiple={false}
+                title={t("declarations.contratosTitle")}
+                hint={t("declarations.contratosHint")}
+                onFiles={setContratos}
+              />
+            </div>
+            <Button type="button" size="sm" disabled={busy} onClick={() => void onUpload()}>
               {t("declarations.upload")}
             </Button>
-            <input
-              ref={fileRef}
-              type="file"
-              className="sr-only"
-              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-              multiple
-              onChange={(event) => void onUpload(event.target.files)}
-            />
           </CardContent>
         </Card>
 

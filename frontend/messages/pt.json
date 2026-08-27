@@ -129,7 +129,8 @@
       "overview": "Visão geral",
       "people": "Pessoas",
       "declarations": "Declarações",
-      "billing": "Faturação"
+      "billing": "Faturação",
+      "settings": "Definições"
     },
     "kpi": {
       "nowMonthly": "Agora · mês",
@@ -139,7 +140,10 @@
       "potentialMonthly": "Potencial · mês",
       "potentialMonthlyHint": "Se ficar connosco a acompanhar o processo",
       "potentialWindow": "Potencial · ~5 anos",
-      "potentialWindowHint": "Se ficar connosco a acompanhar o processo"
+      "potentialWindowHint": "Se ficar connosco a acompanhar o processo",
+      "estimate": "Estimativa",
+      "estimateHint": "Só a partir do extrato da Segurança Social. Não confirmado até os contratos estarem no processo.",
+      "contractsMissing": "Ainda faltam {count} contratos."
     },
     "next": {
       "title": "A seguir no espaço",
@@ -149,11 +153,18 @@
       "billing": "Faturas — totais e estado. Admin e Finance.",
       "openPeople": "Abrir Pessoas",
       "openDeclarations": "Abrir Declarações",
-      "openBilling": "Abrir faturação"
+      "openBilling": "Abrir faturação",
+      "openSettings": "Abrir definições"
     },
     "activity": {
       "title": "Atividade recente",
       "empty": "Ainda sem atividade."
+    },
+    "certs": {
+      "title": "Declarações de não dívida",
+      "hint": "Valem quatro meses a partir da emissão. Envie-as em Definições.",
+      "ss": "SS sem dívida",
+      "at": "AT sem dívida"
     },
     "settings": {
       "crumb": "Definições",
@@ -161,6 +172,13 @@
       "lead": "Envie as declarações de não dívida SS e AT. Convide utilizadores da empresa (Admin). Certificados: Admin e Finance.",
       "certsTitle": "Declarações de não dívida",
       "certsHint": "Cada ficheiro vale quatro meses a partir da data de emissão, salvo override.",
+      "ssDrop": "PDF SS sem dívida",
+      "ssDropHint": "Declaração de não dívida da Segurança Social.",
+      "atDrop": "PDF AT sem dívida",
+      "atDropHint": "Declaração de não dívida da Autoridade Tributária.",
+      "statusOk": "Válido até {date}",
+      "statusWarn": "Expira em {date}",
+      "statusBad": "Em falta ou caducado",
       "kind": "Tipo",
       "issuedOn": "Emitido em",
       "validUntil": "Válido até",
@@ -199,6 +217,24 @@
       "hint": "Este ecrã não ensina o regime nem a lista legal de cessação.",
       "empty": "Ainda não há pessoas neste espaço.",
       "unnamed": "Pessoa",
+      "colName": "Nome",
+      "colModality": "Tipo de contrato",
+      "colFile": "Ficheiro do contrato",
+      "colActions": "Ações",
+      "filterModality": "Tipo de contrato",
+      "filterStatus": "Estado",
+      "filterFile": "Ficheiro do contrato",
+      "filterAll": "Todos",
+      "filterMissingFile": "Sem ficheiro",
+      "filterOnFile": "Com ficheiro",
+      "filterEmpty": "Ninguém corresponde a estes filtros.",
+      "modalityUnknown": "Desconhecido",
+      "modality": {
+        "SEM_TERMO": "Sem termo",
+        "TERMO_CERTO": "Termo certo",
+        "TERMO_INCERTO": "Termo incerto",
+        "OTHER": "Outro"
+      },
       "noFile": "Ainda sem contrato",
       "pending": "Recebido, em revisão",
       "received": "Recebido",
@@ -228,10 +264,15 @@
     "declarationsCrumb": "Declarações",
     "declarations": {
       "lead": "Envie a declaração mensal da Segurança Social. Mostramos só as contagens do último ficheiro aplicado.",
-      "hint": "Vínculos + contratos, ou o livro combinado. Opcionalmente uma folha de remunerações/ausências (NISS, tipo, início). Sem nomes, taxas ou valores neste ecrã.",
-      "uploadTitle": "Ficheiro do mês",
+      "hint": "Precisamos de vínculos e contratos do mês. Envie cada ficheiro, ou um Excel combinado em qualquer das caixas.",
+      "uploadTitle": "Ficheiros do mês",
       "month": "Mês",
-      "upload": "Enviar xlsx ou csv",
+      "needBoth": "Envie vínculos e contratos (dois ficheiros), ou um .xlsx combinado.",
+      "vinculosTitle": "Vínculos",
+      "vinculosHint": "CSV ou a folha de vínculos. O Excel combinado também serve aqui.",
+      "contratosTitle": "Contratos",
+      "contratosHint": "CSV ou a folha de contratos. Pode omitir se o Excel já inclui ambos.",
+      "upload": "Enviar ficheiros",
       "uploadFailed": "O envio falhou.",
       "forbidden": "Só Admin ou HR podem enviar declarações.",
       "nissMismatch": "O NISS da entidade não corresponde a esta empresa.",

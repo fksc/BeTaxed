@@ -264,6 +264,11 @@ def test_benefit_cases_ops_only_leave_months_and_certs(
                 )
                 assert at_cert.status_code == 201, at_cert.text
 
+                hr_scope = await client.get("/v1/me/company", headers=hr_auth)
+                assert hr_scope.status_code == 200, hr_scope.text
+                assert hr_scope.json()["ss_no_debt_valid_until"] == "2026-05-15"
+                assert hr_scope.json()["at_no_debt_valid_until"] == "2026-05-15"
+
                 submitted = await client.post(
                     f"/v1/ops/companies/{company_id}/applications"
                     "?as_of=2026-08-26",

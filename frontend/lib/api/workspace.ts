@@ -16,6 +16,14 @@ export type CompanyScopeOut = {
   legal_name: string;
   role: string | null;
   actor: string;
+  ss_no_debt_valid_until: string | null;
+  at_no_debt_valid_until: string | null;
+  estimate_now_monthly: string | number | null;
+  estimate_now_window: string | number | null;
+  estimate_potential_monthly: string | number | null;
+  estimate_potential_window: string | number | null;
+  estimate_unconfirmed: boolean;
+  contracts_missing: number;
 };
 
 export type PersonOut = {
@@ -26,6 +34,7 @@ export type PersonOut = {
   has_source_conflict: boolean;
   leave_type: string | null;
   employment_id: string | null;
+  contract_modality: string | null;
   has_contract: boolean;
   review_status: string | null;
   document_id: string | null;

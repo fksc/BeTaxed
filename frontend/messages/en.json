@@ -129,7 +129,8 @@
       "overview": "Overview",
       "people": "People",
       "declarations": "Declarations",
-      "billing": "Billing"
+      "billing": "Billing",
+      "settings": "Settings"
     },
     "kpi": {
       "nowMonthly": "Now · month",
@@ -139,7 +140,10 @@
       "potentialMonthly": "Potential · month",
       "potentialMonthlyHint": "If you stay with us through the process",
       "potentialWindow": "Potential · ~5 years",
-      "potentialWindowHint": "If you stay with us through the process"
+      "potentialWindowHint": "If you stay with us through the process",
+      "estimate": "Estimate",
+      "estimateHint": "From the Segurança Social extract only. Not confirmed until employment contracts are on file.",
+      "contractsMissing": "{count} contracts still missing."
     },
     "next": {
       "title": "Next in the workspace",
@@ -149,11 +153,18 @@
       "billing": "Invoices — totals and status only. Admin and Finance.",
       "openPeople": "Open People",
       "openDeclarations": "Open Declarations",
-      "openBilling": "Open Billing"
+      "openBilling": "Open Billing",
+      "openSettings": "Open Settings"
     },
     "activity": {
       "title": "Recent activity",
       "empty": "No activity yet."
+    },
+    "certs": {
+      "title": "No-debt certificates",
+      "hint": "Valid for four months from the issue date. Upload them in Settings.",
+      "ss": "SS no-debt",
+      "at": "AT no-debt"
     },
     "settings": {
       "crumb": "Settings",
@@ -161,6 +172,13 @@
       "lead": "Upload SS and AT no-debt certificates. Invite company users (Admin). Admin and Finance for certificates.",
       "certsTitle": "No-debt certificates",
       "certsHint": "Each file is valid for four months from the issue date unless we override it.",
+      "ssDrop": "SS no-debt PDF",
+      "ssDropHint": "Declaração de não dívida da Segurança Social.",
+      "atDrop": "AT no-debt PDF",
+      "atDropHint": "Declaração de não dívida da Autoridade Tributária.",
+      "statusOk": "Valid until {date}",
+      "statusWarn": "Expires {date}",
+      "statusBad": "Missing or expired",
       "kind": "Kind",
       "issuedOn": "Issued on",
       "validUntil": "Valid until",
@@ -199,6 +217,24 @@
       "hint": "No eligibility recipe or termination legal list on this screen.",
       "empty": "No people in this workspace yet.",
       "unnamed": "Person",
+      "colName": "Name",
+      "colModality": "Contract type",
+      "colFile": "Contract file",
+      "colActions": "Actions",
+      "filterModality": "Contract type",
+      "filterStatus": "Status",
+      "filterFile": "Contract file",
+      "filterAll": "All",
+      "filterMissingFile": "Missing file",
+      "filterOnFile": "File on record",
+      "filterEmpty": "No people match these filters.",
+      "modalityUnknown": "Unknown",
+      "modality": {
+        "SEM_TERMO": "Permanent",
+        "TERMO_CERTO": "Fixed term",
+        "TERMO_INCERTO": "Uncertain term",
+        "OTHER": "Other"
+      },
       "noFile": "No contract yet",
       "pending": "Received, reviewing",
       "received": "Received",
@@ -228,10 +264,15 @@
     "declarationsCrumb": "Declarations",
     "declarations": {
       "lead": "Upload the monthly Segurança Social extract. We show counts from the latest applied file only.",
-      "hint": "Vínculos + contratos, or the combined workbook. Optionally add a remunerações leave sheet (NISS, leave type, start). No names, rates, or pay amounts on this screen.",
-      "uploadTitle": "This month’s file",
+      "hint": "We need both vínculos and contratos for the month. Drop each file, or one combined Excel workbook in either box.",
+      "uploadTitle": "This month’s files",
       "month": "Month",
-      "upload": "Upload xlsx or csv",
+      "needBoth": "Upload vínculos and contratos (two files), or one combined .xlsx.",
+      "vinculosTitle": "Vínculos",
+      "vinculosHint": "CSV or the vínculos sheet. Combined Excel also works here.",
+      "contratosTitle": "Contratos",
+      "contratosHint": "CSV or the contratos sheet. Skip if the Excel already includes both.",
+      "upload": "Upload files",
       "uploadFailed": "Upload failed.",
       "forbidden": "Only Admin or HR can upload declarations.",
       "nissMismatch": "The employer NISS does not match this company.",

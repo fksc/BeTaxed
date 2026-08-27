@@ -173,6 +173,7 @@ async def convert_intake(
         stored.company_id = company.id
 
     await attach_employment_company(session, intake.id, company.id)
+    await session.flush()
     await upsert_headcount_for_company_applied_batches(session, company.id)
     from app.services.billing import seed_commercial_terms
     from app.services.benefit_engine import rebuild_company_ledger

@@ -126,6 +126,11 @@ def test_auth_context_company_and_intake(
                 assert ok.status_code == 200, ok.text
                 assert ok.json()["role"] == "HR"
                 assert ok.json()["actor"] == "COMPANY_STAFF"
+                assert ok.json()["ss_no_debt_valid_until"] is None
+                assert ok.json()["at_no_debt_valid_until"] is None
+                assert ok.json()["estimate_now_monthly"] is None
+                assert ok.json()["estimate_unconfirmed"] is False
+                assert ok.json()["contracts_missing"] == 0
 
                 staff_ok = await client.get(
                     "/v1/me/company",

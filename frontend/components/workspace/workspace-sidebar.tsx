@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileSpreadsheet,
   LayoutDashboard,
+  Settings,
   Users,
 } from "lucide-react";
 
@@ -53,6 +54,12 @@ export function WorkspaceSidebar() {
       href: paths.companiesInvoices,
       label: t("nav.billing"),
       icon: CreditCard,
+      soon: false,
+    },
+    {
+      href: paths.companiesSettings,
+      label: t("nav.settings"),
+      icon: Settings,
       soon: false,
     },
   ];

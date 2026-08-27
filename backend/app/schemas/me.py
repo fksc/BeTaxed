@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from decimal import Decimal
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -32,6 +33,14 @@ class CompanyScopeOut(BaseModel):
     legal_name: str
     role: str | None
     actor: str
+    ss_no_debt_valid_until: date | None = None
+    at_no_debt_valid_until: date | None = None
+    estimate_now_monthly: Decimal | None = None
+    estimate_now_window: Decimal | None = None
+    estimate_potential_monthly: Decimal | None = None
+    estimate_potential_window: Decimal | None = None
+    estimate_unconfirmed: bool = True
+    contracts_missing: int = 0
 
 
 class IntakeScopeOut(BaseModel):

@@ -6,16 +6,30 @@ import asyncio
 import json
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 
+from app.auth.firebase import FirebaseIdentity
 from app.db import AsyncSessionLocal, engine
 from app.main import app
-from app.models import Employee, Intake, SsBatch, StoredFile, TenantCryptoKey
-from app.services.ss_apply import apply_ss_batch, delete_intake_employment_spine
+from app.models import (
+    Company,
+    CompanyMembership,
+    Employee,
+    Intake,
+    SsBatch,
+    StoredFile,
+    TenantCryptoKey,
+    UserBase,
+)
+from app.services.ss_apply import (
+    apply_ss_batch,
+    delete_company_employment_spine,
+    delete_intake_employment_spine,
+)
 from app.services.ss_ingest import ingest_ss_export
 from app.services.ss_parser import SsSourceFile
 from app.services.teaser import (
@@ -23,7 +37,7 @@ from app.services.teaser import (
     persist_intake_teaser,
     remaining_benefit_months,
 )
-from app.settings import HEADER_INTAKE_SESSION
+from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_SESSION
 from app.storage import get_object_storage
 from tests.ss_xlsx_fixtures import (
     CONTRATO_HEADERS,
@@ -373,6 +387,173 @@ def test_teaser_http_verbose_people_when_dev(db_session, monkeypatch) -> None:
             async with AsyncSessionLocal() as session:
                 if intake_id is not None:
                     await _cleanup(session, intake_id)
+            storage = get_object_storage()
+            for path in storage_paths:
+                storage.delete(path)
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
+def test_company_scope_exposes_ss_estimate_unconfirmed(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    identities: dict[str, FirebaseIdentity] = {}
+
+    def fake_verify(token: str) -> FirebaseIdentity:
+        if token not in identities:
+            raise AssertionError(f"unexpected token {token}")
+        return identities[token]
+
+    monkeypatch.setattr("app.deps.auth.verify_id_token", fake_verify)
+    token = f"ad-{uuid4().hex[:12]}"
+    identities[token] = FirebaseIdentity(
+        uid=token, email=f"ad-{uuid4().hex[:8]}@example.test"
+    )
+
+    async def body() -> None:
+        storage_paths: list[str] = []
+        intake_id = None
+        company_id = None
+        user_id = None
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                intake_id = UUID(created.json()["id"])
+                session_token = created.json()["session_token"]
+                uploaded = await client.post(
+                    f"/v1/intakes/{intake_id}/uploads",
+                    headers={HEADER_INTAKE_SESSION: session_token},
+                    data={"period_year_month": "2026-08"},
+                    files={
+                        "files": (
+                            "ss.xlsx",
+                            _mixed_teaser_xlsx(),
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        )
+                    },
+                )
+                assert uploaded.status_code == 201, uploaded.text
+                now_monthly = uploaded.json()["teaser_now_monthly"]
+                now_window = uploaded.json()["teaser_now_window"]
+                potential_monthly = uploaded.json()["teaser_potential_monthly"]
+                potential_window = uploaded.json()["teaser_potential_window"]
+                assert now_monthly is not None
+
+                me = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert me.status_code == 200, me.text
+                user_id = UUID(me.json()["id"])
+
+                converted = await client.post(
+                    f"/v1/intakes/{intake_id}/convert",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        HEADER_INTAKE_SESSION: session_token,
+                    },
+                    json={"legal_name": "Estimate Lda"},
+                )
+                assert converted.status_code == 200, converted.text
+                company_id = UUID(converted.json()["company_id"])
+
+                reading = await client.get(
+                    "/v1/me/company",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        HEADER_COMPANY_ID: str(company_id),
+                    },
+                )
+                assert reading.status_code == 200, reading.text
+                portfolio = reading.json()
+                assert Decimal(str(portfolio["estimate_now_monthly"])) == Decimal(
+                    str(now_monthly)
+                )
+                assert Decimal(str(portfolio["estimate_now_window"])) == Decimal(
+                    str(now_window)
+                )
+                assert Decimal(str(portfolio["estimate_potential_monthly"])) == Decimal(
+                    str(potential_monthly)
+                )
+                assert Decimal(str(portfolio["estimate_potential_window"])) == Decimal(
+                    str(potential_window)
+                )
+                assert portfolio["estimate_unconfirmed"] is True
+                assert portfolio["contracts_missing"] >= 1
+                blob = str(portfolio)
+                assert "remaining_months" not in blob
+                assert PERSON_A not in blob
+                async with AsyncSessionLocal() as session:
+                    stored = (
+                        await session.execute(
+                            select(StoredFile).where(
+                                or_(
+                                    StoredFile.intake_id == intake_id,
+                                    StoredFile.company_id == company_id,
+                                )
+                            )
+                        )
+                    ).scalars().all()
+                    storage_paths.extend(row.gcs_path for row in stored)
+        finally:
+            async with AsyncSessionLocal() as session:
+                if company_id is not None:
+                    await session.execute(
+                        delete(CompanyMembership).where(
+                            CompanyMembership.company_id == company_id
+                        )
+                    )
+                    await delete_company_employment_spine(session, company_id)
+                    await session.execute(
+                        delete(SsBatch).where(SsBatch.company_id == company_id)
+                    )
+                    await session.execute(
+                        delete(StoredFile).where(
+                            or_(
+                                StoredFile.company_id == company_id,
+                                StoredFile.intake_id == intake_id if intake_id else False,
+                            )
+                        )
+                    )
+                    await session.execute(
+                        delete(TenantCryptoKey).where(
+                            TenantCryptoKey.company_id == company_id
+                        )
+                    )
+                if intake_id is not None:
+                    await delete_intake_employment_spine(session, intake_id)
+                    await session.execute(
+                        delete(SsBatch).where(SsBatch.intake_id == intake_id)
+                    )
+                    await session.execute(
+                        delete(TenantCryptoKey).where(
+                            TenantCryptoKey.intake_id == intake_id
+                        )
+                    )
+                    intake = await session.get(Intake, intake_id)
+                    if intake is not None:
+                        intake.converted_company_id = None
+                if company_id is not None:
+                    company = await session.get(Company, company_id)
+                    if company is not None:
+                        company.created_from_intake_id = None
+                await session.flush()
+                if company_id is not None:
+                    company = await session.get(Company, company_id)
+                    if company is not None:
+                        await session.delete(company)
+                if intake_id is not None:
+                    intake = await session.get(Intake, intake_id)
+                    if intake is not None:
+                        await session.delete(intake)
+                if user_id is not None:
+                    user = await session.get(UserBase, user_id)
+                    if user is not None:
+                        await session.delete(user)
+                await session.commit()
             storage = get_object_storage()
             for path in storage_paths:
                 storage.delete(path)

@@ -173,6 +173,17 @@ def test_company_ss_loop_headcount_events_niss_and_roles(
                 assert "remaining_months" not in blob
                 assert "old_salary" not in blob
 
+                reading = await client.get("/v1/me/company", headers=auth)
+                assert reading.status_code == 200, reading.text
+                portfolio = reading.json()
+                assert portfolio["estimate_now_monthly"] is not None
+                assert portfolio["estimate_now_window"] is not None
+                assert portfolio["estimate_potential_monthly"] is not None
+                assert portfolio["estimate_potential_window"] is not None
+                assert portfolio["estimate_unconfirmed"] is True
+                assert portfolio["contracts_missing"] >= 1
+                assert "remaining_months" not in str(portfolio)
+
                 month2 = _people_xlsx(
                     [
                         (
