@@ -8,6 +8,8 @@ RUN apt-get update \
 
 WORKDIR /workspace
 COPY firebase.json .firebaserc ./
+COPY docker/firebase-auth/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 9099 4000
-CMD ["firebase", "emulators:start", "--only", "auth", "--project", "demo-betaxed"]
+ENTRYPOINT ["/entrypoint.sh"]

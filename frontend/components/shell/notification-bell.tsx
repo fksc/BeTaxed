@@ -35,10 +35,15 @@ export function NotificationBell() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon" className="relative" aria-label={t("title")} />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative size-8"
+              aria-label={t("title")}
+            />
           }
         >
-          <Bell className="size-5" />
+          <Bell className="size-4" />
           {unreadCount > 0 ? (
             <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-semibold text-primary-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}

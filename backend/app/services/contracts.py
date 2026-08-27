@@ -166,6 +166,7 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
                     else None
                 ),
                 "employment_id": current.id if current else None,
+                "contract_modality": current.contract_modality if current else None,
                 "has_contract": doc is not None,
                 "review_status": public_status,
                 "document_id": doc.id if doc is not None else None,

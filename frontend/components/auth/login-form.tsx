@@ -44,7 +44,7 @@ export function LoginForm() {
         <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
           {t("auth.kicker")}
         </p>
-        <h1 className="font-heading text-3xl tracking-tight">{t("auth.signInTitle")}</h1>
+        <h1 className="font-editorial text-3xl tracking-tight">{t("auth.signInTitle")}</h1>
         <p className="text-sm text-muted-foreground">{t("auth.signInLead")}</p>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}

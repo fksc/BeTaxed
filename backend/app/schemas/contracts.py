@@ -15,6 +15,7 @@ class PersonOut(BaseModel):
     has_source_conflict: bool = False
     leave_type: str | None = None
     employment_id: uuid.UUID | None
+    contract_modality: str | None = None
     has_contract: bool
     review_status: str | None
     document_id: uuid.UUID | None

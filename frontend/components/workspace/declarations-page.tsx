@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
@@ -17,7 +17,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { MonthPicker } from "@/components/ui/month-picker";
+import { ShellPage } from "@/components/shell/shell-app-bar";
+import { Dropzone } from "@/components/intake/dropzone";
+import { Field } from "@/components/intake/field";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
   listHeadcountMonths,
@@ -71,7 +74,8 @@ export function DeclarationsPage() {
   const [period, setPeriod] = useState(currentMonth);
   const [userMonth, setUserMonth] = useState(currentMonth);
   const [userCount, setUserCount] = useState("0");
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [vinculos, setVinculos] = useState<File[]>([]);
+  const [contratos, setContratos] = useState<File[]>([]);
 
   async function reload() {
     const idToken = await currentIdToken();
@@ -101,8 +105,20 @@ export function DeclarationsPage() {
     (row) => row.source === "USER" && ym(row.year_month) === userMonth,
   );
 
-  async function onUpload(files: FileList | null) {
-    if (!files || files.length === 0) {
+  async function onUpload() {
+    const files = [...vinculos, ...contratos];
+    const unique = files.filter(
+      (file, index) => files.findIndex((other) => other.name === file.name && other.size === file.size) === index,
+    );
+    if (unique.length === 0) {
+      setError(t("declarations.needBoth"));
+      return;
+    }
+    const hasBoth = vinculos.length > 0 && contratos.length > 0;
+    const combinedOnly =
+      unique.length === 1 && unique[0].name.toLowerCase().endsWith(".xlsx");
+    if (!hasBoth && !combinedOnly) {
+      setError(t("declarations.needBoth"));
       return;
     }
     const idToken = await currentIdToken();
@@ -112,7 +128,9 @@ export function DeclarationsPage() {
     }
     setBusy(true);
     try {
-      await uploadCompanySs(Array.from(files), period, { idToken, companyId });
+      await uploadCompanySs(unique, period, { idToken, companyId });
+      setVinculos([]);
+      setContratos([]);
       await reload();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -124,9 +142,6 @@ export function DeclarationsPage() {
       }
     } finally {
       setBusy(false);
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
     }
   }
 
@@ -157,8 +172,7 @@ export function DeclarationsPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("declarationsCrumb")} />
+    <ShellPage crumb={t("declarationsCrumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("nav.declarations")}</div>
         <p className="text-sm text-muted-foreground">{t("declarations.lead")}</p>
@@ -171,35 +185,32 @@ export function DeclarationsPage() {
             <CardTitle className="text-sm">{t("declarations.uploadTitle")}</CardTitle>
             <CardDescription className="text-xs">{t("declarations.hint")}</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-end gap-3 pt-1">
-            <div className="space-y-1">
-              <label className="text-xs text-muted-foreground" htmlFor="ss-period">
-                {t("declarations.month")}
-              </label>
-              <Input
-                id="ss-period"
-                type="month"
-                value={period}
-                onChange={(event) => setPeriod(event.target.value)}
-                className="w-40"
+          <CardContent className="space-y-4 pt-1">
+            <Field label={t("declarations.month")} className="w-56">
+              <MonthPicker id="ss-period" value={period} onChange={setPeriod} />
+            </Field>
+            <p className="text-sm text-muted-foreground">{t("declarations.needBoth")}</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Dropzone
+                files={vinculos}
+                disabled={busy}
+                multiple={false}
+                title={t("declarations.vinculosTitle")}
+                hint={t("declarations.vinculosHint")}
+                onFiles={setVinculos}
+              />
+              <Dropzone
+                files={contratos}
+                disabled={busy}
+                multiple={false}
+                title={t("declarations.contratosTitle")}
+                hint={t("declarations.contratosHint")}
+                onFiles={setContratos}
               />
             </div>
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy}
-              onClick={() => fileRef.current?.click()}
-            >
+            <Button type="button" size="sm" disabled={busy} onClick={() => void onUpload()}>
               {t("declarations.upload")}
             </Button>
-            <input
-              ref={fileRef}
-              type="file"
-              className="sr-only"
-              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-              multiple
-              onChange={(event) => void onUpload(event.target.files)}
-            />
           </CardContent>
         </Card>
 
@@ -295,31 +306,18 @@ export function DeclarationsPage() {
               })}
             </p>
             <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground" htmlFor="user-month">
-                  {t("declarations.month")}
-                </label>
-                <Input
-                  id="user-month"
-                  type="month"
-                  value={userMonth}
-                  onChange={(event) => setUserMonth(event.target.value)}
-                  className="w-40"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground" htmlFor="user-count">
-                  {t("declarations.userHeadcount")}
-                </label>
+              <Field label={t("declarations.month")} className="w-56">
+                <MonthPicker id="user-month" value={userMonth} onChange={setUserMonth} />
+              </Field>
+              <Field label={t("declarations.userHeadcount")} className="w-32">
                 <Input
                   id="user-count"
                   type="number"
                   min={0}
                   value={userCount}
                   onChange={(event) => setUserCount(event.target.value)}
-                  className="w-28"
                 />
-              </div>
+              </Field>
               <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void onUserHeadcount()}>
                 {t("declarations.saveUser")}
               </Button>
@@ -332,6 +330,6 @@ export function DeclarationsPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </ShellPage>
   );
 }

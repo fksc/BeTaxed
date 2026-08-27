@@ -287,6 +287,8 @@ async def post_ops_company(
         locale=body.locale,
         nif=body.nif,
         admin_email=body.admin_email,
+        admin_given_name=body.admin_given_name,
+        admin_family_name=body.admin_family_name,
         admin_role=body.admin_role,
     )
     await db.commit()

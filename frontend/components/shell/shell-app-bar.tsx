@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,7 +15,7 @@ import { NotificationBell } from "@/components/shell/notification-bell";
 
 export function ShellAppBar({ crumb }: { crumb: string }) {
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
       <div className="flex flex-1 items-center gap-2 px-4">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -27,11 +29,22 @@ export function ShellAppBar({ crumb }: { crumb: string }) {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex h-8 items-center gap-1">
           <NotificationBell />
           <LocaleSwitcher />
         </div>
       </div>
     </header>
+  );
+}
+
+export function ShellPage({ crumb, children }: { crumb: string; children: ReactNode }) {
+  return (
+    <>
+      <ShellAppBar crumb={crumb} />
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
+        {children}
+      </div>
+    </>
   );
 }

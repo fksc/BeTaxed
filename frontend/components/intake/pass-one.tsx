@@ -9,6 +9,7 @@ import { Field, TextInput } from "@/components/intake/field";
 import { TeaserCards } from "@/components/intake/teaser-cards";
 import { VerboseTable } from "@/components/intake/verbose-table";
 import { Button } from "@/components/ui/button";
+import { MonthPicker } from "@/components/ui/month-picker";
 import {
   convertIntake,
   createIntake,
@@ -255,7 +256,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
               <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
                 {t("start.kicker")}
               </p>
-              <h1 className="font-heading text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
+              <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
                 {t("start.headline")}
               </h1>
               <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
@@ -300,13 +301,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
               <div className="space-y-5">
                 <Field label={t("start.period")}>
-                  <TextInput
-                    type="month"
-                    value={period}
-                    onChange={(event) => setPeriod(event.target.value)}
-                    required
-                    disabled={busy}
-                  />
+                  <MonthPicker value={period} onChange={setPeriod} disabled={busy} />
                 </Field>
                 <Dropzone files={files} disabled={busy} onFiles={setFiles} />
                 <Button
@@ -352,7 +347,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
               <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
                 {t("converted.kicker")}
               </p>
-              <h1 className="font-heading text-4xl tracking-tight">
+              <h1 className="font-editorial text-4xl tracking-tight">
                 {t("converted.headline", {
                   name: legalName.trim() || t("converted.fallbackName"),
                 })}
@@ -365,7 +360,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
         {phase === "declined" ? (
           <section className="max-w-lg space-y-5">
-            <h1 className="font-heading text-4xl tracking-tight">
+            <h1 className="font-editorial text-4xl tracking-tight">
               {t("declined.headline")}
             </h1>
             <p className="text-muted-foreground">{t("declined.lead")}</p>
@@ -423,7 +418,7 @@ function ResultView({
         <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
           {t("result.kicker")}
         </p>
-        <h1 className="font-heading text-4xl tracking-tight text-balance">
+        <h1 className="font-editorial text-4xl tracking-tight text-balance">
           {t("result.headline")}
         </h1>
         <p className="text-muted-foreground">{t("result.lead")}</p>

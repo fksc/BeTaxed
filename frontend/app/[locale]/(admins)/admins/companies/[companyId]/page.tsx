@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { OpsCompanyDetailPage } from "@/components/admins/ops-company-detail";
 
 export default async function Page({
@@ -6,5 +8,9 @@ export default async function Page({
   params: Promise<{ companyId: string }>;
 }) {
   const { companyId } = await params;
-  return <OpsCompanyDetailPage companyId={companyId} />;
+  return (
+    <Suspense>
+      <OpsCompanyDetailPage companyId={companyId} />
+    </Suspense>
+  );
 }

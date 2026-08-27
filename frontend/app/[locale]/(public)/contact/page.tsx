@@ -10,7 +10,7 @@ export default function ContactPage() {
       <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
         {t("kicker")}
       </p>
-      <h1 className="font-heading text-4xl tracking-tight text-balance sm:text-5xl">
+      <h1 className="font-editorial text-4xl tracking-tight text-balance sm:text-5xl">
         {t("headline")}
       </h1>
       <div className="max-w-xl space-y-2 text-base leading-relaxed text-muted-foreground">

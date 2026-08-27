@@ -62,7 +62,7 @@ If they already have a `user_base` (account-first), **wipe the intake data**; do
 
 ## Sales-led join (no teaser)
 
-BeTaxed staff create the tenant with required profile fields (`legal_name`; optional trading name, locale, NIF) and invite the company admin in the same action: `user_base` (`COMPANY_STAFF`) + `ADMIN` membership (inactive until accept) + `company_invite`. The invite link is onboarding: set Firebase password (or sign in if that email already has an account), then the workspace.
+BeTaxed staff create the tenant with required profile fields (`legal_name`; optional trading name, locale, NIF) and invite the company admin in the same action: admin given name, family name, and email; `user_base` (`COMPANY_STAFF`) + `ADMIN` membership (inactive until accept) + `company_invite`. The invite link is onboarding: set Firebase password (or sign in if that email already has an account), then the workspace.
 
 Company Admin and staff may invite further `ADMIN` / `HR` / `FINANCE` users, resend if send failed or the link expired, and cancel an unused invite. Default **3 seats**; staff override `max_members` on the ops company view. Do not invent members from SS extract people — those are employees, not actors.
 

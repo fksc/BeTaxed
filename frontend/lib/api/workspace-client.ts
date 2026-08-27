@@ -5,6 +5,7 @@ import type {
   CertificateOut,
   CompanyApplicationOut,
   CompanyInvoiceOut,
+  CompanyScopeOut,
   HeadcountMonthOut,
   InviteOut,
   MembersBundleOut,
@@ -21,6 +22,10 @@ import type {
 
 export async function getMe(opts: AuthOpts): Promise<MeOut> {
   return apiJson<MeOut>("/v1/me", { method: "GET" }, opts);
+}
+
+export async function getMeCompany(opts: AuthOpts): Promise<CompanyScopeOut> {
+  return apiJson<CompanyScopeOut>("/v1/me/company", { method: "GET" }, opts);
 }
 
 export async function listPeople(opts: AuthOpts): Promise<PersonOut[]> {
@@ -318,6 +323,8 @@ export async function createOpsCompany(
     locale?: string;
     nif?: string;
     admin_email: string;
+    admin_given_name: string;
+    admin_family_name: string;
     admin_role?: string;
   },
   opts: AuthOpts,

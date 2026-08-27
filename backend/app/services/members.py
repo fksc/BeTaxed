@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.firebase import (
     create_email_user,
     get_user_by_email,
+    set_user_display_name,
     set_user_password,
 )
 from app.deps.context import CompanyContext
@@ -197,10 +198,25 @@ async def ops_company_detail(session: AsyncSession, company: Company) -> dict:
     return base
 
 
-def _mail_copy(company: Company, role: str, url: str, locale: str) -> tuple[str, str]:
+def _display_name(given_name: str | None, family_name: str | None) -> str | None:
+    parts = [p.strip() for p in (given_name, family_name) if p and p.strip()]
+    return " ".join(parts) or None
+
+
+def _mail_copy(
+    company: Company,
+    role: str,
+    url: str,
+    locale: str,
+    *,
+    given_name: str | None = None,
+) -> tuple[str, str]:
+    greeting_en = f"Hi {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
+    greeting_pt = f"Olá {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
     if locale.lower().startswith("en"):
         subject = f"Join {company.legal_name} on BeTaxed"
         body = (
+            f"{greeting_en}"
             f"You were invited to {company.legal_name} as {role}.\n\n"
             f"Open this link to set your password and open the workspace:\n{url}\n\n"
             "If you did not expect this, ignore the message.\n"
@@ -208,6 +224,7 @@ def _mail_copy(company: Company, role: str, url: str, locale: str) -> tuple[str,
         return subject, body
     subject = f"Convite BeTaxed — {company.legal_name}"
     body = (
+        f"{greeting_pt}"
         f"Foi convidado para {company.legal_name} como {role}.\n\n"
         f"Abra este link para definir a palavra-passe e entrar no espaço de trabalho:\n{url}\n\n"
         "Se não esperava este convite, ignore a mensagem.\n"
@@ -217,7 +234,9 @@ def _mail_copy(company: Company, role: str, url: str, locale: str) -> tuple[str,
 
 async def _deliver(invite: CompanyInvite, company: Company, token: str) -> str:
     url = invite_url_for(token)
-    subject, body = _mail_copy(company, invite.role, url, company.locale)
+    subject, body = _mail_copy(
+        company, invite.role, url, company.locale, given_name=invite.given_name
+    )
     try:
         delivery = send_invite_email(to_email=invite.email, subject=subject, body=body)
     except InviteMailError as exc:
@@ -231,7 +250,7 @@ async def _deliver(invite: CompanyInvite, company: Company, token: str) -> str:
 
 
 async def _ensure_invitee_user(
-    session: AsyncSession, email: str
+    session: AsyncSession, email: str, display_name: str | None = None
 ) -> tuple[UserBase, bool]:
     """Return user_base and whether Firebase still needs a password."""
     existing = (
@@ -242,15 +261,19 @@ async def _ensure_invitee_user(
         needs_password = True
         if record is not None:
             needs_password = not record.has_password
+            if display_name:
+                set_user_display_name(record.uid, display_name)
         elif existing.last_login_at is not None:
             needs_password = False
         return existing, needs_password
 
     if record is None:
-        record = create_email_user(email)
+        record = create_email_user(email, display_name=display_name)
         needs_password = True
     else:
         needs_password = not record.has_password
+        if display_name:
+            set_user_display_name(record.uid, display_name)
 
     user = UserBase(
         firebase_uid=record.uid,
@@ -270,6 +293,8 @@ async def create_invite(
     actor: UserBase,
     email: str,
     role: str,
+    given_name: str | None = None,
+    family_name: str | None = None,
 ) -> tuple[CompanyInvite, str | None]:
     if role not in ROLES:
         raise HTTPException(
@@ -316,7 +341,11 @@ async def create_invite(
 
     await assert_seat_available(session, company)
 
-    user, needs_password = await _ensure_invitee_user(session, normalized)
+    given = given_name.strip() if given_name and given_name.strip() else None
+    family = family_name.strip() if family_name and family_name.strip() else None
+    user, needs_password = await _ensure_invitee_user(
+        session, normalized, display_name=_display_name(given, family)
+    )
     if user.user_type == "BETAXED_STAFF":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -349,6 +378,8 @@ async def create_invite(
     invite = CompanyInvite(
         company_id=company.id,
         email=normalized,
+        given_name=given,
+        family_name=family,
         role=role,
         token_hash=hash_session_token(token),
         invited_by_id=actor.id,
@@ -446,6 +477,8 @@ async def public_invite(session: AsyncSession, token: str) -> dict:
     return {
         "company_name": company.legal_name,
         "email": invite.email,
+        "given_name": invite.given_name,
+        "family_name": invite.family_name,
         "role": invite.role,
         "status": _effective_status(invite, now),
         "needs_password": invite.needs_password,
@@ -535,6 +568,8 @@ async def create_sales_company(
     locale: str,
     nif: str | None,
     admin_email: str,
+    admin_given_name: str,
+    admin_family_name: str,
     admin_role: str,
 ) -> tuple[Company, CompanyInvite, str | None]:
     name = legal_name.strip()
@@ -544,6 +579,13 @@ async def create_sales_company(
             detail="legal_name is required.",
         )
     role = admin_role.strip().upper() or "ADMIN"
+    given = admin_given_name.strip()
+    family = admin_family_name.strip()
+    if not given or not family:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="admin given name and family name are required.",
+        )
     if role not in ROLES:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -567,6 +609,8 @@ async def create_sales_company(
         actor=actor,
         email=admin_email,
         role=role,
+        given_name=given,
+        family_name=family,
     )
     return company, invite, url
 

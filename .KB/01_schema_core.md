@@ -118,6 +118,8 @@ CREATE TABLE company_invite (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES company(id),
     email VARCHAR(255) NOT NULL,
+    given_name VARCHAR(100),
+    family_name VARCHAR(100),
     role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'HR', 'FINANCE')),
     token_hash BYTEA NOT NULL,
     invited_by_id UUID NOT NULL REFERENCES user_base(id),
@@ -143,6 +145,7 @@ CREATE INDEX idx_company_invite_email ON company_invite(company_id, email);
 - Resend allowed for `PENDING`, `FAILED`, and `EXPIRED` (new token, new expiry). Not for `ACCEPTED` / `CANCELLED`.
 - Unknown / duplicate active member email → fail closed (409). Open invite for the same email → resend that row.
 - Invite email is the **only** transactional mail in v1 (`KB/08`). Resend or Brevo when `RESEND_API_KEY` / `BREVO_API_KEY` is set (`EMAIL_PROVIDER` to pick); otherwise the API returns `invite_url` for the sender to copy.
+- Sales-led company create requires the admin’s given and family name (stored on the invite; also set as Firebase `displayName`). Other member invites may omit names.
 
 ---
 

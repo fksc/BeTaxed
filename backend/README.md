@@ -22,6 +22,13 @@ Mint a Bearer token against the Auth emulator (UI at http://127.0.0.1:4000):
 # then: curl -H "Authorization: Bearer <idToken>" http://localhost:8080/v1/me
 ```
 
+Wipe local volumes and seed BeTaxed ops (`BETAXED_STAFF`, default `ops@betaxed.local` / `betaxed-dev`):
+
+```bash
+# from repo root
+./scripts/reset-local-dev.sh
+```
+
 - `GET /health` — process liveness (no DB)
 - `GET /ready` — PostgreSQL `SELECT 1`; Redis ping when `REDIS_URL` is set
 - `GET /v1/people` — company people (any member/staff). `X-Company-Id` required. No NISS, no recipe. Includes `status`, `status_source`, `has_source_conflict`.

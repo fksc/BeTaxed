@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { applyContractDocument, listContractFlags } from "@/lib/api/workspace-client";
 import type { MismatchFlag } from "@/lib/api/workspace";
 import { currentIdToken } from "@/lib/firebase";
@@ -48,8 +48,7 @@ export function ContractFlagsPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("flags.crumb")} />
+    <ShellPage crumb={t("flags.crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("flags.title")}</div>
         <p className="text-sm text-muted-foreground">{t("flags.lead")}</p>
@@ -92,6 +91,6 @@ export function ContractFlagsPage() {
           ))
         )}
       </div>
-    </>
+    </ShellPage>
   );
 }

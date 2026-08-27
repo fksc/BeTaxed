@@ -30,7 +30,7 @@ export function SiteHeader() {
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-6 py-5">
-        <Link href={paths.home} className="font-heading text-xl tracking-tight">
+        <Link href={paths.home} className="font-editorial text-xl tracking-tight">
           {t("brand")}
         </Link>
 

@@ -141,6 +141,28 @@ async def list_certificates(
     )
 
 
+async def latest_certificate(
+    session: AsyncSession, company_id: uuid.UUID, kind: str
+) -> CompanyCertificate | None:
+    return (
+        (
+            await session.execute(
+                select(CompanyCertificate)
+                .where(
+                    CompanyCertificate.company_id == company_id,
+                    CompanyCertificate.kind == kind,
+                )
+                .order_by(
+                    CompanyCertificate.valid_until.desc(),
+                    CompanyCertificate.issued_on.desc(),
+                )
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+
 async def upload_certificate(
     session: AsyncSession,
     ctx: CompanyContext,

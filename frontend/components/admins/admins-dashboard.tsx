@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { StatCard } from "@/components/workspace/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
 
@@ -13,9 +13,7 @@ export function AdminsDashboard() {
   const t = useTranslations("admins");
 
   return (
-    <>
-      <ShellAppBar crumb={t("breadcrumb")} />
-
+    <ShellPage crumb={t("breadcrumb")}>
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
         <div>
           <div className="text-xs text-muted-foreground">{t("brandHint")}</div>
@@ -61,6 +59,6 @@ export function AdminsDashboard() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </ShellPage>
   );
 }

@@ -3,16 +3,21 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cancelInvite, inviteMember, resendInvite } from "@/lib/api/workspace-client";
 import type { InviteOut, MemberOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import type { AuthOpts } from "@/lib/api/http";
-
-const selectClass =
-  "h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring";
 
 export function MembersPanel({
   members,
@@ -104,28 +109,34 @@ export function MembersPanel({
           <p className="text-xs text-muted-foreground">{t("linkCopied")}</p>
         ) : null}
         {canInvite ? (
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-xs">
-              {t("email")}
+          <div className="flex flex-wrap items-end gap-3">
+            <Field label={t("email")} className="min-w-56">
               <Input
                 type="email"
-                className="mt-1"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
               />
-            </label>
-            <label className="text-xs">
-              {t("role")}
-              <select
-                className={`${selectClass} mt-1 block`}
+            </Field>
+            <Field label={t("role")} className="w-40">
+              <Select
                 value={role}
-                onChange={(event) => setRole(event.target.value)}
+                onValueChange={(value) => setRole(value ?? "HR")}
+                items={{
+                  ADMIN: t("roles.ADMIN"),
+                  HR: t("roles.HR"),
+                  FINANCE: t("roles.FINANCE"),
+                }}
               >
-                <option value="ADMIN">{t("roles.ADMIN")}</option>
-                <option value="HR">{t("roles.HR")}</option>
-                <option value="FINANCE">{t("roles.FINANCE")}</option>
-              </select>
-            </label>
+                <SelectTrigger aria-label={t("role")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">{t("roles.ADMIN")}</SelectItem>
+                  <SelectItem value="HR">{t("roles.HR")}</SelectItem>
+                  <SelectItem value="FINANCE">{t("roles.FINANCE")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
             <Button type="button" size="sm" disabled={busy || !email.trim()} onClick={() => void onInvite()}>
               {t("invite")}
             </Button>

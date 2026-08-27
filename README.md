@@ -35,6 +35,14 @@ From the **repository root**:
 docker compose up -d postgres redis firebase-auth
 ```
 
+To wipe local Postgres + Auth emulator volumes, migrate, and seed BeTaxed ops staff (`ops@betaxed.local` / `betaxed-dev`):
+
+```bash
+./scripts/reset-local-dev.sh
+```
+
+Then sign in at `/en/login` and open `/en/admins`. Re-seed without wiping: `cd backend && PYTHONPATH=. python scripts/seed_betaxed_staff.py`. Override `SEED_STAFF_EMAIL` / `SEED_STAFF_PASSWORD`. Seed refuses unless `ENV=DEV` and the Auth emulator host is set.
+
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
@@ -57,6 +65,6 @@ npm run dev
 - `GET /api/health` — frontend liveness
 - `/` — pass 1 teaser (upload SS, four figures, continue or decline)
 
-Firebase Auth is the **emulator** in local/DEV (`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, UI at http://127.0.0.1:4000). Cloud agents can run the same Compose stack. Unset the emulator host only for staging/prod.
+Firebase Auth is the **emulator** in local/DEV (`FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`, UI at http://127.0.0.1:4000). Users are stored in the `betaxed_firebase_auth_data` volume (`--export-on-exit`); `docker compose down -v` wipes them. Cloud agents can run the same Compose stack. Unset the emulator host only for staging/prod.
 
 Do not commit `.KB/Samples/` (PII) or `.env` files. Git: `main` production, `dev` integration — `.KB/GIT_STRATEGY.md`.

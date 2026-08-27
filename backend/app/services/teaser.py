@@ -20,6 +20,7 @@ from app.models import (
     CompensationPeriod,
     Employee,
     Employment,
+    EmploymentDocument,
     IncentiveRegime,
     Intake,
     SsBatch,
@@ -44,6 +45,15 @@ class TeaserFigures:
     now_window: Decimal
     potential_monthly: Decimal
     potential_window: Decimal
+
+
+@dataclass(frozen=True)
+class CompanyEstimate:
+    """SS-only workspace reading. Same four OD-2 buckets; not a filing total."""
+
+    figures: TeaserFigures | None
+    contracts_missing: int
+    open_people: int
 
 
 @dataclass(frozen=True)
@@ -108,7 +118,7 @@ async def persist_intake_teaser(
     intake = await session.get(Intake, intake_id)
     if intake is None or intake.status != "OPEN":
         return None
-    figures = await compute_intake_teaser(session, intake_id, as_of)
+    figures = await compute_teaser(session, as_of=as_of, intake_id=intake_id)
     intake.teaser_now_monthly = figures.now_monthly
     intake.teaser_now_window = figures.now_window
     intake.teaser_potential_monthly = figures.potential_monthly
@@ -167,11 +177,28 @@ async def compute_intake_teaser(
     intake_id: uuid.UUID,
     as_of: date,
 ) -> TeaserFigures:
+    return await compute_teaser(session, as_of=as_of, intake_id=intake_id)
+
+
+async def compute_teaser(
+    session: AsyncSession,
+    *,
+    as_of: date,
+    intake_id: uuid.UUID | None = None,
+    company_id: uuid.UUID | None = None,
+) -> TeaserFigures:
+    if (intake_id is None) == (company_id is None):
+        raise ValueError("exactly one of intake_id or company_id")
     now_monthly = Decimal("0")
     now_window = Decimal("0")
     potential_monthly = Decimal("0")
     potential_window = Decimal("0")
 
+    tenant_filter = (
+        Employment.intake_id == intake_id
+        if intake_id is not None
+        else Employment.company_id == company_id
+    )
     rows = (
         await session.execute(
             select(Employment, Employee, CompensationPeriod)
@@ -184,7 +211,7 @@ async def compute_intake_teaser(
                 ),
             )
             .where(
-                Employment.intake_id == intake_id,
+                tenant_filter,
                 Employment.ended_on.is_(None),
                 Employee.deleted_at.is_(None),
                 Employee.status == "ACTIVE",
@@ -199,7 +226,9 @@ async def compute_intake_teaser(
             potential_window=_money(potential_window),
         )
 
-    crypto = await get_or_create_pii_crypto(session, intake_id=intake_id)
+    crypto = await get_or_create_pii_crypto(
+        session, intake_id=intake_id, company_id=company_id
+    )
     for employment, employee, pay in rows:
         dob = _decrypt_dob(crypto, employee.dob_enc)
         if dob is None:
@@ -231,6 +260,67 @@ async def compute_intake_teaser(
         potential_monthly=_money(potential_monthly),
         potential_window=_money(potential_window),
     )
+
+
+async def company_ss_estimate(
+    session: AsyncSession, company_id: uuid.UUID
+) -> CompanyEstimate:
+    """Workspace dashboard reading from applied vínculos. Unconfirmed vs paper."""
+    open_ids = (
+        (
+            await session.execute(
+                select(Employment.employee_id)
+                .join(Employee, Employee.id == Employment.employee_id)
+                .where(
+                    Employment.company_id == company_id,
+                    Employment.ended_on.is_(None),
+                    Employee.deleted_at.is_(None),
+                    Employee.status == "ACTIVE",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    unique_ids = list(dict.fromkeys(open_ids))
+    if not unique_ids:
+        return CompanyEstimate(figures=None, contracts_missing=0, open_people=0)
+
+    with_file = set(
+        (
+            await session.execute(
+                select(EmploymentDocument.employee_id).where(
+                    EmploymentDocument.employee_id.in_(unique_ids)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    missing = sum(1 for employee_id in unique_ids if employee_id not in with_file)
+    as_of = await _latest_applied_period(session, company_id) or date.today()
+    figures = await compute_teaser(session, as_of=as_of, company_id=company_id)
+    return CompanyEstimate(
+        figures=figures,
+        contracts_missing=missing,
+        open_people=len(unique_ids),
+    )
+
+
+async def _latest_applied_period(
+    session: AsyncSession, company_id: uuid.UUID
+) -> date | None:
+    return (
+        await session.execute(
+            select(SsBatch.period_year_month)
+            .where(
+                SsBatch.company_id == company_id,
+                SsBatch.parse_status == "APPLIED",
+            )
+            .order_by(SsBatch.period_year_month.desc(), SsBatch.uploaded_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 async def compute_verbose_people(

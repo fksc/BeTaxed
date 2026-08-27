@@ -16,6 +16,8 @@ from app.deps import (
 )
 from app.models import CompanyMembership, UserBase
 from app.schemas import CompanyScopeOut, IntakeScopeOut, MeOut, MembershipOut
+from app.services.benefit_ops import latest_certificate
+from app.services.teaser import company_ss_estimate
 
 router = APIRouter(prefix="/v1", tags=["auth"])
 
@@ -49,14 +51,29 @@ async def me(
 
 
 @router.get("/me/company", response_model=CompanyScopeOut)
-async def me_company(ctx: CompanyContext = Depends(get_company_context)) -> CompanyScopeOut:
+async def me_company(
+    ctx: CompanyContext = Depends(get_company_context),
+    db: AsyncSession = Depends(get_db),
+) -> CompanyScopeOut:
     role = ctx.membership.role if ctx.membership is not None else None
     actor = "BETAXED_STAFF" if ctx.user.user_type == "BETAXED_STAFF" else "COMPANY_STAFF"
+    ss_cert = await latest_certificate(db, ctx.company.id, "SS_NO_DEBT")
+    at_cert = await latest_certificate(db, ctx.company.id, "AT_NO_DEBT")
+    estimate = await company_ss_estimate(db, ctx.company.id)
+    figures = estimate.figures
     return CompanyScopeOut(
         company_id=ctx.company.id,
         legal_name=ctx.company.legal_name,
         role=role,
         actor=actor,
+        ss_no_debt_valid_until=ss_cert.valid_until if ss_cert else None,
+        at_no_debt_valid_until=at_cert.valid_until if at_cert else None,
+        estimate_now_monthly=figures.now_monthly if figures else None,
+        estimate_now_window=figures.now_window if figures else None,
+        estimate_potential_monthly=figures.potential_monthly if figures else None,
+        estimate_potential_window=figures.potential_window if figures else None,
+        estimate_unconfirmed=estimate.contracts_missing > 0,
+        contracts_missing=estimate.contracts_missing,
     )
 
 

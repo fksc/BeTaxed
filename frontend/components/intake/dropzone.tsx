@@ -10,9 +10,23 @@ type Props = {
   files: File[];
   disabled?: boolean;
   onFiles: (files: File[]) => void;
+  title?: string;
+  hint?: string;
+  multiple?: boolean;
+  accept?: string;
+  className?: string;
 };
 
-export function Dropzone({ files, disabled, onFiles }: Props) {
+export function Dropzone({
+  files,
+  disabled,
+  onFiles,
+  title,
+  hint,
+  multiple = true,
+  accept = ".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  className,
+}: Props) {
   const t = useTranslations("dropzone");
   const inputRef = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
@@ -23,15 +37,27 @@ export function Dropzone({ files, disabled, onFiles }: Props) {
     }
     const next = Array.from(list).filter((file) => {
       const name = file.name.toLowerCase();
-      return name.endsWith(".xlsx") || name.endsWith(".csv");
+      const wantsPdf = accept.includes(".pdf") || accept.includes("application/pdf");
+      const wantsSheet =
+        accept.includes(".xlsx") ||
+        accept.includes(".csv") ||
+        accept.includes("spreadsheet") ||
+        accept.includes("text/csv");
+      if (wantsPdf && name.endsWith(".pdf")) {
+        return true;
+      }
+      if (wantsSheet && (name.endsWith(".xlsx") || name.endsWith(".csv"))) {
+        return true;
+      }
+      return false;
     });
     if (next.length) {
-      onFiles(next);
+      onFiles(multiple ? next : next.slice(0, 1));
     }
   }
 
   return (
-    <div>
+    <div className={className}>
       <button
         type="button"
         disabled={disabled}
@@ -47,7 +73,7 @@ export function Dropzone({ files, disabled, onFiles }: Props) {
           take(event.dataTransfer.files);
         }}
         className={cn(
-          "flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+          "flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors",
           over
             ? "border-primary bg-primary/5"
             : "border-border bg-card hover:border-primary/40",
@@ -56,16 +82,16 @@ export function Dropzone({ files, disabled, onFiles }: Props) {
       >
         <FileSpreadsheet className="size-8 text-primary" strokeWidth={1.5} />
         <div className="space-y-1">
-          <p className="font-medium">{t("title")}</p>
-          <p className="text-sm text-muted-foreground">{t("hint")}</p>
+          <p className="font-medium">{title ?? t("title")}</p>
+          <p className="text-sm text-muted-foreground">{hint ?? t("hint")}</p>
         </div>
       </button>
       <input
         ref={inputRef}
         className="sr-only"
         type="file"
-        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        multiple
+        accept={accept}
+        multiple={multiple}
         disabled={disabled}
         onChange={(event) => take(event.target.files)}
       />

@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShellAppBar } from "@/components/shell/shell-app-bar";
+import { ShellPage } from "@/components/shell/shell-app-bar";
 import {
   collectSepa,
   getBillingSettings,
@@ -141,8 +142,7 @@ export function CompaniesInvoicesPage() {
   }
 
   return (
-    <>
-      <ShellAppBar crumb={t("crumb")} />
+    <ShellPage crumb={t("crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("title")}</div>
         <p className="text-sm text-muted-foreground">{t("lead")}</p>
@@ -190,11 +190,9 @@ export function CompaniesInvoicesPage() {
                       {row.has_proforma ? ` · ${t("proforma")}` : ""}
                       {row.has_legal_pdf ? ` · ${t("legalPdf")}` : ""}
                     </div>
-                    <div className="mt-2 flex flex-wrap items-end gap-2">
-                      <label className="text-xs">
-                        {t("legalNumber")}
+                    <div className="mt-2 flex flex-wrap items-end gap-3">
+                      <Field label={t("legalNumber")} className="min-w-40">
                         <Input
-                          className="mt-1"
                           value={draft.legalNumber}
                           onChange={(event) =>
                             setDrafts((current) => ({
@@ -203,11 +201,9 @@ export function CompaniesInvoicesPage() {
                             }))
                           }
                         />
-                      </label>
-                      <label className="text-xs">
-                        {t("atcud")}
+                      </Field>
+                      <Field label={t("atcud")} className="min-w-40">
                         <Input
-                          className="mt-1"
                           value={draft.atcud}
                           onChange={(event) =>
                             setDrafts((current) => ({
@@ -216,7 +212,7 @@ export function CompaniesInvoicesPage() {
                             }))
                           }
                         />
-                      </label>
+                      </Field>
                       <Button
                         type="button"
                         size="sm"
@@ -278,6 +274,6 @@ export function CompaniesInvoicesPage() {
           }}
         />
       </div>
-    </>
+    </ShellPage>
   );
 }
