@@ -93,7 +93,8 @@
     "parseFailed": "Não foi possível ler este ficheiro. Use o extrato oficial de vínculos e contratos.",
     "authInvalid": "Email ou palavra-passe incorrectos.",
     "authWeak": "A palavra-passe deve ter pelo menos 6 caracteres.",
-    "authEmail": "Indique um email válido."
+    "authEmail": "Indique um email válido.",
+    "authDomain": "Este endereço não está autorizado no Firebase Auth. Adicione o hostname em Authentication → Settings → Authorized domains."
   },
   "verbose": {
     "kicker": "DEV",

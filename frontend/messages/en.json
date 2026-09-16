@@ -93,7 +93,8 @@
     "parseFailed": "This file could not be read. Use the official employment and contracts extract.",
     "authInvalid": "Incorrect email or password.",
     "authWeak": "Password must be at least 6 characters.",
-    "authEmail": "Enter a valid email address."
+    "authEmail": "Enter a valid email address.",
+    "authDomain": "This address is not allowed for Firebase Auth. Add its hostname under Authentication → Settings → Authorized domains."
   },
   "verbose": {
     "kicker": "DEV",

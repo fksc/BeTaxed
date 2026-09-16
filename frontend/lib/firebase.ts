@@ -17,12 +17,15 @@ export function getFirebaseAuth(): Auth {
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim() || "demo-betaxed";
   const apiKey =
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim() || "fake-api-key";
+  const authDomain =
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN?.trim() ||
+    `${projectId}.firebaseapp.com`;
   const app = getApps().length
     ? getApp()
     : initializeApp({
         apiKey,
         projectId,
-        authDomain: `${projectId}.firebaseapp.com`,
+        authDomain,
       });
   const auth = getAuth(app);
   const emulator = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST?.trim();
