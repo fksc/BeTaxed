@@ -167,6 +167,14 @@
       "ss": "SS no-debt",
       "at": "AT no-debt"
     },
+    "already": {
+      "title": "Already benefiting",
+      "hint": "People whose Segurança Social extract already shows the reduced hiring-benefit rate. They are not in the unrealized-saving figures.",
+      "count": "{count} people on the reduced rate",
+      "empty": "Nobody in this extract is already on the reduced rate.",
+      "more": "+{count} more",
+      "openFilter": "View in People"
+    },
     "settings": {
       "crumb": "Settings",
       "title": "Company settings",
@@ -228,7 +236,11 @@
       "filterAll": "All",
       "filterMissingFile": "Missing file",
       "filterOnFile": "File on record",
+      "filterBenefit": "Hiring benefit",
+      "filterBenefitOn": "Already benefiting",
+      "filterBenefitOff": "Not on the reduced rate",
       "filterEmpty": "No people match these filters.",
+      "alreadyBenefiting": "Already on the reduced SS rate",
       "modalityUnknown": "Unknown",
       "modality": {
         "SEM_TERMO": "Permanent",
@@ -430,6 +442,7 @@
       "tabOverview": "Overview",
       "tabVinculos": "Vínculos",
       "tabEmployees": "Employees",
+      "tabAlready": "Already benefiting",
       "tabDocuments": "Documents",
       "kpiEmployees": "People",
       "kpiContracts": "Contracts",
@@ -440,6 +453,8 @@
       "month": "Month",
       "vinculosLead": "Pick a month to see the Segurança Social declaration that landed for that period.",
       "vinculosEmpty": "No declaration for this month yet.",
+      "alreadyLead": "People whose Segurança Social extract already shows the reduced hiring-benefit rate.",
+      "alreadyEmpty": "Nobody in this extract is already on the reduced rate.",
       "documentsLead": "Employment contracts on file. Upload a PDF to start review.",
       "documentsEmpty": "No people to attach contracts to yet.",
       "contractCol": "Contract",

@@ -21,6 +21,7 @@ from app.models import (
 )
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.domain_events import emit_domain_event
+from app.services.teaser import tsu_looks_unused
 from app.storage import build_object_name, get_object_storage, sha256_hex
 
 
@@ -170,6 +171,10 @@ async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> lis
                 "has_contract": doc is not None,
                 "review_status": public_status,
                 "document_id": doc.id if doc is not None else None,
+                "already_on_ss_reduction": bool(
+                    current is not None
+                    and not tsu_looks_unused(current.tsu_rate_pct)
+                ),
             }
         )
     return out

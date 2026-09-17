@@ -39,7 +39,7 @@ import { paths } from "@/lib/app-paths";
 import { currentIdToken } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
-const HUB_TABS = ["overview", "vinculos", "employees", "documents"] as const;
+const HUB_TABS = ["overview", "vinculos", "employees", "already", "documents"] as const;
 type HubTab = (typeof HUB_TABS)[number];
 
 function isHubTab(value: string | null): value is HubTab {
@@ -138,6 +138,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     (item) => item.source === "SS_BATCH" && ym(item.year_month) === selectedYm,
   );
   const contractsOnFile = people.filter((person) => person.has_contract).length;
+  const alreadyBenefiting = people.filter((person) => person.already_on_ss_reduction);
   const latestBatch = batches[0] ?? null;
 
   function goTab(next: HubTab) {
@@ -186,6 +187,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     { id: "overview", label: t("tabOverview") },
     { id: "vinculos", label: t("tabVinculos") },
     { id: "employees", label: t("tabEmployees") },
+    { id: "already", label: t("tabAlready") },
     { id: "documents", label: t("tabDocuments") },
   ];
 
@@ -398,6 +400,26 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
           </Card>
         ) : null}
 
+        {tab === "already" ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("tabAlready")}</CardTitle>
+              <CardDescription>{t("alreadyLead")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {alreadyBenefiting.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t("alreadyEmpty")}</p>
+              ) : (
+                <EmployeeTable
+                  people={alreadyBenefiting}
+                  tw={tw}
+                  contractLabel={t("contractCol")}
+                />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+
         {tab === "documents" ? (
           <Card>
             <CardHeader>
@@ -491,6 +513,11 @@ function EmployeeTable({
             <tr key={person.id} className="border-b border-border/60 last:border-0">
               <td className="py-2 pr-3 font-medium">
                 {person.display_name || tw("people.unnamed")}
+                {person.already_on_ss_reduction ? (
+                  <div className="text-xs font-normal text-muted-foreground">
+                    {tw("people.alreadyBenefiting")}
+                  </div>
+                ) : null}
               </td>
               <td className="py-2 pr-3">
                 {person.status === "ACTIVE"

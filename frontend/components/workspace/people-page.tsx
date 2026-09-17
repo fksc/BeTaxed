@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { Field } from "@/components/intake/field";
@@ -64,6 +65,7 @@ function modalityLabel(value: string | null, t: (key: string) => string): string
 
 export function PeoplePage() {
   const t = useTranslations("workspace");
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<PersonOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -74,6 +76,9 @@ export function PeoplePage() {
   const [filterModality, setFilterModality] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterFile, setFilterFile] = useState("all");
+  const [filterBenefit, setFilterBenefit] = useState(
+    searchParams.get("benefit") === "on" ? "on" : "all",
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
 
@@ -123,9 +128,15 @@ export function PeoplePage() {
       if (filterFile === "onFile" && !row.has_contract) {
         return false;
       }
+      if (filterBenefit === "on" && !row.already_on_ss_reduction) {
+        return false;
+      }
+      if (filterBenefit === "off" && row.already_on_ss_reduction) {
+        return false;
+      }
       return true;
     });
-  }, [rows, filterModality, filterStatus, filterFile]);
+  }, [rows, filterModality, filterStatus, filterFile, filterBenefit]);
 
   async function onFile(employeeId: string, file: File | undefined) {
     if (!file) {
@@ -264,6 +275,26 @@ export function PeoplePage() {
                   </SelectContent>
                 </Select>
               </Field>
+              <Field label={t("people.filterBenefit")} className="w-52">
+                <Select
+                  value={filterBenefit}
+                  onValueChange={(value) => value && setFilterBenefit(value)}
+                  items={{
+                    all: t("people.filterAll"),
+                    on: t("people.filterBenefitOn"),
+                    off: t("people.filterBenefitOff"),
+                  }}
+                >
+                  <SelectTrigger aria-label={t("people.filterBenefit")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("people.filterAll")}</SelectItem>
+                    <SelectItem value="on">{t("people.filterBenefitOn")}</SelectItem>
+                    <SelectItem value="off">{t("people.filterBenefitOff")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("people.empty")}</p>
@@ -291,6 +322,9 @@ export function PeoplePage() {
                           </div>
                           {row.has_source_conflict ? (
                             <div className="text-xs text-destructive">{t("people.conflict")}</div>
+                          ) : null}
+                          {row.already_on_ss_reduction ? (
+                            <div className="text-xs text-muted-foreground">{t("people.alreadyBenefiting")}</div>
                           ) : null}
                         </td>
                         <td className="py-2 pr-3 align-top">

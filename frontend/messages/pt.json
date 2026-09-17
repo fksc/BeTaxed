@@ -167,6 +167,14 @@
       "ss": "SS sem dívida",
       "at": "AT sem dívida"
     },
+    "already": {
+      "title": "Já a beneficiar",
+      "hint": "Pessoas cujo extrato da Segurança Social já mostra a taxa reduzida do benefício de contratação. Não entram nas poupanças por realizar.",
+      "count": "{count} pessoas com a taxa reduzida",
+      "empty": "Ninguém neste extrato está já na taxa reduzida.",
+      "more": "+{count} mais",
+      "openFilter": "Ver em Pessoas"
+    },
     "settings": {
       "crumb": "Definições",
       "title": "Definições da empresa",
@@ -228,7 +236,11 @@
       "filterAll": "Todos",
       "filterMissingFile": "Sem ficheiro",
       "filterOnFile": "Com ficheiro",
+      "filterBenefit": "Benefício de contratação",
+      "filterBenefitOn": "Já a beneficiar",
+      "filterBenefitOff": "Ainda sem taxa reduzida",
       "filterEmpty": "Ninguém corresponde a estes filtros.",
+      "alreadyBenefiting": "Já com a taxa reduzida da SS",
       "modalityUnknown": "Desconhecido",
       "modality": {
         "SEM_TERMO": "Sem termo",
@@ -430,6 +442,7 @@
       "tabOverview": "Visão geral",
       "tabVinculos": "Vínculos",
       "tabEmployees": "Pessoas",
+      "tabAlready": "Já a beneficiar",
       "tabDocuments": "Documentos",
       "kpiEmployees": "Pessoas",
       "kpiContracts": "Contratos",
@@ -440,6 +453,8 @@
       "month": "Mês",
       "vinculosLead": "Escolha o mês da declaração de Segurança Social.",
       "vinculosEmpty": "Ainda não há declaração neste mês.",
+      "alreadyLead": "Pessoas cujo extrato da Segurança Social já mostra a taxa reduzida do benefício de contratação.",
+      "alreadyEmpty": "Ninguém neste extrato está já na taxa reduzida.",
       "documentsLead": "Contratos de trabalho no processo. Carregue um PDF para rever.",
       "documentsEmpty": "Ainda não há pessoas a quem anexar contratos.",
       "contractCol": "Contrato",

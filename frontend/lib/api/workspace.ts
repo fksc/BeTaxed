@@ -38,6 +38,7 @@ export type PersonOut = {
   has_contract: boolean;
   review_status: string | null;
   document_id: string | null;
+  already_on_ss_reduction: boolean;
 };
 
 export type NotificationItem = {
