@@ -31,7 +31,7 @@ from app.models import (
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.teaser import (
     _decrypt_dob,
-    _tsu_looks_unused,
+    tsu_looks_unused,
     age_on,
     remaining_benefit_months,
 )
@@ -341,7 +341,7 @@ def _classify(
     sem = employment.started_on
     if age_on(dob, sem) > regime.max_age_inclusive:
         return "EXPIRED", "SKIP_AGE", sem
-    if not _tsu_looks_unused(employment.tsu_rate_pct):
+    if not tsu_looks_unused(employment.tsu_rate_pct):
         return "EXPIRED", "SKIP_TSU_REDUCED", sem
     remaining = remaining_benefit_months(sem, as_of)
     if remaining == 0:

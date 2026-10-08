@@ -19,6 +19,7 @@ class PersonOut(BaseModel):
     has_contract: bool
     review_status: str | None
     document_id: uuid.UUID | None
+    already_on_ss_reduction: bool = False
 
 
 class StatusOverrideIn(BaseModel):

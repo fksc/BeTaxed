@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 
 from app.auth.firebase import FirebaseIdentity
 from app.db import AsyncSessionLocal, engine
@@ -152,7 +153,34 @@ def test_contract_upload_stub_mismatch_and_staff_apply(
                 blob = str(rows)
                 assert "11111111111" not in blob
                 assert "remaining_months" not in blob
+                assert "tsu_rate" not in blob
+                assert "22.875" not in blob
+                assert all("already_on_ss_reduction" in row for row in rows)
+                assert all(row["already_on_ss_reduction"] is False for row in rows)
                 employee_id = rows[0]["id"]
+                employment_id = rows[0]["employment_id"]
+                assert employment_id is not None
+
+                async with AsyncSessionLocal() as session:
+                    emp = await session.get(Employment, uuid.UUID(employment_id))
+                    assert emp is not None
+                    emp.tsu_rate_pct = Decimal("22.875")
+                    await session.commit()
+
+                reduced = await client.get(
+                    "/v1/people",
+                    headers={
+                        "Authorization": f"Bearer {company_token}",
+                        HEADER_COMPANY_ID: str(company_id),
+                    },
+                )
+                assert reduced.status_code == 200, reduced.text
+                reduced_rows = reduced.json()
+                flagged = next(row for row in reduced_rows if row["id"] == employee_id)
+                assert flagged["already_on_ss_reduction"] is True
+                reduced_blob = str(reduced_rows)
+                assert "22.875" not in reduced_blob
+                assert "11.875" not in reduced_blob
 
                 posted = await client.post(
                     f"/v1/people/{employee_id}/contracts",

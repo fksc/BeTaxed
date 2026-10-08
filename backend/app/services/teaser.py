@@ -99,7 +99,7 @@ def _money(value: Decimal) -> Decimal:
     return value.quantize(_MONEY, rounding=ROUND_HALF_UP)
 
 
-def _tsu_looks_unused(rate: Decimal | None) -> bool:
+def tsu_looks_unused(rate: Decimal | None) -> bool:
     if rate is None:
         return True
     return Decimal(rate) >= _UNUSED_TSU_FLOOR
@@ -241,7 +241,7 @@ async def compute_teaser(
         if modality == "SEM_TERMO":
             if not _eligible_age(dob, employment.started_on):
                 continue
-            if not _tsu_looks_unused(employment.tsu_rate_pct):
+            if not tsu_looks_unused(employment.tsu_rate_pct):
                 continue
             remaining = remaining_benefit_months(employment.started_on, as_of)
             if remaining == 0:
@@ -413,7 +413,7 @@ def _classify_person(
         if not _eligible_age(dob, started_on):
             empty["how_code"] = "SKIP_AGE"
             return empty
-        if not _tsu_looks_unused(tsu_rate_pct):
+        if not tsu_looks_unused(tsu_rate_pct):
             empty["how_code"] = "SKIP_TSU_REDUCED"
             return empty
         remaining = remaining_benefit_months(started_on, as_of)

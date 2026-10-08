@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { FileSpreadsheet, Flag, Settings, Users, Wallet } from "lucide-react";
 
@@ -8,20 +8,21 @@ import { StatCard } from "@/components/workspace/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShellPage } from "@/components/shell/shell-app-bar";
-import { getMeCompany } from "@/lib/api/workspace-client";
+import { getMeCompany, listPeople } from "@/lib/api/workspace-client";
 import { currentIdToken } from "@/lib/firebase";
 import { formatEur } from "@/lib/format-money";
 import { loadCompanyId, loadWorkspaceName, saveWorkspaceName } from "@/lib/company-session";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
 import { StatusDot, certTone } from "@/components/workspace/status-dot";
-import type { CompanyScopeOut } from "@/lib/api/workspace";
+import type { CompanyScopeOut, PersonOut } from "@/lib/api/workspace";
 
 export function WorkspaceDashboard() {
   const t = useTranslations("workspace");
   const ts = useTranslations("workspace.settings");
   const locale = useLocale();
   const [scope, setScope] = useState<CompanyScopeOut | null>(null);
+  const [people, setPeople] = useState<PersonOut[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,12 +37,22 @@ export function WorkspaceDashboard() {
         const loaded = await getMeCompany({ idToken, companyId });
         saveWorkspaceName(loaded.legal_name);
         setScope(loaded);
+        try {
+          setPeople(await listPeople({ idToken, companyId }));
+        } catch {
+          setPeople([]);
+        }
         setError(null);
       } catch {
         setError(t("needSession"));
       }
     })();
   }, [t]);
+
+  const alreadyBenefiting = useMemo(
+    () => people.filter((row) => row.already_on_ss_reduction),
+    [people],
+  );
 
   const name = scope?.legal_name || loadWorkspaceName() || t("fallbackName");
   const hasEstimate = scope?.estimate_now_monthly != null;
@@ -93,6 +104,40 @@ export function WorkspaceDashboard() {
             <Button variant="outline" size="sm" render={<Link href={paths.companiesSettings} />}>
               <Settings />
               {t("next.openSettings")}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("already.title")}</CardTitle>
+            <CardDescription className="text-xs">{t("already.hint")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-1">
+            <p className="text-sm">
+              {t("already.count", { count: String(alreadyBenefiting.length) })}
+            </p>
+            {alreadyBenefiting.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t("already.empty")}</p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {alreadyBenefiting.slice(0, 8).map((row) => (
+                  <li key={row.id}>{row.display_name || t("people.unnamed")}</li>
+                ))}
+              </ul>
+            )}
+            {alreadyBenefiting.length > 8 ? (
+              <p className="text-xs text-muted-foreground">
+                {t("already.more", { count: String(alreadyBenefiting.length - 8) })}
+              </p>
+            ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href={`${paths.companiesPeople}?benefit=on`} />}
+            >
+              <Users />
+              {t("already.openFilter")}
             </Button>
           </CardContent>
         </Card>

@@ -30,6 +30,8 @@ export function LoginForm() {
         setError(t("errors.authInvalid"));
       } else if (code === "auth/invalid-email") {
         setError(t("errors.authEmail"));
+      } else if (code === "auth/unauthorized-domain") {
+        setError(t("errors.authDomain"));
       } else {
         setError(t("errors.generic"));
       }
