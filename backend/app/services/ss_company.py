@@ -15,6 +15,7 @@ from app.models import (
     Company,
     CompanyHeadcountMonth,
     EmploymentEvent,
+    Establishment,
     SsBatch,
 )
 from app.services.contracts import require_hr_or_admin
@@ -24,6 +25,50 @@ from app.services.ss_parser import SsSourceFile
 
 
 _NISS_MISMATCH = "Employer NISS does not match this company."
+_ESTABLISHMENT_REQUIRED = "Choose an establishment for this declaration."
+_ESTABLISHMENT_CLOSED = "Establishment is closed."
+_ESTABLISHMENT_MISSING = "Establishment not found."
+
+
+async def resolve_upload_establishment(
+    session: AsyncSession,
+    company_id: uuid.UUID,
+    requested: uuid.UUID | None,
+) -> uuid.UUID | None:
+    """One open site is implied. Two or more require an explicit choice."""
+    open_rows = (
+        (
+            await session.execute(
+                select(Establishment)
+                .where(
+                    Establishment.company_id == company_id,
+                    Establishment.status == "OPEN",
+                )
+                .order_by(Establishment.ss_code)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if requested is None:
+        if len(open_rows) <= 1:
+            return open_rows[0].id if open_rows else None
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=_ESTABLISHMENT_REQUIRED,
+        )
+    row = await session.get(Establishment, requested)
+    if row is None or row.company_id != company_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=_ESTABLISHMENT_MISSING,
+        )
+    if row.status != "OPEN":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=_ESTABLISHMENT_CLOSED,
+        )
+    return row.id
 
 
 async def ingest_and_apply_company_ss(
@@ -32,14 +77,19 @@ async def ingest_and_apply_company_ss(
     *,
     files: list[SsSourceFile],
     period_year_month: date,
+    establishment_id: uuid.UUID | None = None,
 ) -> SsIngestResult:
     require_hr_or_admin(ctx)
+    resolved = await resolve_upload_establishment(
+        session, ctx.company.id, establishment_id
+    )
     result = await ingest_ss_export(
         session,
         files=files,
         period_year_month=period_year_month,
         company_id=ctx.company.id,
         uploaded_by=ctx.user.id,
+        establishment_id=resolved,
     )
     if result.batch.parse_status != "PARSED":
         return result

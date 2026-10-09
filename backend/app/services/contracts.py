@@ -16,6 +16,7 @@ from app.models import (
     Employment,
     EmploymentDocument,
     EmploymentEvent,
+    Establishment,
     SsBatch,
     StoredFile,
 )
@@ -53,17 +54,36 @@ def _display_name(crypto, employee: Employee) -> str | None:
         return None
 
 
-async def list_company_people(session: AsyncSession, ctx: CompanyContext) -> list[dict]:
+async def list_company_people(
+    session: AsyncSession,
+    ctx: CompanyContext,
+    *,
+    establishment_id: uuid.UUID | None = None,
+) -> list[dict]:
     crypto = await get_or_create_pii_crypto(session, company_id=ctx.company.id)
+    filters = [
+        Employee.company_id == ctx.company.id,
+        Employee.deleted_at.is_(None),
+    ]
+    if establishment_id is not None:
+        site = await session.get(Establishment, establishment_id)
+        if site is None or site.company_id != ctx.company.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Establishment not found.",
+            )
+        filters.append(
+            Employee.id.in_(
+                select(Employment.employee_id).where(
+                    Employment.establishment_id == establishment_id,
+                    Employment.company_id == ctx.company.id,
+                )
+            )
+        )
     employees = (
         (
             await session.execute(
-                select(Employee)
-                .where(
-                    Employee.company_id == ctx.company.id,
-                    Employee.deleted_at.is_(None),
-                )
-                .order_by(Employee.created_at)
+                select(Employee).where(*filters).order_by(Employee.created_at)
             )
         )
         .scalars()

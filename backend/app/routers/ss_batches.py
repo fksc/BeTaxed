@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +31,18 @@ async def get_ss_batches(
     return [SsBatchOut.model_validate(row) for row in rows]
 
 
+def _optional_establishment_id(raw: str | None) -> uuid.UUID | None:
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return uuid.UUID(raw.strip())
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid establishment_id.",
+        ) from exc
+
+
 @router.post(
     "/ss-batches",
     response_model=SsBatchOut,
@@ -37,6 +51,7 @@ async def get_ss_batches(
 async def post_ss_batch(
     files: list[UploadFile] = File(...),
     period_year_month: str = Form(...),
+    establishment_id: str | None = Form(default=None),
     ctx: CompanyContext = Depends(get_company_context),
     db: AsyncSession = Depends(get_db),
 ) -> SsBatchOut:
@@ -44,7 +59,11 @@ async def post_ss_batch(
     period = parse_period_year_month(period_year_month)
     try:
         result = await ingest_and_apply_company_ss(
-            db, ctx, files=sources, period_year_month=period
+            db,
+            ctx,
+            files=sources,
+            period_year_month=period,
+            establishment_id=_optional_establishment_id(establishment_id),
         )
     except HTTPException:
         await db.commit()

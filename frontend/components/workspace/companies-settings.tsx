@@ -10,8 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DatePicker } from "@/components/ui/date-picker";
 import { ShellPage } from "@/components/shell/shell-app-bar";
 import { StatusDot, certTone } from "@/components/workspace/status-dot";
-import { getMe, listCertificates, listMembers, uploadCertificate } from "@/lib/api/workspace-client";
-import type { CertificateOut, MembersBundleOut } from "@/lib/api/workspace";
+import { EstablishmentsCard } from "@/components/workspace/establishments-card";
+import {
+  getMe,
+  listCertificates,
+  listEstablishments,
+  listMembers,
+  uploadCertificate,
+} from "@/lib/api/workspace-client";
+import type { CertificateOut, EstablishmentOut, MembersBundleOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
@@ -27,6 +34,7 @@ export function CompaniesSettingsPage() {
   const t = useTranslations("workspace.settings");
   const locale = useLocale();
   const [rows, setRows] = useState<CertificateOut[]>([]);
+  const [establishments, setEstablishments] = useState<EstablishmentOut[]>([]);
   const [members, setMembers] = useState<MembersBundleOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"SS_NO_DEBT" | "AT_NO_DEBT" | null>(null);
@@ -64,6 +72,7 @@ export function CompaniesSettingsPage() {
       }
       const bundle = await listMembers({ idToken, companyId });
       setMembers(bundle);
+      setEstablishments(await listEstablishments({ idToken, companyId }));
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -208,6 +217,14 @@ export function CompaniesSettingsPage() {
             )}
           </CardContent>
         </Card>
+        {idToken && companyId ? (
+          <EstablishmentsCard
+            rows={establishments}
+            canManage={canInvite}
+            opts={{ idToken, companyId }}
+            onChanged={reload}
+          />
+        ) : null}
         {members && idToken && companyId ? (
           <MembersPanel
             members={members.members}

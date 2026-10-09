@@ -14,6 +14,7 @@ import type {
   NotificationList,
   OpsCompanyDetailOut,
   OpsCompanyListOut,
+  EstablishmentOut,
   PersonOut,
   PublicInviteOut,
   SsBatchOut,
@@ -28,8 +29,50 @@ export async function getMeCompany(opts: AuthOpts): Promise<CompanyScopeOut> {
   return apiJson<CompanyScopeOut>("/v1/me/company", { method: "GET" }, opts);
 }
 
-export async function listPeople(opts: AuthOpts): Promise<PersonOut[]> {
-  return apiJson<PersonOut[]>("/v1/people", { method: "GET" }, opts);
+export async function listPeople(
+  opts: AuthOpts,
+  establishmentId?: string | null,
+): Promise<PersonOut[]> {
+  const query =
+    establishmentId != null && establishmentId !== ""
+      ? `?establishment_id=${encodeURIComponent(establishmentId)}`
+      : "";
+  return apiJson<PersonOut[]>(`/v1/people${query}`, { method: "GET" }, opts);
+}
+
+export async function listEstablishments(opts: AuthOpts): Promise<EstablishmentOut[]> {
+  return apiJson<EstablishmentOut[]>("/v1/establishments", { method: "GET" }, opts);
+}
+
+export async function createEstablishment(
+  body: { name: string; ss_code: string },
+  opts: AuthOpts,
+): Promise<EstablishmentOut> {
+  return apiJson<EstablishmentOut>(
+    "/v1/establishments",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function patchEstablishment(
+  establishmentId: string,
+  body: { name?: string; status?: "OPEN" | "CLOSED" },
+  opts: AuthOpts,
+): Promise<EstablishmentOut> {
+  return apiJson<EstablishmentOut>(
+    `/v1/establishments/${establishmentId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
 }
 
 export async function patchPersonStatus(
@@ -100,9 +143,13 @@ export async function uploadCompanySs(
   files: File[],
   periodYearMonth: string,
   opts: AuthOpts,
+  establishmentId?: string | null,
 ): Promise<SsBatchOut> {
   const body = new FormData();
   body.set("period_year_month", periodYearMonth);
+  if (establishmentId) {
+    body.set("establishment_id", establishmentId);
+  }
   for (const file of files) {
     body.append("files", file);
   }

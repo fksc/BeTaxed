@@ -31,9 +31,10 @@ Wipe local volumes and seed BeTaxed ops (`BETAXED_STAFF`, default `ops@betaxed.l
 
 - `GET /health` — process liveness (no DB)
 - `GET /ready` — PostgreSQL `SELECT 1`; Redis ping when `REDIS_URL` is set
-- `GET /v1/people` — company people (any member/staff). `X-Company-Id` required. No NISS, no recipe. Includes `status`, `status_source`, `has_source_conflict`.
+- `GET /v1/people` — company people (any member/staff). `X-Company-Id` required. Optional `establishment_id` returns only people whose vínculo was applied from that establishment. No NISS, no recipe. Includes `status`, `status_source`, `has_source_conflict`.
+- `GET /v1/establishments` — company establishments (any member/staff). `POST` and `PATCH` are company admin or BeTaxed staff. Body: `name`, `ss_code` (4 digits, SS `ESTABEE`). Status `OPEN` or `CLOSED`.
 - `PATCH /v1/people/{employee_id}` — Admin/HR/staff set `ACTIVE` / `ON_LEAVE` / `TERMINATED`. Emits `STATUS_OVERRIDE` plus `LEAVE_STARTED`/`LEAVE_ENDED`. Sets `status_source` to `USER` (or `ADMIN` for staff). Finance 403. Does not invent a termination legal list.
-- `POST /v1/ss-batches` — company monthly SS extract (`files` + `period_year_month`). Admin/HR/staff. Parses, fail-closed on employer NISS mismatch (409), then applies and upserts `company_headcount_month` (`SS_BATCH`). Optional remunerações leave sheet/file emits `LEAVE_*` (`source = SS_DIFF`); vínculos/contratos never invent leave.
+- `POST /v1/ss-batches` — company monthly SS extract (`files` + `period_year_month`). Admin/HR/staff. Optional `establishment_id`; required when the company has two or more open establishments. One open establishment is used automatically. Parses, fail-closed on employer NISS mismatch (409), then applies and upserts `company_headcount_month` (`SS_BATCH`). Optional remunerações leave sheet/file emits `LEAVE_*` (`source = SS_DIFF`); vínculos/contratos never invent leave.
 - `GET /v1/ss-batches` — period, parse status, event **counts** only (no names, rates, or pay).
 - `GET /v1/headcount-months` / `PUT /v1/headcount-months` — SS_BATCH and USER rows. USER does not overwrite SS_BATCH. Admin/HR/staff on PUT.
 - `POST /v1/people/{employee_id}/contracts` — PDF upload; emits `CONTRACT_UPLOADED` then stub/Gemini review (`CONTRACT_LLM`).
