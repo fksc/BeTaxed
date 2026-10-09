@@ -60,6 +60,7 @@ async def ingest_ss_export(
     company_id: uuid.UUID | None = None,
     intake_id: uuid.UUID | None = None,
     uploaded_by: uuid.UUID | None = None,
+    establishment_id: uuid.UUID | None = None,
 ) -> SsIngestResult:
     """Parse files and write raw rows. Does not apply to employee tables."""
     if company_id is None and intake_id is None:
@@ -87,6 +88,7 @@ async def ingest_ss_export(
         period_year_month=period_year_month,
         uploaded_by=uploaded_by,
         parse_status="PENDING",
+        establishment_id=establishment_id,
     )
     session.add(batch)
     await session.flush()

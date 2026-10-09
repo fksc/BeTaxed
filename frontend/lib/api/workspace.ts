@@ -26,6 +26,14 @@ export type CompanyScopeOut = {
   contracts_missing: number;
 };
 
+export type EstablishmentOut = {
+  id: string;
+  name: string;
+  ss_code: string;
+  status: "OPEN" | "CLOSED" | string;
+  created_at: string;
+};
+
 export type PersonOut = {
   id: string;
   display_name: string | null;

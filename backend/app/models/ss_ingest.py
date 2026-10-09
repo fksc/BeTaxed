@@ -82,6 +82,11 @@ class SsBatch(Base):
     leave_declared: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+    establishment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("establishment.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     files: Mapped[list[SsBatchFile]] = relationship(
         back_populates="batch",

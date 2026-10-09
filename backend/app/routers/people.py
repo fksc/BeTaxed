@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -18,10 +18,11 @@ router = APIRouter(prefix="/v1", tags=["people"])
 
 @router.get("/people", response_model=list[PersonOut])
 async def get_people(
+    establishment_id: uuid.UUID | None = Query(default=None),
     ctx: CompanyContext = Depends(get_company_context),
     db: AsyncSession = Depends(get_db),
 ) -> list[PersonOut]:
-    rows = await list_company_people(db, ctx)
+    rows = await list_company_people(db, ctx, establishment_id=establishment_id)
     return [PersonOut.model_validate(row) for row in rows]
 
 

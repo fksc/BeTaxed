@@ -16,6 +16,7 @@ from app.db import get_db
 from app.redis_util import ping as redis_ping, set_app_redis
 from app.routers import (
     certificates_router,
+    establishments_router,
     intakes_router,
     invoices_router,
     me_router,
@@ -62,6 +63,7 @@ app.include_router(intakes_router)
 app.include_router(people_router)
 app.include_router(ss_batches_router)
 app.include_router(certificates_router)
+app.include_router(establishments_router)
 app.include_router(invoices_router)
 app.include_router(notifications_router)
 app.include_router(ops_router)

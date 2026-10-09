@@ -23,7 +23,7 @@ Pre-convert, `company_id` is null and `intake_id` is set. On convert, set `compa
 
 ## Table: workplace
 
-SS “local de trabalho”. Sample has one Lisbon establishment.
+SS “local de trabalho” label on a vínculo. Sample has one Lisbon workplace. This is not the filing establishment (`establishment` below).
 
 ```sql
 CREATE TABLE workplace (
@@ -34,6 +34,33 @@ CREATE TABLE workplace (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ```
+
+---
+
+## Table: establishment
+
+Segurança Social establishment (`ESTABEE` on the Declaração de Remunerações). One employer NISS, one 4-digit code per site. The code is assigned by SS (often `0001` for the first). It is not the Quadros de Pessoal establishment number, and it is not a second NISS. Contribution rate stays on the vínculo: one establishment can hold more than one rate.
+
+Created in company settings by a company admin or BeTaxed staff. HR and finance can read the list. Address and CAE are not stored yet.
+
+```sql
+CREATE TABLE establishment (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    name VARCHAR(255) NOT NULL,             -- display, e.g. Lisboa
+    ss_code VARCHAR(4) NOT NULL,            -- ESTABEE, four digits
+    status VARCHAR(16) NOT NULL DEFAULT 'OPEN'
+        CHECK (status IN ('OPEN', 'CLOSED')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (company_id, ss_code),
+    CHECK (ss_code ~ '^[0-9]{4}$')
+);
+```
+
+**Rules:**
+- A closed establishment cannot take a new DMR (`DS31` on the SS side).
+- With zero or one **open** establishment, a company SS upload may omit the id. The single open row is stamped on the batch, and apply copies it onto each employment that batch writes. With two or more open, the upload must send `establishment_id`.
+- People list stays company-wide unless `establishment_id` is passed. A person appears when an employment row carries that id.
 
 ---
 
@@ -116,6 +143,7 @@ CREATE TABLE employment (
     percent_work NUMERIC(6, 2),
     profession_raw TEXT,
     workplace_id UUID REFERENCES workplace(id),
+    establishment_id UUID REFERENCES establishment(id),  -- DEV-857; set from the DMR’s establishment
     tsu_rate_pct NUMERIC(6, 3),             -- e.g. 34.75 or reduced
     rate_applied_from DATE,
     rate_applied_to DATE,
@@ -131,6 +159,7 @@ CREATE INDEX idx_employment_employee ON employment(employee_id);
 - Open employment: `ended_on IS NULL`.
 - `tsu_rate_pct` moving off 34.75 is how we see SS **granted** a reduction (internal).
 - `contract_modality = SEM_TERMO` + `started_on` (or document `signed_on` if it differs) feeds the 60-month clock — see `KB/05` / `KB/20`.
+- `establishment_id` is the SS establishment the DMR was filed for. It is not `workplace_id` (local de trabalho text on the vínculo).
 
 ---
 

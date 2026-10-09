@@ -9,6 +9,7 @@ from app.models.employment import (
     Employment,
     EmploymentDocument,
     EmploymentEvent,
+    Establishment,
     StoredFile,
     Workplace,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "Employment",
     "EmploymentDocument",
     "EmploymentEvent",
+    "Establishment",
     "IncentiveRegime",
     "Invoice",
     "InvoiceLine",

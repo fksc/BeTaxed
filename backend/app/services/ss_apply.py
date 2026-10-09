@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     CompanyHeadcountMonth,
+    Establishment,
     CompensationPeriod,
     Employee,
     EmployeeExternalId,
@@ -160,6 +161,9 @@ async def delete_company_employment_spine(
     await session.execute(delete(Employment).where(Employment.company_id == company_id))
     await session.execute(delete(Employee).where(Employee.company_id == company_id))
     await session.execute(delete(Workplace).where(Workplace.company_id == company_id))
+    await session.execute(
+        delete(Establishment).where(Establishment.company_id == company_id)
+    )
 
 
 async def attach_employment_company(
@@ -401,6 +405,9 @@ async def _apply_person(
         open_emp = await _insert_employment(
             session, batch, employee, snap, workplace_id
         )
+
+    if batch.establishment_id is not None:
+        open_emp.establishment_id = batch.establishment_id
 
     if snap.is_active:
         events.extend(
@@ -655,6 +662,7 @@ async def _insert_employment(
         started_on=started,
         ended_on=snap.vinculo.ended_on if not snap.is_active else None,
         workplace_id=workplace_id,
+        establishment_id=batch.establishment_id,
         contract_modality=map_modality(
             snap.contrato.modality_raw if snap.contrato else None
         ),

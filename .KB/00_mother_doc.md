@@ -39,6 +39,7 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 | CompanyInvite | Pending/failed/expired onboarding invite (set password). |
 | Employee | Person in a tenant. Internal UUID; NISS is encrypted + HMAC, never the PK. |
 | Employment | One vínculo. Rehire = new row, same employee. |
+| Establishment | SS filing site (`ESTABEE`, 4 digits) on a company. Not the vínculo workplace label. |
 | CompensationPeriod | Salary / rendimento period on an employment. |
 | EmploymentEvent | Hire, fire, leave, raise, conversion, rate change, user override. |
 | SsBatch | One SS declaration upload (combined xlsx, vínculos+contratos, optional remunerações leave file). |

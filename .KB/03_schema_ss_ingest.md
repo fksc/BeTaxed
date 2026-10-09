@@ -37,6 +37,7 @@ CREATE TABLE ss_batch (
     parse_error TEXT,
     export_label TEXT,                      -- e.g. query name 25157…_vinculos_2026_08_12
     leave_declared BOOLEAN NOT NULL DEFAULT FALSE,
+    establishment_id UUID REFERENCES establishment(id),  -- DEV-857; null on pass 1
     CHECK (company_id IS NOT NULL OR intake_id IS NOT NULL)
 );
 
@@ -48,6 +49,7 @@ CREATE INDEX idx_ss_batch_company_period ON ss_batch(company_id, period_year_mon
 - After convert, `employer_niss_hash` must match `company.employer_niss_hash` or fail closed (ops exception).
 - `APPLIED` means canonical tables were updated and events emitted.
 - Decline/purge: batches for that intake are deleted with the files.
+- Company upload with two or more open establishments must set `establishment_id`. Apply copies it onto each employment the batch writes. Pass 1 leaves it null.
 
 ---
 

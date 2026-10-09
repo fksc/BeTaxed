@@ -26,6 +26,8 @@ Legend: **Y** = allowed, **—** = no, **ops** = BeTaxed staff only.
 | Invite / resend / cancel company members | — | Y | — | — | ops |
 | Override `max_members` | — | — | — | — | ops |
 | See member list | — | Y | Y | Y | ops |
+| See establishments | — | Y | Y | Y | ops |
+| Create or close an establishment | — | Y | — | — | ops |
 
 Company invoice payloads must not include `saving_amount` per employee, `ineligibility_code`, or regime parameters.
 

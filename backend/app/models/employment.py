@@ -105,6 +105,43 @@ class Employee(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
 
+class Establishment(Base):
+    """SS establishment (ESTABEE). Not the vínculo “local de trabalho” label."""
+
+    __tablename__ = "establishment"
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id", "ss_code", name="uq_establishment_company_ss_code"
+        ),
+        CheckConstraint(
+            "status IN ('OPEN', 'CLOSED')",
+            name="ck_establishment_status",
+        ),
+        CheckConstraint(
+            "ss_code ~ '^[0-9]{4}$'",
+            name="ck_establishment_ss_code",
+        ),
+        Index("idx_establishment_company", "company_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.id"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    ss_code: Mapped[str] = mapped_column(String(4), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'OPEN'")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=func.now(), nullable=False
+    )
+
+
 class Workplace(Base):
     __tablename__ = "workplace"
 
@@ -183,6 +220,11 @@ class Employment(Base):
     profession_raw: Mapped[str | None] = mapped_column(Text, nullable=True)
     workplace_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("workplace.id"), nullable=True
+    )
+    establishment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("establishment.id", ondelete="SET NULL"),
+        nullable=True,
     )
     tsu_rate_pct: Mapped[Decimal | None] = mapped_column(Numeric(6, 3), nullable=True)
     rate_applied_from: Mapped[date | None] = mapped_column(Date, nullable=True)

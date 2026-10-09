@@ -21,14 +21,22 @@ import { MonthPicker } from "@/components/ui/month-picker";
 import { ShellPage } from "@/components/shell/shell-app-bar";
 import { Dropzone } from "@/components/intake/dropzone";
 import { Field } from "@/components/intake/field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
+  listEstablishments,
   listHeadcountMonths,
   listSsBatches,
   putUserHeadcount,
   uploadCompanySs,
 } from "@/lib/api/workspace-client";
-import type { HeadcountMonthOut, SsBatchOut } from "@/lib/api/workspace";
+import type { EstablishmentOut, HeadcountMonthOut, SsBatchOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
@@ -76,6 +84,8 @@ export function DeclarationsPage() {
   const [userCount, setUserCount] = useState("0");
   const [vinculos, setVinculos] = useState<File[]>([]);
   const [contratos, setContratos] = useState<File[]>([]);
+  const [establishments, setEstablishments] = useState<EstablishmentOut[]>([]);
+  const [establishmentId, setEstablishmentId] = useState("");
 
   async function reload() {
     const idToken = await currentIdToken();
@@ -84,12 +94,14 @@ export function DeclarationsPage() {
       setError(t("needSession"));
       return;
     }
-    const [nextBatches, nextHeadcounts] = await Promise.all([
+    const [nextBatches, nextHeadcounts, sites] = await Promise.all([
       listSsBatches({ idToken, companyId }),
       listHeadcountMonths({ idToken, companyId }),
+      listEstablishments({ idToken, companyId }),
     ]);
     setBatches(nextBatches);
     setHeadcounts(nextHeadcounts);
+    setEstablishments(sites);
     setError(null);
   }
 
@@ -97,6 +109,8 @@ export function DeclarationsPage() {
     void reload().catch(() => setError(t("needSession")));
   }, [t]);
 
+  const openSites = establishments.filter((row) => row.status === "OPEN");
+  const needsEstablishment = openSites.length >= 2;
   const latest = batches[0] ?? null;
   const ssForPeriod = headcounts.find(
     (row) => row.source === "SS_BATCH" && ym(row.year_month) === (latest ? ym(latest.period_year_month) : period),
@@ -121,6 +135,10 @@ export function DeclarationsPage() {
       setError(t("declarations.needBoth"));
       return;
     }
+    if (needsEstablishment && !establishmentId) {
+      setError(t("declarations.establishmentRequired"));
+      return;
+    }
     const idToken = await currentIdToken();
     const companyId = loadCompanyId();
     if (!idToken || !companyId) {
@@ -128,13 +146,22 @@ export function DeclarationsPage() {
     }
     setBusy(true);
     try {
-      await uploadCompanySs(unique, period, { idToken, companyId });
+      await uploadCompanySs(
+        unique,
+        period,
+        { idToken, companyId },
+        needsEstablishment ? establishmentId : null,
+      );
       setVinculos([]);
       setContratos([]);
       await reload();
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError(t("declarations.forbidden"));
+      } else if (err instanceof ApiError && err.status === 400) {
+        setError(t("declarations.establishmentRequired"));
+      } else if (err instanceof ApiError && err.status === 409 && err.message.includes("closed")) {
+        setError(t("declarations.establishmentClosed"));
       } else if (err instanceof ApiError && err.status === 409) {
         setError(t("declarations.nissMismatch"));
       } else {
@@ -186,9 +213,33 @@ export function DeclarationsPage() {
             <CardDescription className="text-xs">{t("declarations.hint")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-1">
-            <Field label={t("declarations.month")} className="w-56">
-              <MonthPicker id="ss-period" value={period} onChange={setPeriod} />
-            </Field>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label={t("declarations.month")} className="w-56">
+                <MonthPicker id="ss-period" value={period} onChange={setPeriod} />
+              </Field>
+              {needsEstablishment ? (
+                <Field label={t("declarations.establishment")} className="w-56">
+                  <Select
+                    value={establishmentId}
+                    onValueChange={(value) => value && setEstablishmentId(value)}
+                    items={Object.fromEntries(
+                      openSites.map((row) => [row.id, `${row.name} · ${row.ss_code}`]),
+                    )}
+                  >
+                    <SelectTrigger aria-label={t("declarations.establishment")}>
+                      <SelectValue placeholder={t("declarations.establishment")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {openSites.map((row) => (
+                        <SelectItem key={row.id} value={row.id}>
+                          {row.name} · {row.ss_code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
+            </div>
             <p className="text-sm text-muted-foreground">{t("declarations.needBoth")}</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Dropzone

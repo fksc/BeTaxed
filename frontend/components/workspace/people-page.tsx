@@ -15,8 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShellPage } from "@/components/shell/shell-app-bar";
-import { getMe, listPeople, patchPersonStatus, uploadPersonContract } from "@/lib/api/workspace-client";
-import type { PersonOut } from "@/lib/api/workspace";
+import {
+  getMe,
+  listEstablishments,
+  listPeople,
+  patchPersonStatus,
+  uploadPersonContract,
+} from "@/lib/api/workspace-client";
+import type { EstablishmentOut, PersonOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { loadCompanyId } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
@@ -79,20 +85,25 @@ export function PeoplePage() {
   const [filterBenefit, setFilterBenefit] = useState(
     searchParams.get("benefit") === "on" ? "on" : "all",
   );
+  const [establishments, setEstablishments] = useState<EstablishmentOut[]>([]);
+  const [establishmentId, setEstablishmentId] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
 
-  async function reload() {
+  async function reload(nextEstablishmentId = establishmentId) {
     const idToken = await currentIdToken();
     const companyId = loadCompanyId();
     if (!idToken || !companyId) {
       setError(t("needSession"));
       return;
     }
-    const [people, me] = await Promise.all([
-      listPeople({ idToken, companyId }),
+    const site = nextEstablishmentId === "all" ? null : nextEstablishmentId;
+    const [people, me, sites] = await Promise.all([
+      listPeople({ idToken, companyId }, site),
       getMe({ idToken }),
+      listEstablishments({ idToken, companyId }),
     ]);
+    setEstablishments(sites);
     const membership = me.memberships.find((row) => row.company_id === companyId);
     setCanOverride(
       me.user_type === "BETAXED_STAFF" ||
@@ -204,6 +215,39 @@ export function PeoplePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-1">
             <div className="flex flex-wrap items-end gap-3">
+              {establishments.length >= 2 ? (
+                <Field label={t("people.filterEstablishment")} className="w-52">
+                  <Select
+                    value={establishmentId}
+                    onValueChange={(value) => {
+                      if (!value) {
+                        return;
+                      }
+                      setEstablishmentId(value);
+                      void reload(value).catch(() => setError(t("needSession")));
+                    }}
+                    items={{
+                      all: t("people.filterAll"),
+                      ...Object.fromEntries(
+                        establishments.map((row) => [row.id, `${row.name} · ${row.ss_code}`]),
+                      ),
+                    }}
+                  >
+                    <SelectTrigger aria-label={t("people.filterEstablishment")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t("people.filterAll")}</SelectItem>
+                      {establishments.map((row) => (
+                        <SelectItem key={row.id} value={row.id}>
+                          {row.name} · {row.ss_code}
+                          {row.status === "CLOSED" ? ` (${t("people.establishmentClosed")})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
               <Field label={t("people.filterModality")} className="w-48">
                 <Select
                   value={filterModality}
