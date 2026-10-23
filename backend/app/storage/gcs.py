@@ -111,6 +111,17 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def build_contract_object_name(
+    *,
+    company_id: uuid.UUID,
+    file_id: uuid.UUID,
+    filename: str,
+) -> str:
+    """Company folder inside the bucket: `{company_id}/contracts/{file_id}/{filename}`."""
+    safe_name = filename.replace("/", "_").replace("\\", "_")
+    return f"{company_id}/contracts/{file_id}/{safe_name}"
+
+
 def build_object_name(
     *,
     company_id: uuid.UUID | None,

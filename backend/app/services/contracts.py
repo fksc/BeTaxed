@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -12,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.deps.context import CompanyContext
 from app.models import (
     Company,
+    CompensationPeriod,
     Employee,
     Employment,
     EmploymentDocument,
@@ -22,8 +25,13 @@ from app.models import (
 )
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.domain_events import emit_domain_event
-from app.services.teaser import tsu_looks_unused
-from app.storage import build_object_name, get_object_storage, sha256_hex
+from app.services.teaser import _decrypt_dob, age_on, tsu_looks_unused
+from app.services.term_benefit import (
+    assess_term_benefit,
+    classify_hiring_benefit,
+    term_length_months,
+)
+from app.storage import build_contract_object_name, get_object_storage, sha256_hex
 
 
 def require_hr_or_admin(ctx: CompanyContext) -> None:
@@ -52,6 +60,62 @@ def _display_name(crypto, employee: Employee) -> str | None:
         return crypto.decrypt_name(employee.name_enc)
     except Exception:
         return None
+
+
+def _earliest_term_months(documents: list[EmploymentDocument]) -> int | None:
+    dated = [
+        doc
+        for doc in documents
+        if doc.signed_on is not None
+        and term_length_months(doc.signed_on, doc.term_end_on) is not None
+    ]
+    if not dated:
+        return None
+    first = min(dated, key=lambda doc: (doc.signed_on, doc.created_at))
+    return term_length_months(first.signed_on, first.term_end_on)
+
+
+def _staff_term_benefit(
+    *,
+    staff: bool,
+    crypto,
+    employee: Employee,
+    current: Employment | None,
+    documents: list[EmploymentDocument],
+    salary: Decimal | None,
+    as_of: date,
+) -> dict | None:
+    """Suggestion for BeTaxed staff. Company callers get nothing."""
+    if not staff or current is None or current.ended_on is not None:
+        return None
+    if employee.status != "ACTIVE":
+        return None
+    if not tsu_looks_unused(current.tsu_rate_pct):
+        return None
+    if salary is None or salary <= 0:
+        return None
+    dob = _decrypt_dob(crypto, employee.dob_enc)
+    if dob is None:
+        return None
+    result = assess_term_benefit(
+        modality=current.contract_modality,
+        started_on=current.started_on,
+        dob=dob,
+        as_of=as_of,
+        term_months=_earliest_term_months(documents),
+    )
+    if result is None:
+        return None
+    return {
+        "flagged": True,
+        "readings": [
+            {"rule": row.rule, "deemed_on": row.deemed_on, "can_benefit": True}
+            for row in result.readings
+        ],
+        "early_earliest": result.early_earliest,
+        "early_latest": result.early_latest,
+        "early_suggested": result.early_suggested,
+    }
 
 
 async def list_company_people(
@@ -118,20 +182,46 @@ async def list_company_people(
         .all()
     )
     latest_doc: dict[uuid.UUID, EmploymentDocument] = {}
+    docs_by_employee: dict[uuid.UUID, list[EmploymentDocument]] = {}
     for doc in docs:
         latest_doc.setdefault(doc.employee_id, doc)
+        docs_by_employee.setdefault(doc.employee_id, []).append(doc)
 
-    hide_mismatch = ctx.user.user_type != "BETAXED_STAFF"
-    latest_batch_id = (
+    staff = ctx.user.user_type == "BETAXED_STAFF"
+    hide_mismatch = not staff
+    latest_batch = (
         await session.execute(
-            select(SsBatch.id)
+            select(SsBatch.id, SsBatch.period_year_month)
             .where(
                 SsBatch.company_id == ctx.company.id,
                 SsBatch.parse_status == "APPLIED",
             )
             .order_by(SsBatch.period_year_month.desc(), SsBatch.uploaded_at.desc())
+            .limit(1)
         )
-    ).scalars().first()
+    ).first()
+    latest_batch_id = latest_batch.id if latest_batch is not None else None
+    as_of = (
+        latest_batch.period_year_month if latest_batch is not None else date.today()
+    )
+    open_salary: dict[uuid.UUID, Decimal] = {}
+    if staff:
+        employment_ids = [row.id for rows in by_emp.values() for row in rows]
+        if employment_ids:
+            pay_rows = (
+                (
+                    await session.execute(
+                        select(CompensationPeriod).where(
+                            CompensationPeriod.employment_id.in_(employment_ids),
+                            CompensationPeriod.period_to.is_(None),
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            for pay in pay_rows:
+                open_salary[pay.employment_id] = Decimal(pay.base_salary)
     conflict_ids: set[uuid.UUID] = set()
     if latest_batch_id is not None:
         conflict_ids = set(
@@ -174,29 +264,70 @@ async def list_company_people(
         public_status = review_status
         if hide_mismatch and doc is not None and doc.matches_ss == "MISMATCH":
             public_status = "REVIEWED"
-        out.append(
-            {
-                "id": employee.id,
-                "display_name": _display_name(crypto, employee),
-                "status": employee.status,
-                "status_source": employee.status_source,
-                "has_source_conflict": employee.id in conflict_ids,
-                "leave_type": (
-                    latest_leave.get(employee.id)
-                    if employee.status == "ON_LEAVE"
-                    else None
-                ),
-                "employment_id": current.id if current else None,
-                "contract_modality": current.contract_modality if current else None,
-                "has_contract": doc is not None,
-                "review_status": public_status,
-                "document_id": doc.id if doc is not None else None,
-                "already_on_ss_reduction": bool(
-                    current is not None
-                    and not tsu_looks_unused(current.tsu_rate_pct)
-                ),
-            }
+        row = {
+            "id": employee.id,
+            "display_name": _display_name(crypto, employee),
+            "status": employee.status,
+            "status_source": employee.status_source,
+            "has_source_conflict": employee.id in conflict_ids,
+            "leave_type": (
+                latest_leave.get(employee.id) if employee.status == "ON_LEAVE" else None
+            ),
+            "employment_id": current.id if current else None,
+            "contract_modality": current.contract_modality if current else None,
+            "has_contract": doc is not None,
+            "review_status": public_status,
+            "document_id": doc.id if doc is not None else None,
+            "already_on_ss_reduction": bool(
+                current is not None and not tsu_looks_unused(current.tsu_rate_pct)
+            ),
+        }
+        if staff:
+            dob = _decrypt_dob(crypto, employee.dob_enc)
+            if dob is not None:
+                row["age"] = age_on(dob, date.today())
+            outlook = classify_hiring_benefit(
+                already=row["already_on_ss_reduction"],
+                modality=current.contract_modality if current is not None else None,
+                started_on=current.started_on if current is not None else None,
+                employment_open=current is not None and current.ended_on is None,
+                status=employee.status,
+                dob=dob,
+                salary=open_salary.get(current.id) if current is not None else None,
+                as_of=as_of,
+                term_months=_earliest_term_months(docs_by_employee.get(employee.id, [])),
+            )
+            if current is not None and current.started_on is not None:
+                row["contract_started_on"] = current.started_on
+            if outlook is not None:
+                row["benefit_outlook"] = outlook.outlook
+                if outlook.reason is not None:
+                    block: dict = {"reason": outlook.reason}
+                    if current is not None and current.started_on is not None:
+                        block["contract_started_on"] = current.started_on
+                    if outlook.age_on_start is not None:
+                        block["age_on_start"] = outlook.age_on_start
+                    if outlook.reason in {
+                        "window_over",
+                        "term_early_over",
+                        "term_dates_over",
+                    }:
+                        block["counted_to"] = as_of
+                    if outlook.last_day is not None:
+                        block["last_day"] = outlook.last_day
+                    row["benefit_block"] = block
+        benefit = _staff_term_benefit(
+            staff=staff,
+            crypto=crypto,
+            employee=employee,
+            current=current,
+            documents=docs_by_employee.get(employee.id, []),
+            salary=open_salary.get(current.id) if current is not None else None,
+            as_of=as_of,
         )
+        if benefit is not None:
+            row["term_benefit"] = benefit
+        out.append(row)
     return out
 
 
@@ -230,17 +361,20 @@ async def upload_employment_contract(
     current = _current_employment(list(employments))
 
     storage = get_object_storage()
-    object_name = build_object_name(
+    file_id = uuid.uuid4()
+    object_name = build_contract_object_name(
         company_id=ctx.company.id,
-        intake_id=None,
+        file_id=file_id,
         filename=filename,
     )
-    path = storage.put_bytes(
+    path = await asyncio.to_thread(
+        storage.put_bytes,
         content,
         object_name=object_name,
         content_type=mime_type,
     )
     stored = StoredFile(
+        id=file_id,
         company_id=ctx.company.id,
         intake_id=None,
         gcs_path=path,
@@ -394,3 +528,28 @@ async def apply_contract_to_employment(
     doc.ops_confirmed_at = datetime.now(UTC)
     await session.flush()
     return doc
+
+
+async def read_employee_contract(
+    session: AsyncSession,
+    ctx: CompanyContext,
+    *,
+    employee_id: uuid.UUID,
+    document_id: uuid.UUID,
+) -> tuple[bytes, str, str | None]:
+    doc = await session.get(EmploymentDocument, document_id)
+    employee = await session.get(Employee, employee_id)
+    if (
+        doc is None
+        or employee is None
+        or doc.employee_id != employee.id
+        or employee.company_id != ctx.company.id
+        or employee.deleted_at is not None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found.")
+    stored = await session.get(StoredFile, doc.file_id)
+    if stored is None or stored.company_id != ctx.company.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found.")
+    data = await asyncio.to_thread(get_object_storage().get_bytes, stored.gcs_path)
+    filename = stored.original_filename or "contract.pdf"
+    return data, filename, stored.mime_type

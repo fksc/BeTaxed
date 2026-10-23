@@ -25,7 +25,11 @@ Return JSON only with keys:
   CONVERSION = conversão to sem termo
 - signed_on: YYYY-MM-DD of signature / start of this contract, or null
 - term_end_on: YYYY-MM-DD when the term ends, or null for sem termo
-Do not invent names, NISS, salary, or eligibility. If unsure, use TERMO for any end date.
+- full_name: the employee's full name as printed, or null
+- nif: the employee tax id (NIF do trabalhador), digits only, or null
+- niss: the employee social security number (NISS do trabalhador), digits only, or null
+- employer_nif: the employer tax id (NIF da entidade empregadora), digits only, or null
+Copy only values printed in the document. Use null when a value is absent. Do not invent salary or eligibility. If unsure of doc_kind, use TERMO when any end date is present.
 """
 
 
@@ -35,6 +39,10 @@ class ContractExtract:
     signed_on: date | None
     term_end_on: date | None
     leftover: dict
+    full_name: str | None = None
+    nif: str | None = None
+    niss: str | None = None
+    employer_nif: str | None = None
 
 
 class ContractExtractor(Protocol):
@@ -94,11 +102,19 @@ class GeminiExtractor:
         text = (response.text or "").strip()
         parsed = json.loads(text)
         kind = _normalize_kind(parsed.get("doc_kind"))
+        safe_raw = {
+            key: parsed.get(key)
+            for key in ("doc_kind", "signed_on", "term_end_on")
+        }
         return ContractExtract(
             doc_kind=kind,
             signed_on=_parse_date(parsed.get("signed_on")),
             term_end_on=_parse_date(parsed.get("term_end_on")),
-            leftover={"extractor": "gemini", "raw": parsed},
+            leftover={"extractor": "gemini", "raw": safe_raw},
+            full_name=_clean_text(parsed.get("full_name")),
+            nif=_clean_text(parsed.get("nif")),
+            niss=_clean_text(parsed.get("niss")),
+            employer_nif=_clean_text(parsed.get("employer_nif")),
         )
 
 
@@ -118,6 +134,15 @@ def _normalize_kind(raw: object) -> str:
     if value in {"CONVERSION", "CONVERSAO", "CONVERSÃO"}:
         return "CONVERSION"
     return "TERMO"
+
+
+def _clean_text(raw: object) -> str | None:
+    if raw is None:
+        return None
+    text = str(raw).strip()
+    if not text or text.lower() == "null":
+        return None
+    return text
 
 
 def _parse_date(raw: object) -> date | None:

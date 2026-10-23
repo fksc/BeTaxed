@@ -37,7 +37,8 @@ Wipe local volumes and seed BeTaxed ops (`BETAXED_STAFF`, default `ops@betaxed.l
 - `POST /v1/ss-batches` — company monthly SS extract (`files` + `period_year_month`). Admin/HR/staff. Optional `establishment_id`; required when the company has two or more open establishments. One open establishment is used automatically. Parses, fail-closed on employer NISS mismatch (409), then applies and upserts `company_headcount_month` (`SS_BATCH`). Optional remunerações leave sheet/file emits `LEAVE_*` (`source = SS_DIFF`); vínculos/contratos never invent leave.
 - `GET /v1/ss-batches` — period, parse status, event **counts** only (no names, rates, or pay).
 - `GET /v1/headcount-months` / `PUT /v1/headcount-months` — SS_BATCH and USER rows. USER does not overwrite SS_BATCH. Admin/HR/staff on PUT.
-- `POST /v1/people/{employee_id}/contracts` — PDF upload; emits `CONTRACT_UPLOADED` then stub/Gemini review (`CONTRACT_LLM`).
+- `POST /v1/people/{employee_id}/contracts` — one PDF for a known person. Object key `{company_id}/contracts/{file_id}/{filename}`.
+- `POST /v1/contracts` — many PDFs (`files`). Associates by employee NIF, then full name, then NISS. Inline unless `CLOUD_TASKS_TARGET_URL` is set (queue `betaxed-staging`). Response has no NIF, NISS, or name.
 - `GET /v1/notifications` / `POST …/read` / `GET …/stream` — in-app feed + Redis SSE wake-up (KB/08).
 - `GET /v1/ops/contract-flags` — staff-only SS vs paper mismatches.
 - `GET /v1/ops/benefit-cases` — staff-only internal cases (state, remaining months, monthly saving). Never on company APIs.

@@ -156,4 +156,5 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 - **Related:** DEV-836, DEV-850, `KB/08_schema_communications.md`, TJ `workers/cloud_tasks.py`
 - **Context:** Fan-out and Gemini review run **inline after commit** (TJ local fallback). Upload HTTP waits on the stub/Gemini call. Redis pub/sub is only the SSE wake-up.
 - **Why later:** No Cloud Tasks queues wired on BeTaxed Cloud Run yet. Inline is correct for tests and local DEV.
-- **Pickup:** `FANOUT_DOMAIN_EVENT` + `REVIEW_CONTRACT` queues, `POST /internal/workers/…`, OIDC / `INTERNAL_JOB_TOKEN`. Keep inline fallback when unset.
+- **Pickup:** `FANOUT_DOMAIN_EVENT` queue still open. Contract review uses the existing queue `betaxed-staging` (`POST /internal/workers/review-contract`, OIDC / `INTERNAL_JOB_TOKEN`). Keep inline fallback when `CLOUD_TASKS_TARGET_URL` is unset.
+- **Partial (2026-10-09):** DEV-850 batch upload links PDFs by NIF, then name, then NISS, and enqueues one task per file. Fan-out stays inline. Leave this entry open until fan-out is queued.

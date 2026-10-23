@@ -22,6 +22,10 @@ class AppAsyncSession(AsyncSession):
 
         try:
             delivered = await dispatch_pending_domain_events(self)
+            from app.services.contract_jobs import drain_contract_jobs
+
+            delivered += await drain_contract_jobs(self)
+            delivered += await dispatch_pending_domain_events(self)
         except Exception:
             logger.exception("domain event dispatch failed")
             return

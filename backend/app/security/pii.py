@@ -33,6 +33,10 @@ class PiiCrypto:
     def niss_hash(self, niss: str) -> bytes:
         return hmac_niss(niss, self.tenant_scope, self.app_secret)
 
+    def nif_hash(self, nif: str) -> bytes:
+        """Same tenant HMAC as NISS. Stored on employee.nif_hash, never mixed into niss_hash."""
+        return hmac_niss(nif, self.tenant_scope, self.app_secret)
+
     def encrypt_niss(self, niss: str) -> bytes:
         normalized = normalize_niss(niss)
         return encrypt_bytes(normalized.encode("utf-8"), self.dek)

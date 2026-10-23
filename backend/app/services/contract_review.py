@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 
@@ -9,11 +10,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Employee, Employment, EmploymentDocument, StoredFile
-from app.services.contract_llm import get_contract_extractor
+from app.services.contract_llm import ContractExtract, get_contract_extractor
 from app.services.domain_events import emit_domain_event
 from app.storage import get_object_storage
 
 logger = logging.getLogger(__name__)
+
+
+class ContractReviewRetry(Exception):
+    """Transient read failure. Cloud Tasks may deliver the job once more."""
 
 
 def ss_bucket(modality: str) -> str:
@@ -44,8 +49,86 @@ def compute_matches_ss(
     return "MATCH"
 
 
+def apply_contract_extract(doc: EmploymentDocument, extract, employment) -> str:
+    """Write typed columns from one extract. Returns the review event type."""
+    doc.doc_kind = extract.doc_kind
+    doc.signed_on = extract.signed_on
+    doc.term_end_on = extract.term_end_on
+    doc.review_leftover = extract.leftover
+    doc.review_error = None
+    doc.review_status = "REVIEWED"
+    if employment is None:
+        doc.matches_ss = "UNKNOWN"
+    else:
+        doc.matches_ss = compute_matches_ss(
+            ss_modality=employment.contract_modality,
+            ss_started_on=employment.started_on,
+            ss_ended_on=employment.ended_on,
+            doc_kind=extract.doc_kind,
+            signed_on=extract.signed_on,
+            term_end_on=extract.term_end_on,
+        )
+    if doc.matches_ss == "MISMATCH":
+        return "CONTRACT_SS_MISMATCH"
+    return "CONTRACT_REVIEWED"
+
+
+async def _reviewed_same_hash(
+    session: AsyncSession,
+    *,
+    company_id: uuid.UUID | None,
+    sha256: str | None,
+    file_id: uuid.UUID,
+) -> ContractExtract | None:
+    if company_id is None or not sha256:
+        return None
+    doc = (
+        await session.execute(
+            select(EmploymentDocument)
+            .join(StoredFile, StoredFile.id == EmploymentDocument.file_id)
+            .join(Employee, Employee.id == EmploymentDocument.employee_id)
+            .where(
+                Employee.company_id == company_id,
+                StoredFile.sha256 == sha256,
+                StoredFile.id != file_id,
+                EmploymentDocument.review_status == "REVIEWED",
+                EmploymentDocument.doc_kind.is_not(None),
+            )
+            .order_by(EmploymentDocument.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if doc is None or doc.doc_kind is None:
+        return None
+    return ContractExtract(
+        doc_kind=doc.doc_kind,
+        signed_on=doc.signed_on,
+        term_end_on=doc.term_end_on,
+        leftover={"extractor": "sha256"},
+    )
+
+
+def review_event_payload(doc: EmploymentDocument, employee: Employee, employment) -> dict:
+    payload = {
+        "employment_document_id": str(doc.id),
+        "employee_id": str(doc.employee_id),
+        "company_id": str(employee.company_id) if employee.company_id else None,
+        "doc_kind": doc.doc_kind,
+        "signed_on": doc.signed_on.isoformat() if doc.signed_on else None,
+        "term_end_on": doc.term_end_on.isoformat() if doc.term_end_on else None,
+        "matches_ss": doc.matches_ss,
+    }
+    if employment is not None:
+        payload["ss_modality"] = employment.contract_modality
+        payload["ss_started_on"] = employment.started_on.isoformat()
+    return payload
+
+
 async def review_employment_document(
-    session: AsyncSession, document_id: uuid.UUID
+    session: AsyncSession,
+    document_id: uuid.UUID,
+    *,
+    retry: bool = False,
 ) -> EmploymentDocument | None:
     doc = (
         await session.execute(
@@ -67,63 +150,43 @@ async def review_employment_document(
         doc.review_error = "missing_file_or_employee"
         return doc
 
-    try:
-        data = get_object_storage().get_bytes(stored.gcs_path)
-        extract = get_contract_extractor().extract(
-            data,
-            mime_type=stored.mime_type,
-            filename=stored.original_filename,
-        )
-    except Exception as exc:
-        logger.warning("contract review failed document=%s: %s", document_id, exc)
-        doc.review_status = "FAILED"
-        doc.review_error = type(exc).__name__
-        await emit_domain_event(
-            session,
-            event_type="CONTRACT_REVIEW_FAILED",
-            source_entity_type="EMPLOYMENT_DOCUMENT",
-            source_entity_id=doc.id,
-            actor_id=None,
-            company_id=employee.company_id,
-            payload={"employment_document_id": str(doc.id)},
-        )
-        return doc
-
-    doc.doc_kind = extract.doc_kind
-    doc.signed_on = extract.signed_on
-    doc.term_end_on = extract.term_end_on
-    doc.review_leftover = extract.leftover
-    doc.review_error = None
-    doc.review_status = "REVIEWED"
-
-    if employment is None:
-        doc.matches_ss = "UNKNOWN"
-    else:
-        doc.matches_ss = compute_matches_ss(
-            ss_modality=employment.contract_modality,
-            ss_started_on=employment.started_on,
-            ss_ended_on=employment.ended_on,
-            doc_kind=extract.doc_kind,
-            signed_on=extract.signed_on,
-            term_end_on=extract.term_end_on,
-        )
-
-    payload = {
-        "employment_document_id": str(doc.id),
-        "employee_id": str(doc.employee_id),
-        "company_id": str(employee.company_id) if employee.company_id else None,
-        "doc_kind": doc.doc_kind,
-        "signed_on": doc.signed_on.isoformat() if doc.signed_on else None,
-        "term_end_on": doc.term_end_on.isoformat() if doc.term_end_on else None,
-        "matches_ss": doc.matches_ss,
-    }
-    if employment is not None:
-        payload["ss_modality"] = employment.contract_modality
-        payload["ss_started_on"] = employment.started_on.isoformat()
-
-    event_type = (
-        "CONTRACT_SS_MISMATCH" if doc.matches_ss == "MISMATCH" else "CONTRACT_REVIEWED"
+    extract = await _reviewed_same_hash(
+        session,
+        company_id=employee.company_id,
+        sha256=stored.sha256,
+        file_id=stored.id,
     )
+    if extract is not None:
+        logger.info("contract review reused extract document=%s", document_id)
+    else:
+        try:
+            storage = get_object_storage()
+            data = await asyncio.to_thread(storage.get_bytes, stored.gcs_path)
+            extract = await asyncio.to_thread(
+                get_contract_extractor().extract,
+                data,
+                mime_type=stored.mime_type,
+                filename=stored.original_filename,
+            )
+        except Exception as exc:
+            logger.warning("contract review failed document=%s: %s", document_id, type(exc).__name__)
+            if retry:
+                raise ContractReviewRetry from exc
+            doc.review_status = "FAILED"
+            doc.review_error = type(exc).__name__
+            await emit_domain_event(
+                session,
+                event_type="CONTRACT_REVIEW_FAILED",
+                source_entity_type="EMPLOYMENT_DOCUMENT",
+                source_entity_id=doc.id,
+                actor_id=None,
+                company_id=employee.company_id,
+                payload={"employment_document_id": str(doc.id)},
+            )
+            return doc
+
+    event_type = apply_contract_extract(doc, extract, employment)
+    payload = review_event_payload(doc, employee, employment)
     await emit_domain_event(
         session,
         event_type=event_type,

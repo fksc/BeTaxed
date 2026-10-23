@@ -58,6 +58,23 @@ Analyst columns on the sample (idade, fee/ano, VLOOKUP) are **not** SS. Ignore o
 
 ---
 
+## Staff flag: term contract that can still open the benefit (DEV-877)
+
+Ops only. Company APIs and the company people page do not show it, and it does not file anything with Segurança Social.
+
+For an **active** open term employment, with a date of birth, base salary above zero, and the employer rate still unused:
+
+- **Termo certo:** sem termo after the first term plus one renewal of the same length, when a contract PDF has both `signed_on` and `term_end_on`. The length is whole calendar months on the earliest such PDF. Also report three historical readings from the same start: +2 years, +3 years, +4 years. Each line is its own yes or no.
+- **Termo incerto:** +4 years only.
+- A line is a yes when age on that date is ≤ 30 and some of the 60 months from that date are still left. “Still left” is counted to the latest applied Segurança Social period, or to today when no file has been applied.
+- When that primary date would already be age 31 or older, look at the first contract date. A declaration is still possible on any day from the day after the contract started through the day before the 31st birthday, including when those are the same day. Staff usually pick about a month before the birthday. Flag that window only when the 60 months counted from its last day are not already over. Certo’s primary date is the one-renewal date when the PDF length is known; without that length, the window opens only when all three historical caps fail the age test. Incerto’s primary date is the 4-year date.
+
+`first_permanent_elsewhere` does not remove the flag. A prior permanent contract elsewhere is still filed.
+
+The staff Employees hiring-benefit filter keeps everyone until a choice is made. **Already benefiting** is the reduced employer rate. **Not on the reduced rate** is everyone else. **Might benefit** is this flag, or a permanent contract that can still open the 60 months (age ≤ 30 on the start, salary above zero, rate unused, months left). **Won't benefit** is a known dead end: the window is over, the age test fails, the employment has ended, or the contract is not a path to this benefit. A missing date of birth or salary stays out of Might and Won't. The staff table shows the contract start. While Won't benefit is selected, the name explains the first closed path, in the staff member's language, and repeats that date.
+
+---
+
 ## Internal vs customer
 
 The engine uses this doc. Company-facing product uses `KB/10` (teaser + workspace). Never paste this table into the teaser UI.

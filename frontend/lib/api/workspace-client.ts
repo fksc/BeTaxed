@@ -1,4 +1,6 @@
-import { apiJson, type AuthOpts } from "@/lib/api/http";
+import { getApiUrl } from "@/lib/api/client";
+import { apiJson, authHeaders, type AuthOpts } from "@/lib/api/http";
+import { ApiError } from "@/lib/api/types";
 import type {
   BillingSettingsOut,
   BenefitCaseOut,
@@ -95,6 +97,24 @@ export async function patchPersonStatus(
   );
 }
 
+export async function openPersonContract(
+  employeeId: string,
+  documentId: string,
+  opts: AuthOpts,
+): Promise<void> {
+  const response = await fetch(
+    `${getApiUrl()}/v1/people/${employeeId}/contracts/${documentId}`,
+    { headers: authHeaders(opts) },
+  );
+  if (!response.ok) {
+    throw new ApiError(response.statusText || `HTTP ${response.status}`, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export async function uploadPersonContract(
   employeeId: string,
   file: File,
@@ -103,6 +123,117 @@ export async function uploadPersonContract(
   const body = new FormData();
   body.set("file", file);
   return apiJson(`/v1/people/${employeeId}/contracts`, { method: "POST", body }, opts);
+}
+
+function postForm(
+  path: string,
+  body: FormData,
+  opts: AuthOpts,
+  onProgress: (percent: number) => void,
+): { promise: Promise<unknown>; abort: () => void } {
+  const xhr = new XMLHttpRequest();
+  const promise = new Promise<unknown>((resolve, reject) => {
+    xhr.open("POST", `${getApiUrl()}${path}`);
+    const headers = authHeaders(opts);
+    headers.forEach((value, key) => {
+      xhr.setRequestHeader(key, value);
+    });
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as unknown);
+        } catch {
+          reject(new ApiError("Empty upload response", xhr.status));
+        }
+        return;
+      }
+      let message = xhr.statusText || `HTTP ${xhr.status}`;
+      try {
+        const parsed: unknown = JSON.parse(xhr.responseText);
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          "detail" in parsed &&
+          typeof (parsed as { detail: unknown }).detail === "string"
+        ) {
+          message = (parsed as { detail: string }).detail;
+        }
+      } catch {
+        /* ignore */
+      }
+      reject(new ApiError(message, xhr.status));
+    };
+    xhr.onerror = () => reject(new ApiError("Upload failed", 0));
+    xhr.onabort = () => reject(new ApiError("aborted", 0));
+    xhr.send(body);
+  });
+  return { promise, abort: () => xhr.abort() };
+}
+
+export type ContractBatchItem = {
+  inbox_id: string;
+  filename: string | null;
+  status: string;
+  match_via: string | null;
+  employee_id: string | null;
+  document_id: string | null;
+};
+
+export async function uploadContractBatch(
+  files: File[],
+  opts: AuthOpts,
+): Promise<{ items: ContractBatchItem[] }> {
+  const body = new FormData();
+  for (const file of files) {
+    body.append("files", file);
+  }
+  return apiJson("/v1/contracts", { method: "POST", body }, opts);
+}
+
+export function uploadPersonContractFile(
+  employeeId: string,
+  file: File,
+  opts: AuthOpts,
+  onProgress: (percent: number) => void,
+): { promise: Promise<{ id: string; review_status: string }>; abort: () => void } {
+  const body = new FormData();
+  body.set("file", file);
+  const job = postForm(`/v1/people/${employeeId}/contracts`, body, opts, onProgress);
+  return {
+    abort: job.abort,
+    promise: job.promise.then((data) => {
+      const row = data as { id?: string; review_status?: string };
+      if (!row.id || !row.review_status) {
+        throw new ApiError("Empty upload response", 0);
+      }
+      return { id: row.id, review_status: row.review_status };
+    }),
+  };
+}
+
+export function uploadContractFile(
+  file: File,
+  opts: AuthOpts,
+  onProgress: (percent: number) => void,
+): { promise: Promise<ContractBatchItem>; abort: () => void } {
+  const body = new FormData();
+  body.append("files", file);
+  const job = postForm("/v1/contracts", body, opts, onProgress);
+  return {
+    abort: job.abort,
+    promise: job.promise.then((data) => {
+      const item = (data as { items?: ContractBatchItem[] }).items?.[0];
+      if (!item) {
+        throw new ApiError("Empty upload response", 0);
+      }
+      return item;
+    }),
+  };
 }
 
 export async function listNotifications(opts: AuthOpts): Promise<NotificationList> {

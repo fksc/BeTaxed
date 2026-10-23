@@ -34,6 +34,36 @@ export type EstablishmentOut = {
   created_at: string;
 };
 
+export type TermBenefitReading = {
+  rule: "certo_renewal" | "years_2" | "years_3" | "years_4" | "incerto_4";
+  deemed_on: string;
+  can_benefit: boolean;
+};
+
+export type TermBenefitOut = {
+  flagged: boolean;
+  readings: TermBenefitReading[];
+  early_earliest?: string | null;
+  early_latest?: string | null;
+  early_suggested?: string | null;
+};
+
+export type BenefitBlockOut = {
+  reason:
+    | "no_start"
+    | "employment_ended"
+    | "age_at_start"
+    | "window_over"
+    | "term_no_day"
+    | "term_early_over"
+    | "term_dates_over"
+    | "other_modality";
+  contract_started_on?: string | null;
+  age_on_start?: number | null;
+  counted_to?: string | null;
+  last_day?: string | null;
+};
+
 export type PersonOut = {
   id: string;
   display_name: string | null;
@@ -47,6 +77,11 @@ export type PersonOut = {
   review_status: string | null;
   document_id: string | null;
   already_on_ss_reduction: boolean;
+  age?: number | null;
+  contract_started_on?: string | null;
+  benefit_outlook?: "already" | "might" | "never" | null;
+  benefit_block?: BenefitBlockOut | null;
+  term_benefit?: TermBenefitOut | null;
 };
 
 export type NotificationItem = {

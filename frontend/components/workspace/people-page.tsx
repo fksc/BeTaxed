@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -16,11 +17,17 @@ import {
 } from "@/components/ui/select";
 import { ShellPage } from "@/components/shell/shell-app-bar";
 import {
+  ContractBatchModal,
+  contractUploadRows,
+  runContractUploads,
+  type ContractUploadRow,
+} from "@/components/workspace/contract-batch-modal";
+import {
   getMe,
   listEstablishments,
   listPeople,
+  openPersonContract,
   patchPersonStatus,
-  uploadPersonContract,
 } from "@/lib/api/workspace-client";
 import type { EstablishmentOut, PersonOut } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
@@ -30,6 +37,11 @@ import { currentIdToken } from "@/lib/firebase";
 const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
 const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
 const MODALITIES = ["SEM_TERMO", "TERMO_CERTO", "TERMO_INCERTO", "OTHER"] as const;
+type SortKey = "name" | "modality" | "status" | "file";
+
+function foldName(value: string): string {
+  return value.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase();
+}
 
 function reviewLabel(status: string | null, t: (key: string) => string): string {
   if (!status) {
@@ -88,7 +100,14 @@ export function PeoplePage() {
   const [establishments, setEstablishments] = useState<EstablishmentOut[]>([]);
   const [establishmentId, setEstablishmentId] = useState("all");
   const inputRef = useRef<HTMLInputElement>(null);
+  const batchRef = useRef<HTMLInputElement>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
+  const [batchNote, setBatchNote] = useState<string | null>(null);
+  const [uploadRows, setUploadRows] = useState<ContractUploadRow[] | null>(null);
+  const [uploadRunning, setUploadRunning] = useState(false);
+  const [nameQuery, setNameQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   async function reload(nextEstablishmentId = establishmentId) {
     const idToken = await currentIdToken();
@@ -145,28 +164,89 @@ export function PeoplePage() {
       if (filterBenefit === "off" && row.already_on_ss_reduction) {
         return false;
       }
+      const query = foldName(nameQuery.trim());
+      if (query && !foldName(row.display_name || t("people.unnamed")).includes(query)) {
+        return false;
+      }
       return true;
     });
-  }, [rows, filterModality, filterStatus, filterFile, filterBenefit]);
+  }, [rows, filterModality, filterStatus, filterFile, filterBenefit, nameQuery, t]);
+
+  const visible = useMemo(() => {
+    const direction = sortDir === "asc" ? 1 : -1;
+    const label = (row: PersonOut): string => {
+      if (sortKey === "name") {
+        return row.display_name || t("people.unnamed");
+      }
+      if (sortKey === "modality") {
+        return modalityLabel(row.contract_modality, t);
+      }
+      if (sortKey === "status") {
+        return t(`people.status.${row.status}`);
+      }
+      return row.has_contract ? reviewLabel(row.review_status, t) : t("people.noFile");
+    };
+    return [...filtered].sort(
+      (a, b) => direction * label(a).localeCompare(label(b), undefined, { sensitivity: "base" }),
+    );
+  }, [filtered, sortDir, sortKey, t]);
+
+  function onSort(column: SortKey) {
+    if (sortKey === column) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(column);
+    setSortDir("asc");
+  }
+
+  async function onShow(employeeId: string, documentId: string) {
+    const idToken = await currentIdToken();
+    const companyId = loadCompanyId();
+    if (!idToken || !companyId) {
+      setError(t("needSession"));
+      return;
+    }
+    try {
+      await openPersonContract(employeeId, documentId, { idToken, companyId });
+    } catch {
+      setError(t("people.showFailed"));
+    }
+  }
+
+  async function startUploads(files: File[], employeeId?: string) {
+    const idToken = await currentIdToken();
+    const companyId = loadCompanyId();
+    if (!idToken || !companyId) {
+      setError(t("needSession"));
+      return;
+    }
+    setError(null);
+    setBatchNote(null);
+    setUploadRows(contractUploadRows(files));
+    setUploadRunning(true);
+    try {
+      await runContractUploads({
+        files,
+        companyId,
+        employeeId,
+        getIdToken: (forceRefresh) => currentIdToken(forceRefresh),
+        onRows: setUploadRows,
+      });
+    } finally {
+      setUploadRunning(false);
+    }
+  }
 
   async function onFile(employeeId: string, file: File | undefined) {
     if (!file) {
       return;
     }
-    const idToken = await currentIdToken();
-    const companyId = loadCompanyId();
-    if (!idToken || !companyId) {
-      return;
-    }
-    setBusyId(employeeId);
-    try {
-      await uploadPersonContract(employeeId, file, { idToken, companyId });
-      await reload();
-    } catch {
-      setError(t("people.uploadFailed"));
-    } finally {
-      setBusyId(null);
-    }
+    await startUploads([file], employeeId);
+  }
+
+  async function onBatch(files: File[]) {
+    await startUploads(files);
   }
 
   async function onStatus(
@@ -215,6 +295,14 @@ export function PeoplePage() {
           </CardHeader>
           <CardContent className="space-y-4 pt-1">
             <div className="flex flex-wrap items-end gap-3">
+              <Field label={t("people.search")} className="w-56">
+                <Input
+                  value={nameQuery}
+                  onChange={(event) => setNameQuery(event.target.value)}
+                  placeholder={t("people.searchPlaceholder")}
+                  aria-label={t("people.search")}
+                />
+              </Field>
               {establishments.length >= 2 ? (
                 <Field label={t("people.filterEstablishment")} className="w-52">
                   <Select
@@ -339,25 +427,61 @@ export function PeoplePage() {
                   </SelectContent>
                 </Select>
               </Field>
+              {canOverride ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={uploadRows !== null}
+                  onClick={() => batchRef.current?.click()}
+                >
+                  {t("people.batchUpload")}
+                </Button>
+              ) : null}
             </div>
+            {batchNote ? <p className="text-sm text-muted-foreground">{batchNote}</p> : null}
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("people.empty")}</p>
-            ) : filtered.length === 0 ? (
+            ) : visible.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("people.filterEmpty")}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="text-xs text-muted-foreground">
                     <tr className="border-b">
-                      <th className="py-2 pr-3 font-medium">{t("people.colName")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("people.colModality")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("people.statusLabel")}</th>
-                      <th className="py-2 pr-3 font-medium">{t("people.colFile")}</th>
+                      <SortHeader
+                        label={t("people.colName")}
+                        column="name"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortHeader
+                        label={t("people.colModality")}
+                        column="modality"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortHeader
+                        label={t("people.statusLabel")}
+                        column="status"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
+                      <SortHeader
+                        label={t("people.colFile")}
+                        column="file"
+                        sortKey={sortKey}
+                        sortDir={sortDir}
+                        onSort={onSort}
+                      />
                       <th className="py-2 font-medium">{t("people.colActions")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((row) => (
+                    {visible.map((row) => (
                       <tr key={row.id} className="border-b border-border/60 last:border-0">
                         <td className="py-2 pr-3 align-top">
                           <div className="font-medium">{row.display_name || t("people.unnamed")}</div>
@@ -457,14 +581,30 @@ export function PeoplePage() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={busyId === row.id}
+                            disabled={busyId === row.id || uploadRows !== null}
                             onClick={() => {
                               setTargetId(row.id);
                               inputRef.current?.click();
                             }}
                           >
-                            {t("people.upload")}
+                            {row.has_contract ? t("people.reupload") : t("people.upload")}
                           </Button>
+                          {row.has_contract && row.document_id ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="ml-2"
+                              disabled={uploadRows !== null}
+                              onClick={() => {
+                                if (row.document_id) {
+                                  void onShow(row.id, row.document_id);
+                                }
+                              }}
+                            >
+                              {t("people.show")}
+                            </Button>
+                          ) : null}
                         </td>
                       </tr>
                     ))}
@@ -487,7 +627,77 @@ export function PeoplePage() {
             }
           }}
         />
+        <input
+          ref={batchRef}
+          type="file"
+          className="sr-only"
+          accept="application/pdf,.pdf"
+          multiple
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            if (files.length > 0) {
+              void onBatch(files);
+            }
+          }}
+        />
+        {uploadRows ? (
+          <ContractBatchModal
+            rows={uploadRows}
+            running={uploadRunning}
+            onClose={(summary) => {
+              setUploadRows(null);
+              const note = t("people.batchResult", {
+                matched: String(summary.matched),
+                unmatched: String(summary.unmatched),
+                pending: String(summary.pending),
+              });
+              setBatchNote(
+                summary.failed > 0
+                  ? `${note} ${t("people.batchFailedCount", { failed: String(summary.failed) })}`
+                  : note,
+              );
+              if (summary.failed > 0 && summary.matched + summary.unmatched + summary.pending === 0) {
+                setError(t("people.batchFailed"));
+              }
+              void reload();
+            }}
+          />
+        ) : null}
       </div>
     </ShellPage>
+  );
+}
+
+function SortHeader({
+  label,
+  column,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  column: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onSort: (column: SortKey) => void;
+}) {
+  const t = useTranslations("workspace");
+  const active = sortKey === column;
+  return (
+    <th
+      className="py-2 pr-3 font-medium"
+      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 hover:text-foreground"
+        aria-label={t("people.sortColumn", { column: label })}
+        onClick={() => onSort(column)}
+      >
+        {label}
+        <span aria-hidden="true">{active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
   );
 }

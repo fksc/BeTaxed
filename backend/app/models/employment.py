@@ -7,6 +7,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -66,6 +67,15 @@ class Employee(Base):
                 "intake_id IS NOT NULL AND company_id IS NULL AND deleted_at IS NULL"
             ),
         ),
+        Index(
+            "idx_employee_company_nif",
+            "company_id",
+            "nif_hash",
+            unique=True,
+            postgresql_where=text(
+                "company_id IS NOT NULL AND nif_hash IS NOT NULL AND deleted_at IS NULL"
+            ),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -87,6 +97,8 @@ class Employee(Base):
     niss_enc: Mapped[bytes] = mapped_column(BYTEA, nullable=False)
     name_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     dob_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    nif_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    nif_hash: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     first_permanent_elsewhere: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=text("'UNKNOWN'")
     )
@@ -418,4 +430,67 @@ class EmploymentDocument(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class ContractInbox(Base):
+    """PDF held until NIF, name, or NISS links it to an employee (DEV-850)."""
+
+    __tablename__ = "contract_inbox"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('PENDING', 'MATCHED', 'UNMATCHED', 'FAILED')",
+            name="ck_contract_inbox_status",
+        ),
+        CheckConstraint(
+            "match_via IS NULL OR match_via IN ('NIF', 'NAME', 'NISS')",
+            name="ck_contract_inbox_match_via",
+        ),
+        Index("idx_contract_inbox_company_status", "company_id", "status"),
+        CheckConstraint(
+            "doc_kind IS NULL OR doc_kind IN ('SEM_TERMO', 'TERMO', 'CONVERSION')",
+            name="ck_contract_inbox_doc_kind",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("company.id"), nullable=False
+    )
+    file_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("stored_file.id"), nullable=False
+    )
+    uploaded_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'PENDING'")
+    )
+    match_via: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employee.id"), nullable=True
+    )
+    employment_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("employment_document.id"), nullable=True
+    )
+    nif_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    name_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    niss_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    employer_nif_mismatch: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    doc_kind: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    signed_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    term_end_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    nif_conflict: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
+    )
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )

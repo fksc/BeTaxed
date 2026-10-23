@@ -1,6 +1,7 @@
 from app.routers.certificates import router as certificates_router
 from app.routers.establishments import router as establishments_router
 from app.routers.intakes import router as intakes_router
+from app.routers.internal_workers import router as internal_workers_router
 from app.routers.invoices import router as invoices_router
 from app.routers.me import router as me_router
 from app.routers.members import router as members_router
@@ -14,6 +15,7 @@ __all__ = [
     "certificates_router",
     "establishments_router",
     "intakes_router",
+    "internal_workers_router",
     "invoices_router",
     "me_router",
     "members_router",
