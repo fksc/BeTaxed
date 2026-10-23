@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { FileText, Users, UserCheck, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -27,17 +28,22 @@ import { MembersPanel } from "@/components/workspace/members-panel";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
   getOpsCompany,
+  listEstablishments,
   listHeadcountMonths,
   listPeople,
   listSsBatches,
   openPersonContract,
   patchOpsCompany,
+  patchPersonStatus,
 } from "@/lib/api/workspace-client";
 import type {
+  EstablishmentOut,
   HeadcountMonthOut,
   OpsCompanyDetailOut,
+  BenefitBlockOut,
   PersonOut,
   SsBatchOut,
+  TermBenefitOut,
 } from "@/lib/api/workspace";
 import { ApiError } from "@/lib/api/types";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -47,6 +53,10 @@ import { cn } from "@/lib/utils";
 
 const HUB_TABS = ["overview", "vinculos", "employees", "already", "documents"] as const;
 type HubTab = (typeof HUB_TABS)[number];
+const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
+const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
+const MODALITIES = ["SEM_TERMO", "TERMO_CERTO", "TERMO_INCERTO", "OTHER"] as const;
+type SortKey = "name" | "age" | "start" | "modality" | "status" | "file";
 
 function isHubTab(value: string | null): value is HubTab {
   return HUB_TABS.includes(value as HubTab);
@@ -64,6 +74,10 @@ function currentYearMonth(): { year: string; month: string } {
   };
 }
 
+function foldName(value: string): string {
+  return value.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase();
+}
+
 function reviewLabel(status: string | null, t: (key: string) => string): string {
   if (!status) {
     return t("people.noFile");
@@ -75,6 +89,31 @@ function reviewLabel(status: string | null, t: (key: string) => string): string 
     return t("people.failed");
   }
   return t("people.received");
+}
+
+function sourceLabel(source: string, t: (key: string) => string): string {
+  if (source === "USER" || source === "ADMIN") {
+    return t("people.sourceUser");
+  }
+  if (source === "HRMS") {
+    return t("people.sourceHrms");
+  }
+  return t("people.sourceSs");
+}
+
+function modalityLabel(value: string | null, t: (key: string) => string): string {
+  if (!value) {
+    return t("people.modalityUnknown");
+  }
+  if (
+    value === "SEM_TERMO" ||
+    value === "TERMO_CERTO" ||
+    value === "TERMO_INCERTO" ||
+    value === "OTHER"
+  ) {
+    return t(`people.modality.${value}`);
+  }
+  return value;
 }
 
 export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
@@ -98,6 +137,12 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const nowYm = currentYearMonth();
   const [year, setYear] = useState(nowYm.year);
   const [month, setMonth] = useState(nowYm.month);
+  const [establishments, setEstablishments] = useState<EstablishmentOut[]>([]);
+  const [establishmentId, setEstablishmentId] = useState("all");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [leaveById, setLeaveById] = useState<Record<string, (typeof LEAVE_TYPES)[number]>>(
+    {},
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const batchRef = useRef<HTMLInputElement>(null);
   const [batchNote, setBatchNote] = useState<string | null>(null);
@@ -105,7 +150,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [uploadRunning, setUploadRunning] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
 
-  async function reload() {
+  async function reload(nextEstablishmentId = establishmentId) {
     const token = await currentIdToken();
     if (!token) {
       setError(t("needAuth"));
@@ -113,16 +158,19 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     }
     setIdToken(token);
     const opts = { idToken: token, companyId };
-    const [detail, nextPeople, nextBatches, nextHeadcounts] = await Promise.all([
+    const site = nextEstablishmentId === "all" ? null : nextEstablishmentId;
+    const [detail, nextPeople, nextBatches, nextHeadcounts, sites] = await Promise.all([
       getOpsCompany(companyId, { idToken: token }),
-      listPeople(opts),
+      listPeople(opts, site),
       listSsBatches(opts),
       listHeadcountMonths(opts),
+      listEstablishments(opts),
     ]);
     setRow(detail);
     setPeople(nextPeople);
     setBatches(nextBatches);
     setHeadcounts(nextHeadcounts);
+    setEstablishments(sites);
     setMaxMembers(String(detail.max_members));
     setError(null);
   }
@@ -223,6 +271,37 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
 
   async function onBatch(files: File[]) {
     await startUploads(files);
+  }
+
+  async function onPersonStatus(
+    employeeId: string,
+    status: (typeof STATUSES)[number],
+    leaveType?: (typeof LEAVE_TYPES)[number],
+  ) {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      setError(t("needAuth"));
+      return;
+    }
+    setBusyId(employeeId);
+    try {
+      await patchPersonStatus(
+        employeeId,
+        status === "ON_LEAVE"
+          ? { status, leave_type: leaveType ?? leaveById[employeeId] ?? "OTHER" }
+          : { status },
+        { idToken: token, companyId },
+      );
+      await reload();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        setError(tw("people.statusForbidden"));
+      } else {
+        setError(tw("people.statusFailed"));
+      }
+    } finally {
+      setBusyId(null);
+    }
   }
 
   const tabs: { id: HubTab; label: string }[] = [
@@ -427,19 +506,27 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
         ) : null}
 
         {tab === "employees" ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("tabEmployees")}</CardTitle>
-              <CardDescription>{tw("people.hint")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {people.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{tw("people.empty")}</p>
-              ) : (
-                <EmployeeTable people={people} tw={tw} contractLabel={t("contractCol")} />
-              )}
-            </CardContent>
-          </Card>
+          <StaffPeopleCard
+            people={people}
+            establishments={establishments}
+            establishmentId={establishmentId}
+            onEstablishment={(value) => {
+              setEstablishmentId(value);
+              void reload(value).catch(() => setError(t("needAuth")));
+            }}
+            busyId={busyId}
+            uploadsLocked={uploadRows !== null}
+            leaveById={leaveById}
+            onLeave={(employeeId, leave) =>
+              setLeaveById((current) => ({ ...current, [employeeId]: leave }))
+            }
+            onShow={(employeeId, documentId) => void onShow(employeeId, documentId)}
+            onUploadClick={(employeeId) => {
+              setUploadTarget(employeeId);
+              fileRef.current?.click();
+            }}
+            onStatus={(employeeId, status, leave) => void onPersonStatus(employeeId, status, leave)}
+          />
         ) : null}
 
         {tab === "already" ? (
@@ -596,6 +683,578 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   );
 }
 
+function StaffPeopleCard({
+  people,
+  establishments,
+  establishmentId,
+  onEstablishment,
+  busyId,
+  uploadsLocked,
+  leaveById,
+  onLeave,
+  onShow,
+  onUploadClick,
+  onStatus,
+}: {
+  people: PersonOut[];
+  establishments: EstablishmentOut[];
+  establishmentId: string;
+  onEstablishment: (id: string) => void;
+  busyId: string | null;
+  uploadsLocked: boolean;
+  leaveById: Record<string, (typeof LEAVE_TYPES)[number]>;
+  onLeave: (employeeId: string, leave: (typeof LEAVE_TYPES)[number]) => void;
+  onShow: (employeeId: string, documentId: string) => void;
+  onUploadClick: (employeeId: string) => void;
+  onStatus: (
+    employeeId: string,
+    status: (typeof STATUSES)[number],
+    leave?: (typeof LEAVE_TYPES)[number],
+  ) => void;
+}) {
+  const t = useTranslations("admins.companyDetail");
+  const tw = useTranslations("workspace");
+  const format = useFormatter();
+  const [filterModality, setFilterModality] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterFile, setFilterFile] = useState("all");
+  const [filterBenefit, setFilterBenefit] = useState("all");
+  const [nameQuery, setNameQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const filtered = useMemo(() => {
+    return people.filter((row) => {
+      if (filterModality === "missing" && row.contract_modality) {
+        return false;
+      }
+      if (
+        filterModality !== "all" &&
+        filterModality !== "missing" &&
+        row.contract_modality !== filterModality
+      ) {
+        return false;
+      }
+      if (filterStatus !== "all" && row.status !== filterStatus) {
+        return false;
+      }
+      if (filterFile === "missing" && row.has_contract) {
+        return false;
+      }
+      if (filterFile === "onFile" && !row.has_contract) {
+        return false;
+      }
+      if (filterBenefit === "on" && !row.already_on_ss_reduction) {
+        return false;
+      }
+      if (filterBenefit === "off" && row.already_on_ss_reduction) {
+        return false;
+      }
+      if (filterBenefit === "might" && row.benefit_outlook !== "might") {
+        return false;
+      }
+      if (filterBenefit === "never" && row.benefit_outlook !== "never") {
+        return false;
+      }
+      const query = foldName(nameQuery.trim());
+      if (query && !foldName(row.display_name || tw("people.unnamed")).includes(query)) {
+        return false;
+      }
+      return true;
+    });
+  }, [people, filterModality, filterStatus, filterFile, filterBenefit, nameQuery, tw]);
+
+  const visible = useMemo(() => {
+    const direction = sortDir === "asc" ? 1 : -1;
+    if (sortKey === "age") {
+      return [...filtered].sort((a, b) => {
+        if (a.age == null && b.age == null) {
+          return 0;
+        }
+        if (a.age == null) {
+          return 1;
+        }
+        if (b.age == null) {
+          return -1;
+        }
+        return direction * (a.age - b.age);
+      });
+    }
+    if (sortKey === "start") {
+      return [...filtered].sort((a, b) => {
+        if (!a.contract_started_on && !b.contract_started_on) {
+          return 0;
+        }
+        if (!a.contract_started_on) {
+          return 1;
+        }
+        if (!b.contract_started_on) {
+          return -1;
+        }
+        return direction * a.contract_started_on.localeCompare(b.contract_started_on);
+      });
+    }
+    const label = (row: PersonOut): string => {
+      if (sortKey === "name") {
+        return row.display_name || tw("people.unnamed");
+      }
+      if (sortKey === "modality") {
+        return modalityLabel(row.contract_modality, tw);
+      }
+      if (sortKey === "status") {
+        return tw(`people.status.${row.status}`);
+      }
+      return row.has_contract ? reviewLabel(row.review_status, tw) : tw("people.noFile");
+    };
+    return [...filtered].sort(
+      (a, b) => direction * label(a).localeCompare(label(b), undefined, { sensitivity: "base" }),
+    );
+  }, [filtered, sortDir, sortKey, tw]);
+
+  function onSort(column: SortKey) {
+    if (sortKey === column) {
+      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(column);
+    setSortDir("asc");
+  }
+
+  const filtersActive =
+    establishmentId !== "all" ||
+    filterModality !== "all" ||
+    filterStatus !== "all" ||
+    filterFile !== "all" ||
+    filterBenefit !== "all" ||
+    nameQuery.trim() !== "";
+  const showBenefit = visible.some((person) => person.term_benefit?.flagged);
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{t("tabEmployees")}</CardTitle>
+        <CardDescription className="text-xs">{t("benefitLead")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-1">
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label={tw("people.search")} className="w-56">
+            <Input
+              value={nameQuery}
+              onChange={(event) => setNameQuery(event.target.value)}
+              placeholder={tw("people.searchPlaceholder")}
+              aria-label={tw("people.search")}
+            />
+          </Field>
+          {establishments.length >= 2 ? (
+            <Field label={tw("people.filterEstablishment")} className="w-52">
+              <Select
+                value={establishmentId}
+                onValueChange={(value) => {
+                  if (value) {
+                    onEstablishment(value);
+                  }
+                }}
+                items={{
+                  all: tw("people.filterAll"),
+                  ...Object.fromEntries(
+                    establishments.map((site) => [site.id, `${site.name} · ${site.ss_code}`]),
+                  ),
+                }}
+              >
+                <SelectTrigger aria-label={tw("people.filterEstablishment")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{tw("people.filterAll")}</SelectItem>
+                  {establishments.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name} · {site.ss_code}
+                      {site.status === "CLOSED" ? ` (${tw("people.establishmentClosed")})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+          <Field label={tw("people.filterModality")} className="w-48">
+            <Select
+              value={filterModality}
+              onValueChange={(value) => value && setFilterModality(value)}
+              items={{
+                all: tw("people.filterAll"),
+                SEM_TERMO: tw("people.modality.SEM_TERMO"),
+                TERMO_CERTO: tw("people.modality.TERMO_CERTO"),
+                TERMO_INCERTO: tw("people.modality.TERMO_INCERTO"),
+                OTHER: tw("people.modality.OTHER"),
+                missing: tw("people.modalityUnknown"),
+              }}
+            >
+              <SelectTrigger aria-label={tw("people.filterModality")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{tw("people.filterAll")}</SelectItem>
+                {MODALITIES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {tw(`people.modality.${item}`)}
+                  </SelectItem>
+                ))}
+                <SelectItem value="missing">{tw("people.modalityUnknown")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={tw("people.filterStatus")} className="w-40">
+            <Select
+              value={filterStatus}
+              onValueChange={(value) => value && setFilterStatus(value)}
+              items={{
+                all: tw("people.filterAll"),
+                ACTIVE: tw("people.status.ACTIVE"),
+                ON_LEAVE: tw("people.status.ON_LEAVE"),
+                TERMINATED: tw("people.status.TERMINATED"),
+              }}
+            >
+              <SelectTrigger aria-label={tw("people.filterStatus")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{tw("people.filterAll")}</SelectItem>
+                {STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {tw(`people.status.${status}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={tw("people.filterFile")} className="w-44">
+            <Select
+              value={filterFile}
+              onValueChange={(value) => value && setFilterFile(value)}
+              items={{
+                all: tw("people.filterAll"),
+                missing: tw("people.filterMissingFile"),
+                onFile: tw("people.filterOnFile"),
+              }}
+            >
+              <SelectTrigger aria-label={tw("people.filterFile")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{tw("people.filterAll")}</SelectItem>
+                <SelectItem value="missing">{tw("people.filterMissingFile")}</SelectItem>
+                <SelectItem value="onFile">{tw("people.filterOnFile")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={tw("people.filterBenefit")} className="w-60">
+            <Select
+              value={filterBenefit}
+              onValueChange={(value) => value && setFilterBenefit(value)}
+              items={{
+                all: tw("people.filterAll"),
+                on: tw("people.filterBenefitOn"),
+                off: tw("people.filterBenefitOff"),
+                might: t("filterBenefitMight"),
+                never: t("filterBenefitNever"),
+              }}
+            >
+              <SelectTrigger aria-label={tw("people.filterBenefit")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{tw("people.filterAll")}</SelectItem>
+                <SelectItem value="on">{tw("people.filterBenefitOn")}</SelectItem>
+                <SelectItem value="off">{tw("people.filterBenefitOff")}</SelectItem>
+                <SelectItem value="might">{t("filterBenefitMight")}</SelectItem>
+                <SelectItem value="never">{t("filterBenefitNever")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        {people.length === 0 && !filtersActive ? (
+          <p className="text-sm text-muted-foreground">{tw("people.empty")}</p>
+        ) : visible.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{tw("people.filterEmpty")}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="text-xs text-muted-foreground">
+                <tr className="border-b">
+                  <SortHeader
+                    label={tw("people.colName")}
+                    column="name"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label={t("colAge")}
+                    column="age"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label={t("colContractStart")}
+                    column="start"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label={tw("people.colModality")}
+                    column="modality"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label={tw("people.statusLabel")}
+                    column="status"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    label={tw("people.colFile")}
+                    column="file"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  {showBenefit ? (
+                    <th className="py-2 pr-3 font-medium">{t("benefitCol")}</th>
+                  ) : null}
+                  <th className="py-2 font-medium">{tw("people.colActions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((row) => (
+                  <tr key={row.id} className="border-b border-border/60 last:border-0">
+                    <td className="py-2 pr-3 align-top">
+                      {filterBenefit === "never" && row.benefit_block ? (
+                        <Tooltip>
+                          <TooltipTrigger className="cursor-help text-left font-medium underline decoration-dotted underline-offset-4">
+                            {row.display_name || tw("people.unnamed")}
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm whitespace-normal text-left">
+                            {blockMessage(row.benefit_block, t, format)}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <div className="font-medium">
+                          {row.display_name || tw("people.unnamed")}
+                        </div>
+                      )}
+                      <div className="text-xs text-muted-foreground">
+                        {sourceLabel(row.status_source, tw)}
+                      </div>
+                      {row.has_source_conflict ? (
+                        <div className="text-xs text-destructive">{tw("people.conflict")}</div>
+                      ) : null}
+                      {row.already_on_ss_reduction ? (
+                        <div className="text-xs text-muted-foreground">
+                          {tw("people.alreadyBenefiting")}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-3 align-top tabular-nums">
+                      {row.age == null ? t("ageUnknown") : row.age}
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {row.contract_started_on
+                        ? format.dateTime(new Date(`${row.contract_started_on}T00:00:00`), {
+                            dateStyle: "medium",
+                          })
+                        : t("ageUnknown")}
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {modalityLabel(row.contract_modality, tw)}
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      <div className="flex flex-col gap-2">
+                        <Select
+                          value={row.status}
+                          disabled={busyId === row.id}
+                          onValueChange={(value) => {
+                            if (value) {
+                              onStatus(row.id, value as (typeof STATUSES)[number]);
+                            }
+                          }}
+                          items={Object.fromEntries(
+                            STATUSES.map((status) => [status, tw(`people.status.${status}`)]),
+                          )}
+                        >
+                          <SelectTrigger className="w-36" aria-label={tw("people.statusLabel")}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUSES.map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {tw(`people.status.${status}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {row.status === "ON_LEAVE" ? (
+                          <Select
+                            value={leaveById[row.id] ?? row.leave_type ?? "OTHER"}
+                            disabled={busyId === row.id}
+                            onValueChange={(value) => {
+                              if (!value) {
+                                return;
+                              }
+                              const leave = value as (typeof LEAVE_TYPES)[number];
+                              onLeave(row.id, leave);
+                              onStatus(row.id, "ON_LEAVE", leave);
+                            }}
+                            items={Object.fromEntries(
+                              LEAVE_TYPES.map((leave) => [leave, tw(`people.leave.${leave}`)]),
+                            )}
+                          >
+                            <SelectTrigger className="w-36" aria-label={tw("people.leaveLabel")}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LEAVE_TYPES.map((leave) => (
+                                <SelectItem key={leave} value={leave}>
+                                  {tw(`people.leave.${leave}`)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {row.has_contract ? (
+                        reviewLabel(row.review_status, tw)
+                      ) : (
+                        <span className="text-destructive">{tw("people.noFile")}</span>
+                      )}
+                    </td>
+                    {showBenefit ? (
+                      <td className="py-2 pr-3 align-top text-xs text-muted-foreground">
+                        {row.term_benefit?.flagged
+                          ? benefitLines(row.term_benefit, t, format).map((line) => (
+                              <div key={line}>{line}</div>
+                            ))
+                          : null}
+                      </td>
+                    ) : null}
+                    <td className="py-2 align-top">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === row.id || uploadsLocked}
+                        onClick={() => onUploadClick(row.id)}
+                      >
+                        {row.has_contract ? tw("people.reupload") : tw("people.upload")}
+                      </Button>
+                      {row.has_contract && row.document_id ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="ml-2"
+                          disabled={uploadsLocked}
+                          onClick={() => {
+                            if (row.document_id) {
+                              onShow(row.id, row.document_id);
+                            }
+                          }}
+                        >
+                          {tw("people.show")}
+                        </Button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SortHeader({
+  label,
+  column,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  label: string;
+  column: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  onSort: (column: SortKey) => void;
+}) {
+  const tw = useTranslations("workspace");
+  const active = sortKey === column;
+  return (
+    <th
+      className="py-2 pr-3 font-medium"
+      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <button
+        type="button"
+        className="inline-flex items-center gap-1 hover:text-foreground"
+        aria-label={tw("people.sortColumn", { column: label })}
+        onClick={() => onSort(column)}
+      >
+        {label}
+        <span aria-hidden="true">{active ? (sortDir === "asc" ? "↑" : "↓") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+function blockMessage(
+  block: BenefitBlockOut,
+  t: ReturnType<typeof useTranslations>,
+  format: ReturnType<typeof useFormatter>,
+): string {
+  const day = (iso: string) =>
+    format.dateTime(new Date(`${iso}T00:00:00`), { dateStyle: "medium" });
+  const month = (iso: string) =>
+    format.dateTime(new Date(`${iso}T00:00:00`), { month: "long", year: "numeric" });
+  return t(`benefitBlock.${block.reason}`, {
+    date: block.contract_started_on ? day(block.contract_started_on) : "",
+    age: block.age_on_start ?? "",
+    month: block.counted_to ? month(block.counted_to) : "",
+    lastDay: block.last_day ? day(block.last_day) : "",
+  });
+}
+
+function benefitLines(
+  benefit: TermBenefitOut,
+  t: ReturnType<typeof useTranslations>,
+  format: ReturnType<typeof useFormatter>,
+): string[] {
+  const day = (iso: string) =>
+    format.dateTime(new Date(`${iso}T00:00:00`), { dateStyle: "medium" });
+  const lines = benefit.readings
+    .filter((reading) => reading.can_benefit)
+    .map((reading) =>
+      t(`benefit.${reading.rule}`, { date: day(reading.deemed_on) }),
+    );
+  if (benefit.early_earliest && benefit.early_latest && benefit.early_suggested) {
+    lines.push(
+      t("benefit.early", {
+        earliest: day(benefit.early_earliest),
+        latest: day(benefit.early_latest),
+        suggested: day(benefit.early_suggested),
+      }),
+    );
+  }
+  return lines;
+}
+
 function EmployeeTable({
   people,
   tw,
@@ -605,6 +1264,9 @@ function EmployeeTable({
   tw: ReturnType<typeof useTranslations>;
   contractLabel: string;
 }) {
+  const t = useTranslations("admins.companyDetail");
+  const format = useFormatter();
+  const showBenefit = people.some((person) => person.term_benefit?.flagged);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
@@ -612,7 +1274,10 @@ function EmployeeTable({
           <tr className="border-b">
             <th className="py-2 pr-3 font-medium">{tw("people.title")}</th>
             <th className="py-2 pr-3 font-medium">{tw("people.statusLabel")}</th>
-            <th className="py-2 font-medium">{contractLabel}</th>
+            <th className="py-2 pr-3 font-medium">{contractLabel}</th>
+            {showBenefit ? (
+              <th className="py-2 font-medium">{t("benefitCol")}</th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -633,9 +1298,18 @@ function EmployeeTable({
                     ? tw("people.status.ON_LEAVE")
                     : tw("people.status.TERMINATED")}
               </td>
-              <td className="py-2 text-muted-foreground">
+              <td className="py-2 pr-3 text-muted-foreground">
                 {reviewLabel(person.review_status, tw)}
               </td>
+              {showBenefit ? (
+                <td className="py-2 text-xs text-muted-foreground">
+                  {person.term_benefit?.flagged
+                    ? benefitLines(person.term_benefit, t, format).map((line) => (
+                        <div key={line}>{line}</div>
+                      ))
+                    : null}
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

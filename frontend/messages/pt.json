@@ -500,6 +500,31 @@
       "documentsEmpty": "Ainda não há pessoas a quem anexar contratos.",
       "contractCol": "Contrato",
       "uploadFailed": "Não foi possível carregar o contrato.",
+      "benefitCol": "Benefício possível",
+      "colAge": "Idade",
+      "ageUnknown": "—",
+      "filterBenefitMight": "Pode beneficiar",
+      "filterBenefitNever": "Não pode beneficiar",
+      "colContractStart": "Início do contrato",
+      "benefitBlock": {
+        "no_start": "Não há data de início do contrato, por isso os 60 meses não têm por onde começar.",
+        "employment_ended": "Contrato iniciado em {date}. Este vínculo terminou, por isso o benefício não pode ser aberto nele.",
+        "age_at_start": "Contrato iniciado em {date}. Já tinha {age} anos nesse dia. O benefício exige 30 anos ou menos na data de sem termo.",
+        "window_over": "Contrato iniciado em {date}. Os 60 meses a partir desse dia já terminaram, contados até {month}.",
+        "term_no_day": "Contrato iniciado em {date}. Já tinha 31 anos nesse dia, ou o dia seguinte já é o 31.º aniversário, por isso não resta nenhum dia para declarar sem termo.",
+        "term_early_over": "Contrato iniciado em {date}. O último dia em que podia ser declarado sem termo antes dos 31 anos foi {lastDay}. Os 60 meses a partir desse dia já terminaram, contados até {month}.",
+        "term_dates_over": "Contrato iniciado em {date}. Todas as datas de sem termo em que ainda tinha 30 anos ou menos já não têm meses, contadas até {month}.",
+        "other_modality": "Contrato iniciado em {date}. Este tipo de contrato não abre este benefício."
+      },
+      "benefitLead": "Todas as pessoas desta empresa. Benefício de contratação pode mostrar quem já está na taxa reduzida, quem ainda pode abri-lo e quem não pode. Benefício possível é a sugestão para contratos a termo e não comunica nada à Segurança Social.",
+      "benefit": {
+        "certo_renewal": "Uma renovação · {date}",
+        "years_2": "Regra dos 2 anos · {date}",
+        "years_3": "Regra dos 3 anos · {date}",
+        "years_4": "Regra dos 4 anos · {date}",
+        "incerto_4": "Termo incerto, 4 anos · {date}",
+        "early": "Declarar sem termo entre {earliest} e {latest}. Data habitual {suggested}."
+      },
       "months": {
         "01": "Janeiro",
         "02": "Fevereiro",

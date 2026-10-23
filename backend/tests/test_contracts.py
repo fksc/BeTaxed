@@ -33,7 +33,7 @@ from app.security.dek_store import get_or_create_pii_crypto
 from app.services.contract_llm import ContractExtract
 from app.services.contract_review import compute_matches_ss
 from app.services.ss_apply import delete_company_employment_spine, delete_intake_employment_spine
-from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_SESSION
+from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_SESSION, get_gcs_bucket
 from tests.ss_xlsx_fixtures import EMPLOYER_NISS, PERSON_B, combined_workbook
 
 
@@ -91,6 +91,8 @@ def test_contract_upload_stub_mismatch_and_staff_apply(
     db_session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("CONTRACT_LLM", "stub")
+    monkeypatch.setenv("GCS_BUCKET", "")
+    get_gcs_bucket.cache_clear()
     identities = _patch_verify(monkeypatch)
 
     async def body() -> None:
@@ -161,6 +163,27 @@ def test_contract_upload_stub_mismatch_and_staff_apply(
                 assert "22.875" not in blob
                 assert all("already_on_ss_reduction" in row for row in rows)
                 assert all(row["already_on_ss_reduction"] is False for row in rows)
+                assert all("term_benefit" not in row for row in rows)
+                assert all("age" not in row for row in rows)
+                assert all("benefit_outlook" not in row for row in rows)
+                assert all("benefit_block" not in row for row in rows)
+                assert all("contract_started_on" not in row for row in rows)
+
+                staff_people = await client.get(
+                    "/v1/people",
+                    headers={
+                        "Authorization": f"Bearer {staff_token}",
+                        HEADER_COMPANY_ID: str(company_id),
+                    },
+                )
+                assert staff_people.status_code == 200, staff_people.text
+                staff_rows = staff_people.json()
+                assert all(isinstance(row.get("age"), int) for row in staff_rows)
+                assert all(row.get("benefit_outlook") == "might" for row in staff_rows)
+                assert all(row.get("contract_started_on") for row in staff_rows)
+                assert all("benefit_block" not in row for row in staff_rows)
+                assert "dob" not in str(staff_rows)
+
                 employee_id = rows[0]["id"]
                 employment_id = rows[0]["employment_id"]
                 assert employment_id is not None

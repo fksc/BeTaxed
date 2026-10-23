@@ -7,6 +7,41 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class TermReadingOut(BaseModel):
+    rule: Literal["certo_renewal", "years_2", "years_3", "years_4", "incerto_4"]
+    deemed_on: date
+    can_benefit: bool = True
+
+
+class TermBenefitOut(BaseModel):
+    """Staff-only. Omitted for company users."""
+
+    flagged: bool
+    readings: list[TermReadingOut] = Field(default_factory=list)
+    early_earliest: date | None = None
+    early_latest: date | None = None
+    early_suggested: date | None = None
+
+
+class BenefitBlockOut(BaseModel):
+    """Staff-only. Why this person cannot open the hiring benefit."""
+
+    reason: Literal[
+        "no_start",
+        "employment_ended",
+        "age_at_start",
+        "window_over",
+        "term_no_day",
+        "term_early_over",
+        "term_dates_over",
+        "other_modality",
+    ]
+    contract_started_on: date | None = None
+    age_on_start: int | None = None
+    counted_to: date | None = None
+    last_day: date | None = None
+
+
 class PersonOut(BaseModel):
     id: uuid.UUID
     display_name: str | None
@@ -20,6 +55,11 @@ class PersonOut(BaseModel):
     review_status: str | None
     document_id: uuid.UUID | None
     already_on_ss_reduction: bool = False
+    age: int | None = None
+    contract_started_on: date | None = None
+    benefit_outlook: Literal["already", "might", "never"] | None = None
+    benefit_block: BenefitBlockOut | None = None
+    term_benefit: TermBenefitOut | None = None
 
 
 class StatusOverrideIn(BaseModel):

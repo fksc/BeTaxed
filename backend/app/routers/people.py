@@ -23,7 +23,7 @@ from app.services.employee_status import override_employee_status
 router = APIRouter(prefix="/v1", tags=["people"])
 
 
-@router.get("/people", response_model=list[PersonOut])
+@router.get("/people", response_model=list[PersonOut], response_model_exclude_none=True)
 async def get_people(
     establishment_id: uuid.UUID | None = Query(default=None),
     ctx: CompanyContext = Depends(get_company_context),
@@ -33,7 +33,11 @@ async def get_people(
     return [PersonOut.model_validate(row) for row in rows]
 
 
-@router.patch("/people/{employee_id}", response_model=PersonOut)
+@router.patch(
+    "/people/{employee_id}",
+    response_model=PersonOut,
+    response_model_exclude_none=True,
+)
 async def patch_person_status(
     employee_id: uuid.UUID,
     body: StatusOverrideIn,
