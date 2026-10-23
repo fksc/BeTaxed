@@ -72,4 +72,36 @@ CREATE TABLE employment_document (
 - SS/AT no-debt PDFs are `kind` `SS_NO_DEBT` / `AT_NO_DEBT` and attach to `company_certificate` (`KB/05`), not to `employment_document`.
 - Company sees “please upload this person’s contract”, not “upload because they are 28 and on termo”. Company APIs never expose `matches_ss = MISMATCH` or SS-vs-PDF field diffs (recipe-adjacent). Staff ops queue does.
 - **Upload → review:** persist the file with `review_status = PENDING`. Emit `CONTRACT_UPLOADED` (`KB/08`). A worker (Gemini, or DEV stub) fills typed columns, sets `MATCH` / `MISMATCH`, emits `CONTRACT_REVIEWED` or `CONTRACT_SS_MISMATCH`. Do **not** auto-rewrite `employment.*`. Staff confirm copies modality / `signed_on` / `term_end_on` onto employment with `source = CONTRACT`.
-- **Flow (locked as product, not as Pass-1 math):** teaser from SS only → client uploads contracts → LLM/ops one-by-one vs the extract → `MATCH` / `MISMATCH`. Do not auto-rewrite the public teaser from PDFs.
+- **Batch upload** (`POST /v1/contracts`): many PDFs, no employee id on the request. Objects go to `{company_id}/contracts/{file_id}/{filename}` in the bucket (`gcloud storage`, Python client — not `gsutil`). Each file is a row in `contract_inbox` until it links. The worker reads employee NIF, full name, and NISS from the PDF and stops at the first unique hit: **NIF, then name, then NISS**. Employer NIF is checked against `company.nif_enc` only. Zero or several people stay `UNMATCHED`. A link stores the PDF NIF on `employee` when that column is empty. A file whose `sha256` already has a saved extract for that company is not sent to Gemini again; matching still runs, and the same employee keeps the existing document.
+- **Flow (locked as product, not as Pass-1 math):** teaser from SS only → client uploads contracts → LLM/ops vs the extract → `MATCH` / `MISMATCH`. Do not auto-rewrite the public teaser from PDFs.
+
+## Table: contract_inbox
+
+Batch PDFs before they have an `employee_id`. Identity columns are encrypted. APIs do not return NIF, NISS, or the extracted name.
+
+```sql
+CREATE TABLE contract_inbox (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    file_id UUID NOT NULL REFERENCES stored_file(id),
+    uploaded_by UUID REFERENCES user_base(id),
+    status VARCHAR(16) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'MATCHED', 'UNMATCHED', 'FAILED')),
+    match_via VARCHAR(8)
+        CHECK (match_via IS NULL OR match_via IN ('NIF', 'NAME', 'NISS')),
+    employee_id UUID REFERENCES employee(id),
+    employment_document_id UUID REFERENCES employment_document(id),
+    nif_enc BYTEA,
+    name_enc BYTEA,
+    niss_enc BYTEA,
+    employer_nif_mismatch BOOLEAN,
+    nif_conflict BOOLEAN NOT NULL DEFAULT FALSE,
+    doc_kind VARCHAR(24)
+        CHECK (doc_kind IS NULL OR doc_kind IN ('SEM_TERMO', 'TERMO', 'CONVERSION')),
+    signed_on DATE,
+    term_end_on DATE,
+    error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed_at TIMESTAMPTZ
+);
+```

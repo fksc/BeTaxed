@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime
 
@@ -23,7 +24,7 @@ from app.models import (
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.domain_events import emit_domain_event
 from app.services.teaser import tsu_looks_unused
-from app.storage import build_object_name, get_object_storage, sha256_hex
+from app.storage import build_contract_object_name, get_object_storage, sha256_hex
 
 
 def require_hr_or_admin(ctx: CompanyContext) -> None:
@@ -230,17 +231,20 @@ async def upload_employment_contract(
     current = _current_employment(list(employments))
 
     storage = get_object_storage()
-    object_name = build_object_name(
+    file_id = uuid.uuid4()
+    object_name = build_contract_object_name(
         company_id=ctx.company.id,
-        intake_id=None,
+        file_id=file_id,
         filename=filename,
     )
-    path = storage.put_bytes(
+    path = await asyncio.to_thread(
+        storage.put_bytes,
         content,
         object_name=object_name,
         content_type=mime_type,
     )
     stored = StoredFile(
+        id=file_id,
         company_id=ctx.company.id,
         intake_id=None,
         gcs_path=path,
@@ -394,3 +398,28 @@ async def apply_contract_to_employment(
     doc.ops_confirmed_at = datetime.now(UTC)
     await session.flush()
     return doc
+
+
+async def read_employee_contract(
+    session: AsyncSession,
+    ctx: CompanyContext,
+    *,
+    employee_id: uuid.UUID,
+    document_id: uuid.UUID,
+) -> tuple[bytes, str, str | None]:
+    doc = await session.get(EmploymentDocument, document_id)
+    employee = await session.get(Employee, employee_id)
+    if (
+        doc is None
+        or employee is None
+        or doc.employee_id != employee.id
+        or employee.company_id != ctx.company.id
+        or employee.deleted_at is not None
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found.")
+    stored = await session.get(StoredFile, doc.file_id)
+    if stored is None or stored.company_id != ctx.company.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contract not found.")
+    data = await asyncio.to_thread(get_object_storage().get_bytes, stored.gcs_path)
+    filename = stored.original_filename or "contract.pdf"
+    return data, filename, stored.mime_type

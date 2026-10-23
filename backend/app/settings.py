@@ -91,6 +91,35 @@ def get_vertex_location() -> str:
     return os.environ.get("VERTEX_LOCATION", "europe-west1").strip() or "europe-west1"
 
 
+def get_cloud_tasks_target_url() -> str | None:
+    """POST /internal/workers/review-contract. Unset keeps contract jobs inline."""
+    raw = os.environ.get("CLOUD_TASKS_TARGET_URL", "").strip()
+    return raw or None
+
+
+def get_cloud_tasks_queue() -> str:
+    return os.environ.get("CLOUD_TASKS_QUEUE", "betaxed-staging").strip() or "betaxed-staging"
+
+
+def get_cloud_tasks_location() -> str:
+    return os.environ.get("CLOUD_TASKS_LOCATION", "europe-west1").strip() or "europe-west1"
+
+
+def get_cloud_tasks_invoker_sa() -> str | None:
+    raw = os.environ.get("CLOUD_TASKS_INVOKER_SA", "").strip()
+    return raw or None
+
+
+def get_cloud_tasks_oidc_audience() -> str | None:
+    raw = os.environ.get("CLOUD_TASKS_OIDC_AUDIENCE", "").strip()
+    return raw or get_cloud_tasks_target_url()
+
+
+def get_internal_job_token() -> str | None:
+    raw = os.environ.get("INTERNAL_JOB_TOKEN", "").strip()
+    return raw or None
+
+
 def get_gemini_model() -> str:
     return os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
 

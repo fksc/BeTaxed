@@ -4,6 +4,7 @@ from app.models.core import Company, CompanyInvite, CompanyMembership, Intake, U
 from app.models.crypto import TenantCryptoKey
 from app.models.employment import (
     CompensationPeriod,
+    ContractInbox,
     Employee,
     EmployeeExternalId,
     Employment,
@@ -46,6 +47,7 @@ __all__ = [
     "CompanyInvite",
     "CompanyMembership",
     "CompensationPeriod",
+    "ContractInbox",
     "DomainEvent",
     "Employee",
     "EmployeeExternalId",

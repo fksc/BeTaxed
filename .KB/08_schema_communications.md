@@ -64,6 +64,8 @@ Live UI: SSE `GET /v1/notifications/stream` (direct to FastAPI, ~50s then client
 
 ## Workers
 
-Local / unset Cloud Tasks: inline after commit (same as TJ fallback).
+Local / unset `CLOUD_TASKS_TARGET_URL`: inline after commit (same as TJ fallback).
 
-Parked: Cloud Tasks queues so the HTTP upload does not wait on Vertex (`KB/90` SL-010). Email delivery is not a general v1 channel. **Invite mail** (DEV-852) is the exception: Resend or Brevo when an API key is set (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `BREVO_API_KEY`, `EMAIL_FROM`); otherwise the sender receives `invite_url` to copy. Do not build a notification-email product here.
+Contract PDFs: one task per file on the existing queue `betaxed-staging` (`europe-west1`, `maxAttempts` 2 in GCP). Handler `POST /internal/workers/review-contract`, OIDC (`CLOUD_TASKS_INVOKER_SA`) or `INTERNAL_JOB_TOKEN`. Gemini model `gemini-2.5-flash` in `europe-west1`. Notification fan-out stays inline until a later slice of DEV-850.
+
+Email delivery is not a general v1 channel. **Invite mail** (DEV-852) is the exception: Resend or Brevo when an API key is set (`EMAIL_PROVIDER`, `RESEND_API_KEY`, `BREVO_API_KEY`, `EMAIL_FROM`); otherwise the sender receives `invite_url` to copy. Do not build a notification-email product here.

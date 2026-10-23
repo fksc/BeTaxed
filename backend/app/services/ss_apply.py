@@ -18,6 +18,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models import (
     CompanyHeadcountMonth,
+    ContractInbox,
     Establishment,
     CompensationPeriod,
     Employee,
@@ -115,6 +116,9 @@ async def delete_intake_employment_spine(
     emp_ids = select(Employee.id).where(Employee.intake_id == intake_id)
     empl_ids = select(Employment.id).where(Employment.intake_id == intake_id)
     await session.execute(
+        delete(ContractInbox).where(ContractInbox.employee_id.in_(emp_ids))
+    )
+    await session.execute(
         delete(EmploymentDocument).where(EmploymentDocument.employee_id.in_(emp_ids))
     )
     await session.execute(
@@ -145,6 +149,9 @@ async def delete_company_employment_spine(
         delete(CompanyHeadcountMonth).where(
             CompanyHeadcountMonth.company_id == company_id
         )
+    )
+    await session.execute(
+        delete(ContractInbox).where(ContractInbox.company_id == company_id)
     )
     await session.execute(
         delete(EmploymentDocument).where(EmploymentDocument.employee_id.in_(emp_ids))

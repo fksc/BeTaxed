@@ -75,6 +75,8 @@ CREATE TABLE employee (
     niss_enc BYTEA NOT NULL,
     name_enc BYTEA,                         -- often absent on SS extract
     dob_enc BYTEA,
+    nif_enc BYTEA,                          -- employee tax id, filled from a contract PDF
+    nif_hash BYTEA,                         -- tenant HMAC; join key for contract NIF
     first_permanent_elsewhere VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN'
         CHECK (first_permanent_elsewhere IN ('UNKNOWN', 'NO', 'YES')),
     first_permanent_source VARCHAR(24) NOT NULL DEFAULT 'UNKNOWN'
@@ -92,10 +94,13 @@ CREATE UNIQUE INDEX idx_employee_company_niss
     ON employee(company_id, niss_hash) WHERE company_id IS NOT NULL AND deleted_at IS NULL;
 CREATE UNIQUE INDEX idx_employee_intake_niss
     ON employee(intake_id, niss_hash) WHERE intake_id IS NOT NULL AND company_id IS NULL AND deleted_at IS NULL;
+CREATE UNIQUE INDEX idx_employee_company_nif
+    ON employee(company_id, nif_hash) WHERE company_id IS NOT NULL AND nif_hash IS NOT NULL AND deleted_at IS NULL;
 ```
 
 **Rules:**
 - Never use NISS as PK. Join uploads with `niss_hash` (`KB/07_security_encryption.md`).
+- `nif_hash` / `nif_enc` are the employee tax id. SS ingest does not fill them. A contract worker stores the PDF NIF after a link when the employee has none, and does not overwrite a different stored NIF.
 - Rehire: **same** employee, new `employment`.
 - `first_permanent_elsewhere`: **company-reported** (onboarding forms we receive) or ops. `YES` = they told us this person already had a sem termo (this employer or elsewhere). SS extract of **this** employer cannot prove other employers.
 - **Always file anyway.** SS history is incomplete; a prior sem termo may be missing from their database. Do not treat `YES` as `ineligibility_code` that blocks `benefit_case` submit.

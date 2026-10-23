@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ShellPage } from "@/components/shell/shell-app-bar";
+import {
+  ContractBatchModal,
+  contractUploadRows,
+  runContractUploads,
+  type ContractUploadRow,
+} from "@/components/workspace/contract-batch-modal";
 import { MembersPanel } from "@/components/workspace/members-panel";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
@@ -24,8 +30,8 @@ import {
   listHeadcountMonths,
   listPeople,
   listSsBatches,
+  openPersonContract,
   patchOpsCompany,
-  uploadPersonContract,
 } from "@/lib/api/workspace-client";
 import type {
   HeadcountMonthOut,
@@ -93,6 +99,10 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [year, setYear] = useState(nowYm.year);
   const [month, setMonth] = useState(nowYm.month);
   const fileRef = useRef<HTMLInputElement>(null);
+  const batchRef = useRef<HTMLInputElement>(null);
+  const [batchNote, setBatchNote] = useState<string | null>(null);
+  const [uploadRows, setUploadRows] = useState<ContractUploadRow[] | null>(null);
+  const [uploadRunning, setUploadRunning] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
 
   async function reload() {
@@ -168,19 +178,51 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     }
   }
 
-  async function onUpload(employeeId: string, file: File | undefined) {
-    if (!file || !idToken) {
+  async function onShow(employeeId: string, documentId: string) {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      setError(t("needAuth"));
       return;
     }
-    setBusy(true);
     try {
-      await uploadPersonContract(employeeId, file, { idToken, companyId });
-      await reload();
+      await openPersonContract(employeeId, documentId, { idToken: token, companyId });
     } catch {
       setError(t("uploadFailed"));
-    } finally {
-      setBusy(false);
     }
+  }
+
+  async function startUploads(files: File[], employeeId?: string) {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      setError(t("needAuth"));
+      return;
+    }
+    setError(null);
+    setBatchNote(null);
+    setUploadRows(contractUploadRows(files));
+    setUploadRunning(true);
+    try {
+      await runContractUploads({
+        files,
+        companyId,
+        employeeId,
+        getIdToken: (forceRefresh) => currentIdToken(forceRefresh),
+        onRows: setUploadRows,
+      });
+    } finally {
+      setUploadRunning(false);
+    }
+  }
+
+  async function onUpload(employeeId: string, file: File | undefined) {
+    if (!file) {
+      return;
+    }
+    await startUploads([file], employeeId);
+  }
+
+  async function onBatch(files: File[]) {
+    await startUploads(files);
   }
 
   const tabs: { id: HubTab; label: string }[] = [
@@ -426,7 +468,19 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
               <CardTitle>{t("tabDocuments")}</CardTitle>
               <CardDescription>{t("documentsLead")}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || uploadRows !== null}
+                  onClick={() => batchRef.current?.click()}
+                >
+                  {tw("people.batchUpload")}
+                </Button>
+                {batchNote ? <p className="text-sm text-muted-foreground">{batchNote}</p> : null}
+              </div>
               {people.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("documentsEmpty")}</p>
               ) : (
@@ -453,14 +507,30 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={busy}
+                              disabled={busy || uploadRows !== null}
                               onClick={() => {
                                 setUploadTarget(person.id);
                                 fileRef.current?.click();
                               }}
                             >
-                              {tw("people.upload")}
+                              {person.has_contract ? tw("people.reupload") : tw("people.upload")}
                             </Button>
+                            {person.has_contract && person.document_id ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="ml-2"
+                                disabled={busy || uploadRows !== null}
+                                onClick={() => {
+                                  if (person.document_id) {
+                                    void onShow(person.id, person.document_id);
+                                  }
+                                }}
+                              >
+                                {tw("people.show")}
+                              </Button>
+                            ) : null}
                           </td>
                         </tr>
                       ))}
@@ -485,6 +555,43 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
           }
         }}
       />
+      <input
+        ref={batchRef}
+        type="file"
+        className="sr-only"
+        accept="application/pdf,.pdf"
+        multiple
+        onChange={(event) => {
+          const files = Array.from(event.target.files ?? []);
+          event.target.value = "";
+          if (files.length > 0) {
+            void onBatch(files);
+          }
+        }}
+      />
+      {uploadRows ? (
+        <ContractBatchModal
+          rows={uploadRows}
+          running={uploadRunning}
+          onClose={(summary) => {
+            setUploadRows(null);
+            const note = tw("people.batchResult", {
+              matched: String(summary.matched),
+              unmatched: String(summary.unmatched),
+              pending: String(summary.pending),
+            });
+            setBatchNote(
+              summary.failed > 0
+                ? `${note} ${tw("people.batchFailedCount", { failed: String(summary.failed) })}`
+                : note,
+            );
+            if (summary.failed > 0 && summary.matched + summary.unmatched + summary.pending === 0) {
+              setError(t("uploadFailed"));
+            }
+            void reload();
+          }}
+        />
+      ) : null}
     </ShellPage>
   );
 }

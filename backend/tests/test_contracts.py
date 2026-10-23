@@ -17,7 +17,9 @@ from app.main import app
 from app.models import (
     Company,
     CompanyMembership,
+    ContractInbox,
     DomainEvent,
+    Employee,
     Employment,
     EmploymentDocument,
     Intake,
@@ -27,10 +29,12 @@ from app.models import (
     TenantCryptoKey,
     UserBase,
 )
+from app.security.dek_store import get_or_create_pii_crypto
+from app.services.contract_llm import ContractExtract
 from app.services.contract_review import compute_matches_ss
 from app.services.ss_apply import delete_company_employment_spine, delete_intake_employment_spine
 from app.settings import HEADER_COMPANY_ID, HEADER_INTAKE_SESSION
-from tests.ss_xlsx_fixtures import EMPLOYER_NISS, combined_workbook
+from tests.ss_xlsx_fixtures import EMPLOYER_NISS, PERSON_B, combined_workbook
 
 
 @pytest.fixture
@@ -244,76 +248,90 @@ def test_contract_upload_stub_mismatch_and_staff_apply(
                     assert "CONTRACT_UPLOADED" in types
                     assert "CONTRACT_SS_MISMATCH" in types
         finally:
-            async with AsyncSessionLocal() as session:
-                if company_id is not None:
-                    await session.execute(
-                        delete(Notification).where(
-                            Notification.domain_event_id.in_(
-                                select(DomainEvent.id).where(
-                                    DomainEvent.company_id == company_id
-                                )
-                            )
-                        )
-                    )
-                    await session.execute(
-                        delete(DomainEvent).where(DomainEvent.company_id == company_id)
-                    )
-                    await session.execute(
-                        delete(CompanyMembership).where(
-                            CompanyMembership.company_id == company_id
-                        )
-                    )
-                    await delete_company_employment_spine(session, company_id)
-                    await session.execute(delete(SsBatch).where(SsBatch.company_id == company_id))
-                    if intake_id is not None:
-                        await session.execute(
-                            delete(SsBatch).where(SsBatch.intake_id == intake_id)
-                        )
-                    await session.execute(
-                        delete(StoredFile).where(
-                            or_(
-                                StoredFile.company_id == company_id,
-                                StoredFile.intake_id == intake_id if intake_id else False,
-                            )
-                        )
-                    )
-                    await session.execute(
-                        delete(TenantCryptoKey).where(
-                            TenantCryptoKey.company_id == company_id
-                        )
-                    )
-                if intake_id is not None:
-                    await delete_intake_employment_spine(session, intake_id)
-                    await session.execute(
-                        delete(TenantCryptoKey).where(
-                            TenantCryptoKey.intake_id == intake_id
-                        )
-                    )
-                    intake = await session.get(Intake, intake_id)
-                    if intake is not None:
-                        intake.converted_company_id = None
-                if company_id is not None:
-                    company = await session.get(Company, company_id)
-                    if company is not None:
-                        company.created_from_intake_id = None
-                await session.flush()
-                if company_id is not None:
-                    company = await session.get(Company, company_id)
-                    if company is not None:
-                        await session.delete(company)
-                if intake_id is not None:
-                    intake = await session.get(Intake, intake_id)
-                    if intake is not None:
-                        await session.delete(intake)
-                if user_id is not None:
-                    user = await session.get(UserBase, user_id)
-                    if user is not None:
-                        await session.delete(user)
-                if staff_id is not None:
-                    staff = await session.get(UserBase, staff_id)
-                    if staff is not None:
-                        await session.delete(staff)
-                await session.commit()
+            await _purge_contract_company(
+                company_id=company_id,
+                intake_id=intake_id,
+                user_id=user_id,
+                staff_id=staff_id,
+            )
             await engine.dispose()
+
+    asyncio.run(body())
+
+
+async def _purge_contract_company(
+    *,
+    company_id: uuid.UUID | None,
+    intake_id: uuid.UUID | None,
+    user_id: uuid.UUID | None,
+    staff_id: uuid.UUID | None,
+) -> None:
+    async with AsyncSessionLocal() as session:
+        if company_id is not None:
+            await session.execute(
+                delete(Notification).where(
+                    Notification.domain_event_id.in_(
+                        select(DomainEvent.id).where(DomainEvent.company_id == company_id)
+                    )
+                )
+            )
+            await session.execute(
+                delete(DomainEvent).where(DomainEvent.company_id == company_id)
+            )
+            await session.execute(
+                delete(CompanyMembership).where(CompanyMembership.company_id == company_id)
+            )
+            await delete_company_employment_spine(session, company_id)
+            await session.execute(delete(SsBatch).where(SsBatch.company_id == company_id))
+            if intake_id is not None:
+                await session.execute(delete(SsBatch).where(SsBatch.intake_id == intake_id))
+            await session.execute(
+                delete(StoredFile).where(
+                    or_(
+                        StoredFile.company_id == company_id,
+                        StoredFile.intake_id == intake_id if intake_id else False,
+                    )
+                )
+            )
+            await session.execute(
+                delete(TenantCryptoKey).where(TenantCryptoKey.company_id == company_id)
+            )
+        if intake_id is not None:
+            await delete_intake_employment_spine(session, intake_id)
+            await session.execute(
+                delete(TenantCryptoKey).where(TenantCryptoKey.intake_id == intake_id)
+            )
+            intake = await session.get(Intake, intake_id)
+            if intake is not None:
+                intake.converted_company_id = None
+        if company_id is not None:
+            company = await session.get(Company, company_id)
+            if company is not None:
+                company.created_from_intake_id = None
+        await session.flush()
+        if company_id is not None:
+            company = await session.get(Company, company_id)
+            if company is not None:
+                await session.delete(company)
+        if intake_id is not None:
+            intake = await session.get(Intake, intake_id)
+            if intake is not None:
+                await session.delete(intake)
+        if user_id is not None:
+            user = await session.get(UserBase, user_id)
+            if user is not None:
+                await session.delete(user)
+        if staff_id is not None:
+            staff = await session.get(UserBase, staff_id)
+            if staff is not None:
+                await session.delete(staff)
+        await session.commit()
+
+
+def test_worker_rejects_missing_token() -> None:
+    async def body() -> None:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            denied = await client.post("/internal/workers/review-contract", json={})
+            assert denied.status_code == 401
 
     asyncio.run(body())

@@ -72,12 +72,12 @@ export async function waitForAuthUser(): Promise<User | null> {
   });
 }
 
-export async function currentIdToken(): Promise<string | null> {
+export async function currentIdToken(forceRefresh = false): Promise<string | null> {
   const user = await waitForAuthUser();
   if (!user) {
     return null;
   }
-  return user.getIdToken();
+  return user.getIdToken(forceRefresh);
 }
 
 export async function signInEmail(

@@ -28,14 +28,23 @@ async def dispatch_pending_domain_events(session: AsyncSession) -> int:
                 logger.exception("fanout failed event=%s", event_id)
             event = await session.get(DomainEvent, event_id)
             if event is not None and event.event_type == "CONTRACT_UPLOADED":
-                from app.services.contract_review import review_employment_document
+                from app.models import EmploymentDocument
+                from app.services.cloud_tasks import contract_tasks_configured
 
-                try:
-                    await review_employment_document(session, event.source_entity_id)
-                except Exception:
-                    logger.exception(
-                        "contract review failed document=%s", event.source_entity_id
-                    )
+                doc = await session.get(EmploymentDocument, event.source_entity_id)
+                if doc is not None and doc.review_status == "PENDING":
+                    if contract_tasks_configured():
+                        queued = session.info.setdefault("pending_contract_review_ids", [])
+                        queued.append(doc.id)
+                    else:
+                        from app.services.contract_review import review_employment_document
+
+                        try:
+                            await review_employment_document(session, event.source_entity_id)
+                        except Exception:
+                            logger.exception(
+                                "contract review failed document=%s", event.source_entity_id
+                            )
             nxt.extend(session.info.pop("pending_domain_event_ids", []))
         pending = nxt
     return delivered

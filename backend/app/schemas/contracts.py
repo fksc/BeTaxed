@@ -40,6 +40,24 @@ class ContractUploadOut(BaseModel):
     matches_ss: str | None = None
 
 
+class ContractBatchItemOut(BaseModel):
+    inbox_id: uuid.UUID
+    filename: str | None
+    status: str
+    match_via: str | None = None
+    employee_id: uuid.UUID | None = None
+    document_id: uuid.UUID | None = None
+
+
+class ContractBatchOut(BaseModel):
+    items: list[ContractBatchItemOut]
+
+
+class ContractWorkerIn(BaseModel):
+    inbox_id: uuid.UUID | None = None
+    employment_document_id: uuid.UUID | None = None
+
+
 class MismatchFlagOut(BaseModel):
     id: uuid.UUID
     company_id: uuid.UUID
