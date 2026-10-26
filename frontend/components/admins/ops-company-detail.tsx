@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Columns3, Eye, FileText, Upload, UserCheck, UserPlus, Users, CalendarDays } from "lucide-react";
+import { Columns3, Eye, FileText, ListPlus, RefreshCw, Upload, UserCheck, Users, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
@@ -1221,7 +1221,7 @@ function StaffPeopleCard({
                           disabled={busyId === row.id || uploadsLocked}
                           onClick={() => onUploadClick(row.id)}
                         >
-                          <Upload />
+                          {row.has_contract ? <RefreshCw /> : <Upload />}
                         </RoundAction>
                         {row.has_contract && row.document_id ? (
                           <RoundAction
@@ -1249,7 +1249,7 @@ function StaffPeopleCard({
                             disabled={busyId === row.id}
                             onClick={() => onAddToPipeline(row.id)}
                           >
-                            <UserPlus />
+                            <ListPlus />
                           </RoundAction>
                         ) : null}
                       </div>
