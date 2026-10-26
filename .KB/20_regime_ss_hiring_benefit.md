@@ -73,6 +73,8 @@ For an **active** open term employment, with a date of birth, base salary above 
 
 The staff Employees hiring-benefit filter keeps everyone until a choice is made. **Already benefiting** is the reduced employer rate. **Not on the reduced rate** is everyone else. **Might benefit** is this flag, or a permanent contract that can still open the 60 months (age ≤ 30 on the start, salary above zero, rate unused, months left). **Won't benefit** is a known dead end: the window is over, the age test fails, the employment has ended, or the contract is not a path to this benefit. A missing date of birth or salary stays out of Might and Won't. The staff table shows the contract start. While Won't benefit is selected, the name explains the first closed path, in the staff member's language, and repeats that date.
 
+The flag is not a case. Staff add a flagged person to the request pipeline when they start work. Stages, waits, and close won / close lost are `KB/05_schema_benefit.md#request-case`.
+
 ---
 
 ## Internal vs customer

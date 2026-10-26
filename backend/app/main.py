@@ -25,6 +25,7 @@ from app.routers import (
     notifications_router,
     ops_router,
     people_router,
+    request_cases_router,
     ss_batches_router,
     webhooks_router,
 )
@@ -63,6 +64,7 @@ app.include_router(members_router)
 app.include_router(intakes_router)
 app.include_router(internal_workers_router)
 app.include_router(people_router)
+app.include_router(request_cases_router)
 app.include_router(ss_batches_router)
 app.include_router(certificates_router)
 app.include_router(establishments_router)

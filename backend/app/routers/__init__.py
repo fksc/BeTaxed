@@ -8,6 +8,7 @@ from app.routers.members import router as members_router
 from app.routers.notifications import router as notifications_router
 from app.routers.ops import router as ops_router
 from app.routers.people import router as people_router
+from app.routers.request_cases import router as request_cases_router
 from app.routers.ss_batches import router as ss_batches_router
 from app.routers.webhooks import router as webhooks_router
 
@@ -22,6 +23,7 @@ __all__ = [
     "notifications_router",
     "ops_router",
     "people_router",
+    "request_cases_router",
     "ss_batches_router",
     "webhooks_router",
 ]

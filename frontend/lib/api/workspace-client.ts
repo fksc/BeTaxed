@@ -307,6 +307,125 @@ export async function putUserHeadcount(
   );
 }
 
+export async function listPipeline(opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").PipelineStageOut[]>(
+    "/v1/ops/pipeline",
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function listRequestCases(opts: AuthOpts, companyId?: string | null) {
+  const query = companyId ? `?company_id=${companyId}` : "";
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut[]>(
+    `/v1/ops/request-cases${query}`,
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function openRequestCase(employeeId: string, opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    "/v1/ops/request-cases",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employee_id: employeeId }),
+    },
+    opts,
+  );
+}
+
+export async function runRequestOperation(
+  caseId: string,
+  code: string,
+  payload: Record<string, unknown>,
+  opts: AuthOpts,
+) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    `/v1/ops/request-cases/${caseId}/operations`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, payload }),
+    },
+    opts,
+  );
+}
+
+export async function listMinutaTemplates(opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").MinutaTemplateOut[]>(
+    "/v1/ops/minuta-templates",
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function listRejectionReasons(opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").RejectionReasonOut[]>(
+    "/v1/ops/rejection-reasons",
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function uploadRequestFile(
+  file: File,
+  kind: string,
+  companyId: string,
+  opts: AuthOpts,
+) {
+  const body = new FormData();
+  body.set("file", file);
+  body.set("kind", kind);
+  body.set("company_id", companyId);
+  return apiJson<{ id: string }>("/v1/ops/request-files", { method: "POST", body }, opts);
+}
+
+export async function listCompanyRequestCases(opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut[]>(
+    "/v1/request-cases",
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function openSentMinuta(caseId: string, opts: AuthOpts): Promise<void> {
+  const response = await fetch(`${getApiUrl()}/v1/request-cases/${caseId}/minuta`, {
+    headers: authHeaders(opts),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.statusText || `HTTP ${response.status}`, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function openRequestNotice(fileId: string, opts: AuthOpts): Promise<void> {
+  const response = await fetch(`${getApiUrl()}/v1/request-cases/files/${fileId}`, {
+    headers: authHeaders(opts),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.statusText || `HTTP ${response.status}`, response.status);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function uploadSignedScan(caseId: string, file: File, opts: AuthOpts) {
+  const body = new FormData();
+  body.set("file", file);
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    `/v1/request-cases/${caseId}/signed-scan`,
+    { method: "POST", body },
+    opts,
+  );
+}
+
 export async function listBenefitCases(opts: AuthOpts): Promise<BenefitCaseOut[]> {
   return apiJson<BenefitCaseOut[]>("/v1/ops/benefit-cases", { method: "GET" }, opts);
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { FileText, Users, UserCheck, CalendarDays } from "lucide-react";
+import { Columns3, FileText, Users, UserCheck, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   runContractUploads,
   type ContractUploadRow,
 } from "@/components/workspace/contract-batch-modal";
+import { RequestPipeline } from "@/components/admins/request-pipeline";
 import { MembersPanel } from "@/components/workspace/members-panel";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
@@ -33,6 +34,7 @@ import {
   listPeople,
   listSsBatches,
   openPersonContract,
+  openRequestCase,
   patchOpsCompany,
   patchPersonStatus,
 } from "@/lib/api/workspace-client";
@@ -51,7 +53,7 @@ import { paths } from "@/lib/app-paths";
 import { currentIdToken } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
-const HUB_TABS = ["overview", "vinculos", "employees", "already", "documents"] as const;
+const HUB_TABS = ["overview", "vinculos", "employees", "pipeline", "already", "documents"] as const;
 type HubTab = (typeof HUB_TABS)[number];
 const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
 const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
@@ -149,6 +151,23 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [uploadRows, setUploadRows] = useState<ContractUploadRow[] | null>(null);
   const [uploadRunning, setUploadRunning] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
+
+  async function addToPipeline(employeeId: string) {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      setError(t("needAuth"));
+      return;
+    }
+    setBusyId(employeeId);
+    try {
+      await openRequestCase(employeeId, { idToken: token });
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("needAuth"));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function reload(nextEstablishmentId = establishmentId) {
     const token = await currentIdToken();
@@ -308,6 +327,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     { id: "overview", label: t("tabOverview") },
     { id: "vinculos", label: t("tabVinculos") },
     { id: "employees", label: t("tabEmployees") },
+    { id: "pipeline", label: t("tabPipeline") },
     { id: "already", label: t("tabAlready") },
     { id: "documents", label: t("tabDocuments") },
   ];
@@ -505,6 +525,8 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
           </Card>
         ) : null}
 
+        {tab === "pipeline" ? <RequestPipeline fixedCompanyId={companyId} /> : null}
+
         {tab === "employees" ? (
           <StaffPeopleCard
             people={people}
@@ -526,6 +548,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
               fileRef.current?.click();
             }}
             onStatus={(employeeId, status, leave) => void onPersonStatus(employeeId, status, leave)}
+            onAddToPipeline={(employeeId) => void addToPipeline(employeeId)}
           />
         ) : null}
 
@@ -694,6 +717,7 @@ function StaffPeopleCard({
   onLeave,
   onShow,
   onUploadClick,
+  onAddToPipeline,
   onStatus,
 }: {
   people: PersonOut[];
@@ -706,6 +730,7 @@ function StaffPeopleCard({
   onLeave: (employeeId: string, leave: (typeof LEAVE_TYPES)[number]) => void;
   onShow: (employeeId: string, documentId: string) => void;
   onUploadClick: (employeeId: string) => void;
+  onAddToPipeline: (employeeId: string) => void;
   onStatus: (
     employeeId: string,
     status: (typeof STATUSES)[number],
@@ -713,6 +738,7 @@ function StaffPeopleCard({
   ) => void;
 }) {
   const t = useTranslations("admins.companyDetail");
+  const tc = useTranslations("admins.cases");
   const tw = useTranslations("workspace");
   const format = useFormatter();
   const [filterModality, setFilterModality] = useState("all");
@@ -988,6 +1014,7 @@ function StaffPeopleCard({
                     sortDir={sortDir}
                     onSort={onSort}
                   />
+                  <th className="py-2 pr-3 font-medium">{t("colPipeline")}</th>
                   <SortHeader
                     label={t("colAge")}
                     column="age"
@@ -1058,6 +1085,23 @@ function StaffPeopleCard({
                           {tw("people.alreadyBenefiting")}
                         </div>
                       ) : null}
+                    </td>
+                    <td className="py-2 pr-3 align-top">
+                      {row.request_case_stage ? (
+                        <Tooltip>
+                          <TooltipTrigger
+                            className="inline-flex text-foreground"
+                            aria-label={row.request_case_stage}
+                          >
+                            <Columns3 size={16} />
+                          </TooltipTrigger>
+                          <TooltipContent>{row.request_case_stage}</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-muted-foreground/40" aria-hidden="true">
+                          —
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 pr-3 align-top tabular-nums">
                       {row.age == null ? t("ageUnknown") : row.age}
@@ -1167,6 +1211,17 @@ function StaffPeopleCard({
                           }}
                         >
                           {tw("people.show")}
+                        </Button>
+                      ) : null}
+                      {row.benefit_outlook === "might" && !row.request_case_stage ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="ml-2"
+                          disabled={busyId === row.id}
+                          onClick={() => onAddToPipeline(row.id)}
+                        >
+                          {tc("addToPipeline")}
                         </Button>
                       ) : null}
                     </td>

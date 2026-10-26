@@ -82,6 +82,62 @@ export type PersonOut = {
   benefit_outlook?: "already" | "might" | "never" | null;
   benefit_block?: BenefitBlockOut | null;
   term_benefit?: TermBenefitOut | null;
+  request_case_stage?: string | null;
+};
+
+export type PipelineStageOut = {
+  id: string;
+  code: string;
+  name: string;
+  stage_type: string;
+  position: number;
+  entry_path: string | null;
+  operations: string[];
+};
+
+export type RequestMove = {
+  operation: string;
+  stage_id: string;
+  outcome: "favorable" | "unfavorable" | "claim" | null;
+};
+
+export type RequestCaseOut = {
+  id: string;
+  company_id: string;
+  company_name: string;
+  employee_id: string;
+  display_name: string | null;
+  stage_id: string;
+  stage_code: string;
+  stage_name: string;
+  stage_type: string;
+  path: string;
+  applied_on: string | null;
+  benefit_starts_on: string | null;
+  probation_ends_on: string | null;
+  minuta_sent: boolean;
+  minuta_id: string | null;
+  notice_file_id: string | null;
+  operations?: string[];
+  moves?: RequestMove[];
+  can_claim?: boolean;
+  can_attach_scan?: boolean;
+  remaining_months?: number | null;
+};
+
+export type MinutaTemplateOut = {
+  id: string;
+  code: string;
+  title: string;
+  body_html: string;
+  is_active: boolean;
+};
+
+export type RejectionReasonOut = {
+  id: string;
+  code: string;
+  label: string;
+  blocks_claim: boolean;
 };
 
 export type NotificationItem = {

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import {
   CreditCard,
+  ClipboardList,
   FileSpreadsheet,
   LayoutDashboard,
   Settings,
@@ -42,6 +43,12 @@ export function WorkspaceSidebar() {
       href: paths.companiesPeople,
       label: t("nav.people"),
       icon: Users,
+      soon: false,
+    },
+    {
+      href: paths.companiesRequests,
+      label: t("nav.requests"),
+      icon: ClipboardList,
       soon: false,
     },
     {

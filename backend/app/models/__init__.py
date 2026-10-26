@@ -28,6 +28,16 @@ from app.models.billing import (
     InvoiceStatusEvent,
     Payment,
 )
+from app.models.request_case import (
+    MinutaTemplate,
+    PipelineOperation,
+    PipelineStage,
+    PipelineStageOperation,
+    RejectionReason,
+    RequestCase,
+    RequestCaseFile,
+    RequestCaseMinuta,
+)
 from app.models.ss_ingest import (
     CompanyHeadcountMonth,
     SsBatch,
@@ -60,7 +70,15 @@ __all__ = [
     "InvoiceLine",
     "InvoiceStatusEvent",
     "Intake",
+    "MinutaTemplate",
     "Notification",
+    "PipelineOperation",
+    "PipelineStage",
+    "PipelineStageOperation",
+    "RejectionReason",
+    "RequestCase",
+    "RequestCaseFile",
+    "RequestCaseMinuta",
     "Payment",
     "SsBatch",
     "SsBatchFile",

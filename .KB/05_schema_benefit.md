@@ -166,3 +166,150 @@ CREATE TABLE saving_month (
 - `billable = FALSE` if terminated, clawback, or **leave** (OD-4 locked: no success fee on leave months).
 - Once `locked_at` is set, do not update amounts. Corrections = new month or credit note.
 - Company invoices **sum fee_amount** where billable; they do not list employees (`KB/06`).
+
+---
+
+## Request case (DEV-882) {#request-case}
+
+The staff flag says who can still benefit. It is not a case. A `request_case` row is created when BeTaxed staff add that person to the pipeline. Company users see the stage of their own cases, a sent minuta, and an unfavorable notice. They do not see the flag, rates, or remaining months.
+
+`benefit_case` stays the internal ledger. `request_case.benefit_case_id` may point at it. Neither row files with Segurança Social by itself.
+
+### Stage types
+
+A stage is a row, not a hardcoded name. Staff can add or remove stages. The code knows the type and the operations assigned to the current stage.
+
+| `stage_type` | Meaning |
+|---|---|
+| `WORK` | BeTaxed staff act |
+| `WAIT_CLIENT` | Waiting on the company |
+| `WAIT_SS` | Waiting on Segurança Social |
+| `CLOSE_WON` | Closed, approved. Like a CRM closed-won |
+| `CLOSE_LOST` | Closed, refused. Like a CRM closed-lost |
+
+Close won and close lost are terminal. Claim is not a close type. A claim is a work stage that later closes won or lost.
+
+`ss_submission_ref` and `ss_status_read_at` stay empty until a Segurança Social sub-account can submit or read status. That result updates this case. It does not create a second case.
+
+### Tables
+
+```sql
+CREATE TABLE pipeline_stage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL,
+    stage_type VARCHAR(16) NOT NULL
+        CHECK (stage_type IN ('WORK', 'WAIT_CLIENT', 'WAIT_SS', 'CLOSE_WON', 'CLOSE_LOST')),
+    position INTEGER NOT NULL,
+    entry_path VARCHAR(16)
+        CHECK (entry_path IS NULL OR entry_path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE pipeline_operation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE pipeline_stage_operation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    operation_id UUID NOT NULL REFERENCES pipeline_operation(id),
+    next_stage_id UUID REFERENCES pipeline_stage(id),
+    next_won_stage_id UUID REFERENCES pipeline_stage(id),
+    next_lost_stage_id UUID REFERENCES pipeline_stage(id),
+    next_claim_stage_id UUID REFERENCES pipeline_stage(id),
+    UNIQUE (stage_id, operation_id)
+);
+
+CREATE TABLE rejection_reason (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    label VARCHAR(255) NOT NULL,
+    blocks_claim BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE minuta_template (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    body_html TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE request_case (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    employee_id UUID NOT NULL REFERENCES employee(id),
+    employment_id UUID NOT NULL REFERENCES employment(id),
+    opened_by UUID NOT NULL REFERENCES user_base(id),
+    opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    stage_stack UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
+    path VARCHAR(16) NOT NULL
+        CHECK (path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
+    probation_ends_on DATE,
+    benefit_starts_on DATE,
+    applied_on DATE,
+    applied_by UUID REFERENCES user_base(id),
+    decision_on DATE,
+    rejection_reason_id UUID REFERENCES rejection_reason(id),
+    benefit_case_id UUID REFERENCES benefit_case(id),
+    ss_submission_ref VARCHAR(128),
+    ss_status_read_at TIMESTAMPTZ,
+    closed_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX uq_request_case_open_employment
+    ON request_case (employment_id)
+    WHERE closed_at IS NULL;
+
+CREATE TABLE request_case_minuta (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_case_id UUID NOT NULL REFERENCES request_case(id),
+    template_id UUID NOT NULL REFERENCES minuta_template(id),
+    body_html TEXT NOT NULL,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE request_case_file (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    request_case_id UUID REFERENCES request_case(id),
+    kind VARCHAR(32) NOT NULL
+        CHECK (kind IN ('SIGNED_MINUTA', 'UNFAVORABLE_NOTICE', 'CLAIM_SUPPORT')),
+    file_id UUID NOT NULL REFERENCES stored_file(id),
+    uploaded_by UUID REFERENCES user_base(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Seeded board
+
+No minuta types are seeded. One rejection reason is seeded: `PRIOR_SEM_TERMO`, and it blocks a claim. Further blocking reasons are added as rows.
+
+| Code | Type | Entry | Operations |
+|---|---|---|---|
+| `probation` | Work | `OPEN_CONTRACT` | Record probation. Next stage is Ready |
+| `minuta` | Work | `FIXED_TERM` | Generate minuta (stays). Send minuta (next is Signature) |
+| `signature` | Waiting on the client | — | Attach signed scan. Next is Ready |
+| `ready` | Work | — | Record filing. Next is Awaiting decision |
+| `awaiting_decision` | Waiting on Segurança Social | — | Record a decision: won, lost, or claim |
+| `claim` | Work | — | Record a decision: won or lost |
+| `closed_won` | Close won | — | — |
+| `closed_lost` | Close lost | — | — |
+
+`path` is taken from the employment when the case opens. `TERMO_CERTO` and `TERMO_INCERTO` are `FIXED_TERM` and enter on the stage whose `entry_path` is `FIXED_TERM`. Anything else is `OPEN_CONTRACT` and enters on the probation entry. Recording “no probation” moves to Ready and never creates a minuta. A probation end date may set `benefit_starts_on` so the 60 months start later.
+
+A decision of won moves to the assignment’s `next_won_stage_id`. Lost moves to `next_lost_stage_id` and requires a reason and an unfavorable notice. Claim moves to `next_claim_stage_id` only when `blocks_claim` is false. The same decision operation on Claim has no claim destination, so the claim closes won or lost.
+
+`stage_stack` is the stages this case has actually entered, latest last. Staff can move the card back one visit. Dates, the minuta, and uploaded files stay. Leaving a close stage clears `closed_at`. A case that only has its current stage on the stack steps back along its path: fixed term is minuta, signature, ready, awaiting decision; an open contract is probation, ready, awaiting decision. Claim, and a close with no earlier visit recorded, step back to awaiting decision.
+
+Remaining months are derived for staff when the stage type is close won, from `benefit_starts_on` when set, otherwise the employment start. Company payloads omit that number.
+
+`{{ key }}` in a minuta body is filled from the person and the company. Staff can edit `body_html` before send. Tokens: `person_name`, `company_name`, `contract_started_on`, `benefit_starts_on`.
+
+Signed scans may be uploaded in bulk with `request_case_id` empty until staff attach one to a case that is on a stage with the attach operation.

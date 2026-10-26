@@ -60,6 +60,7 @@ class PersonOut(BaseModel):
     benefit_outlook: Literal["already", "might", "never"] | None = None
     benefit_block: BenefitBlockOut | None = None
     term_benefit: TermBenefitOut | None = None
+    request_case_stage: str | None = None
 
 
 class StatusOverrideIn(BaseModel):
