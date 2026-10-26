@@ -4,8 +4,11 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GripVertical, Undo2 } from "lucide-react";
 
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Link } from "@/i18n/navigation";
+import { paths } from "@/lib/app-paths";
 import {
   Select,
   SelectContent,
@@ -263,7 +266,12 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                   <Fragment key={row.id}>
                     <tr className="border-t border-border/70">
                       <td className="px-3 py-3 font-medium">
-                        {row.display_name || t("unnamed")}
+                        <Link
+                          href={paths.adminsEmployee(row.company_id, row.employee_id)}
+                          className="hover:underline"
+                        >
+                          {row.display_name || t("unnamed")}
+                        </Link>
                         {row.remaining_months != null ? (
                           <div className="text-xs font-normal text-muted-foreground">
                             {t("remaining", { count: row.remaining_months })}
@@ -271,7 +279,14 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                         ) : null}
                       </td>
                       {fixedCompanyId ? null : (
-                        <td className="px-3 py-3 text-muted-foreground">{row.company_name}</td>
+                        <td className="px-3 py-3">
+                          <Link
+                            href={paths.adminsCompany(row.company_id)}
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            {row.company_name}
+                          </Link>
+                        </td>
                       )}
                       <td className="px-3 py-3">
                         <span
@@ -392,11 +407,19 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                             <GripVertical size={16} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="font-medium">{row.display_name || t("unnamed")}</div>
+                            <Link
+                              href={paths.adminsEmployee(row.company_id, row.employee_id)}
+                              className="font-medium hover:underline"
+                            >
+                              {row.display_name || t("unnamed")}
+                            </Link>
                             {fixedCompanyId ? null : (
-                              <div className="truncate text-xs text-muted-foreground">
+                              <Link
+                                href={paths.adminsCompany(row.company_id)}
+                                className="block truncate text-xs text-primary underline-offset-4 hover:underline"
+                              >
                                 {row.company_name}
-                              </div>
+                              </Link>
                             )}
                             <div className="text-xs text-muted-foreground">{pathLabel(row.path, t)}</div>
                             {row.remaining_months != null ? (
@@ -463,11 +486,10 @@ function CaseActions({
     <div className="space-y-2">
       {ops.includes("RECORD_PROBATION") ? (
         <div className="space-y-1">
-          <Input
-            type="date"
+          <DatePicker
             value={probationOn}
             aria-label={t("probationEnd")}
-            onChange={(event) => setProbationOn(event.target.value)}
+            onChange={setProbationOn}
           />
           <Button
             type="button"
@@ -556,11 +578,10 @@ function CaseActions({
       ) : null}
       {ops.includes("RECORD_FILING") ? (
         <div className="space-y-1">
-          <Input
-            type="date"
+          <DatePicker
             value={appliedOn}
             aria-label={t("appliedOn")}
-            onChange={(event) => setAppliedOn(event.target.value)}
+            onChange={setAppliedOn}
           />
           <Button
             type="button"
@@ -718,11 +739,11 @@ function DropDetails({
       </div>
       {move.operation === "RECORD_PROBATION" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Input
-            type="date"
+          <DatePicker
             value={probationOn}
             aria-label={t("probationEnd")}
-            onChange={(event) => setProbationOn(event.target.value)}
+            onChange={setProbationOn}
+            className="w-44"
           />
           <Button
             type="button"

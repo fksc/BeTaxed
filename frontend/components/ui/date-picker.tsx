@@ -19,12 +19,14 @@ export function DatePicker({
   className,
   id,
   disabled,
+  "aria-label": ariaLabel,
 }: {
   value: string
   onChange: (next: string) => void
   className?: string
   id?: string
   disabled?: boolean
+  "aria-label"?: string
 }) {
   const selected = parseValue(value)
 
@@ -38,6 +40,7 @@ export function DatePicker({
             type="button"
             variant="outline"
             disabled={disabled}
+            aria-label={ariaLabel}
             className={cn(
               "w-full justify-between font-normal data-[empty=true]:text-muted-foreground",
               className

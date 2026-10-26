@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Columns3, FileText, Users, UserCheck, CalendarDays } from "lucide-react";
+import { Columns3, Eye, FileText, Upload, UserCheck, UserPlus, Users, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
@@ -529,6 +529,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
 
         {tab === "employees" ? (
           <StaffPeopleCard
+            companyId={companyId}
             people={people}
             establishments={establishments}
             establishmentId={establishmentId}
@@ -706,7 +707,47 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   );
 }
 
+function RoundAction({
+  label,
+  children,
+  disabled,
+  onClick,
+  href,
+}: {
+  label: string;
+  children: ReactNode;
+  disabled?: boolean;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const className =
+    "inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.5";
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          href ? (
+            <Link href={href} aria-label={label} className={className} />
+          ) : (
+            <button
+              type="button"
+              aria-label={label}
+              disabled={disabled}
+              onClick={onClick}
+              className={className}
+            />
+          )
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function StaffPeopleCard({
+  companyId,
   people,
   establishments,
   establishmentId,
@@ -720,6 +761,7 @@ function StaffPeopleCard({
   onAddToPipeline,
   onStatus,
 }: {
+  companyId: string;
   people: PersonOut[];
   establishments: EstablishmentOut[];
   establishmentId: string;
@@ -1014,7 +1056,6 @@ function StaffPeopleCard({
                     sortDir={sortDir}
                     onSort={onSort}
                   />
-                  <th className="py-2 pr-3 font-medium">{t("colPipeline")}</th>
                   <SortHeader
                     label={t("colAge")}
                     column="age"
@@ -1070,9 +1111,12 @@ function StaffPeopleCard({
                           </TooltipContent>
                         </Tooltip>
                       ) : (
-                        <div className="font-medium">
+                        <Link
+                          href={paths.adminsEmployee(companyId, row.id)}
+                          className="font-medium hover:underline"
+                        >
                           {row.display_name || tw("people.unnamed")}
-                        </div>
+                        </Link>
                       )}
                       <div className="text-xs text-muted-foreground">
                         {sourceLabel(row.status_source, tw)}
@@ -1085,23 +1129,6 @@ function StaffPeopleCard({
                           {tw("people.alreadyBenefiting")}
                         </div>
                       ) : null}
-                    </td>
-                    <td className="py-2 pr-3 align-top">
-                      {row.request_case_stage ? (
-                        <Tooltip>
-                          <TooltipTrigger
-                            className="inline-flex text-foreground"
-                            aria-label={row.request_case_stage}
-                          >
-                            <Columns3 size={16} />
-                          </TooltipTrigger>
-                          <TooltipContent>{row.request_case_stage}</TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        <span className="text-muted-foreground/40" aria-hidden="true">
-                          —
-                        </span>
-                      )}
                     </td>
                     <td className="py-2 pr-3 align-top tabular-nums">
                       {row.age == null ? t("ageUnknown") : row.age}
@@ -1188,42 +1215,44 @@ function StaffPeopleCard({
                       </td>
                     ) : null}
                     <td className="py-2 align-top">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busyId === row.id || uploadsLocked}
-                        onClick={() => onUploadClick(row.id)}
-                      >
-                        {row.has_contract ? tw("people.reupload") : tw("people.upload")}
-                      </Button>
-                      {row.has_contract && row.document_id ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="ml-2"
-                          disabled={uploadsLocked}
-                          onClick={() => {
-                            if (row.document_id) {
-                              onShow(row.id, row.document_id);
-                            }
-                          }}
+                      <div className="flex items-center gap-1">
+                        <RoundAction
+                          label={row.has_contract ? tw("people.reupload") : tw("people.upload")}
+                          disabled={busyId === row.id || uploadsLocked}
+                          onClick={() => onUploadClick(row.id)}
                         >
-                          {tw("people.show")}
-                        </Button>
-                      ) : null}
-                      {row.benefit_outlook === "might" && !row.request_case_stage ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="ml-2"
-                          disabled={busyId === row.id}
-                          onClick={() => onAddToPipeline(row.id)}
-                        >
-                          {tc("addToPipeline")}
-                        </Button>
-                      ) : null}
+                          <Upload />
+                        </RoundAction>
+                        {row.has_contract && row.document_id ? (
+                          <RoundAction
+                            label={tw("people.show")}
+                            disabled={uploadsLocked}
+                            onClick={() => {
+                              if (row.document_id) {
+                                onShow(row.id, row.document_id);
+                              }
+                            }}
+                          >
+                            <Eye />
+                          </RoundAction>
+                        ) : null}
+                        {row.request_case_stage ? (
+                          <RoundAction
+                            label={row.request_case_stage}
+                            href={paths.adminsEmployee(companyId, row.id)}
+                          >
+                            <Columns3 />
+                          </RoundAction>
+                        ) : row.benefit_outlook === "might" ? (
+                          <RoundAction
+                            label={tc("addToPipeline")}
+                            disabled={busyId === row.id}
+                            onClick={() => onAddToPipeline(row.id)}
+                          >
+                            <UserPlus />
+                          </RoundAction>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

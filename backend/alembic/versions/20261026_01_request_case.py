@@ -161,8 +161,8 @@ def upgrade() -> None:
             ('ready', 'Ready', 'WORK', 40, NULL),
             ('awaiting_decision', 'Awaiting decision', 'WAIT_SS', 50, NULL),
             ('claim', 'Claim', 'WORK', 60, NULL),
-            ('closed_won', 'Closed won', 'CLOSE_WON', 70, NULL),
-            ('closed_lost', 'Closed lost', 'CLOSE_LOST', 80, NULL)
+            ('closed_approved', 'Closed approved', 'CLOSE_WON', 70, NULL),
+            ('closed_rejected', 'Closed rejected', 'CLOSE_LOST', 80, NULL)
         """
     )
     op.execute(
@@ -189,8 +189,8 @@ def upgrade() -> None:
             ('minuta', 'SEND_MINUTA', 'signature', NULL, NULL, NULL),
             ('signature', 'ATTACH_SIGNED_SCAN', 'ready', NULL, NULL, NULL),
             ('ready', 'RECORD_FILING', 'awaiting_decision', NULL, NULL, NULL),
-            ('awaiting_decision', 'RECORD_DECISION', NULL, 'closed_won', 'closed_lost', 'claim'),
-            ('claim', 'RECORD_DECISION', NULL, 'closed_won', 'closed_lost', NULL)
+            ('awaiting_decision', 'RECORD_DECISION', NULL, 'closed_approved', 'closed_rejected', 'claim'),
+            ('claim', 'RECORD_DECISION', NULL, 'closed_approved', 'closed_rejected', NULL)
         ) AS link(stage_code, op_code, next_code, won_code, lost_code, claim_code)
         JOIN pipeline_stage s ON s.code = link.stage_code
         JOIN pipeline_operation o ON o.code = link.op_code

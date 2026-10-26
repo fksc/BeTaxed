@@ -87,7 +87,7 @@ def earlier_stage_code(path: str, stage_code: str) -> str | None:
     """Previous stage when this case has no visit history yet."""
     if stage_code == "claim":
         return "awaiting_decision"
-    if stage_code in {"closed_won", "closed_lost"}:
+    if stage_code in {"closed_approved", "closed_rejected"}:
         return "awaiting_decision"
     line = _OPEN_LINE if path == "OPEN_CONTRACT" else _FIXED_LINE
     if stage_code not in line:

@@ -187,7 +187,7 @@ A stage is a row, not a hardcoded name. Staff can add or remove stages. The code
 | `CLOSE_WON` | Closed, approved. Like a CRM closed-won |
 | `CLOSE_LOST` | Closed, refused. Like a CRM closed-lost |
 
-Close won and close lost are terminal. Claim is not a close type. A claim is a work stage that later closes won or lost.
+Close approved and close rejected are terminal. Claim is not a close type. A claim is a work stage that later closes approved or rejected.
 
 `ss_submission_ref` and `ss_status_read_at` stay empty until a Segurança Social sub-account can submit or read status. That result updates this case. It does not create a second case.
 
@@ -299,8 +299,8 @@ No minuta types are seeded. One rejection reason is seeded: `PRIOR_SEM_TERMO`, a
 | `ready` | Work | — | Record filing. Next is Awaiting decision |
 | `awaiting_decision` | Waiting on Segurança Social | — | Record a decision: won, lost, or claim |
 | `claim` | Work | — | Record a decision: won or lost |
-| `closed_won` | Close won | — | — |
-| `closed_lost` | Close lost | — | — |
+| `closed_approved` | Close approved | — | — |
+| `closed_rejected` | Close rejected | — | — |
 
 `path` is taken from the employment when the case opens. `TERMO_CERTO` and `TERMO_INCERTO` are `FIXED_TERM` and enter on the stage whose `entry_path` is `FIXED_TERM`. Anything else is `OPEN_CONTRACT` and enters on the probation entry. Recording “no probation” moves to Ready and never creates a minuta. A probation end date may set `benefit_starts_on` so the 60 months start later.
 

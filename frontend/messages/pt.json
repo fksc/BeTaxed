@@ -468,8 +468,8 @@
         "WORK": "Trabalho",
         "WAIT_CLIENT": "À espera do cliente",
         "WAIT_SS": "À espera da Segurança Social",
-        "CLOSE_WON": "Fechado ganho",
-        "CLOSE_LOST": "Fechado perdido"
+        "CLOSE_WON": "Aprovado",
+        "CLOSE_LOST": "Recusado"
       },
       "addToPipeline": "Adicionar ao pipeline",
       "inPipeline": "No pipeline"
@@ -531,6 +531,25 @@
       "saving": "A criar…",
       "failed": "Não foi possível criar a empresa.",
       "needAuth": "Entre primeiro como staff."
+    },
+    "employee": {
+      "crumb": "Pessoa",
+      "back": "Voltar à empresa",
+      "missing": "Esta pessoa não está na lista da empresa.",
+      "needAuth": "Não foi possível abrir esta pessoa.",
+      "facts": "Vínculo",
+      "age": "Idade",
+      "contractStart": "Início do contrato",
+      "modality": "Contrato",
+      "status": "Estado",
+      "file": "Contrato",
+      "pipeline": "Pedido",
+      "noCase": "Fora do pipeline.",
+      "stage": "Fase",
+      "filed": "Entregue",
+      "benefitStart": "Início do benefício",
+      "showContract": "Ver contrato",
+      "possible": "Benefício possível"
     },
     "companyDetail": {
       "crumb": "Empresa",

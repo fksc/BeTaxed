@@ -468,8 +468,8 @@
         "WORK": "Work",
         "WAIT_CLIENT": "Waiting on the client",
         "WAIT_SS": "Waiting on Segurança Social",
-        "CLOSE_WON": "Closed won",
-        "CLOSE_LOST": "Closed lost"
+        "CLOSE_WON": "Approved",
+        "CLOSE_LOST": "Rejected"
       },
       "addToPipeline": "Add to pipeline",
       "inPipeline": "In pipeline"
@@ -531,6 +531,25 @@
       "saving": "Creating…",
       "failed": "Could not create the company.",
       "needAuth": "Sign in as staff first."
+    },
+    "employee": {
+      "crumb": "Person",
+      "back": "Back to the company",
+      "missing": "This person is not on the company list.",
+      "needAuth": "Could not open this person.",
+      "facts": "Employment",
+      "age": "Age",
+      "contractStart": "Contract start",
+      "modality": "Contract",
+      "status": "Status",
+      "file": "Contract file",
+      "pipeline": "Request",
+      "noCase": "Not in the pipeline.",
+      "stage": "Stage",
+      "filed": "Filed",
+      "benefitStart": "Benefit start",
+      "showContract": "Show contract",
+      "possible": "Possible benefit"
     },
     "companyDetail": {
       "crumb": "Company",

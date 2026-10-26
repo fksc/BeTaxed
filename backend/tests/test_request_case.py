@@ -49,7 +49,7 @@ def test_earlier_stage_follows_the_path() -> None:
     assert earlier_stage_code("FIXED_TERM", "minuta") is None
     assert earlier_stage_code("OPEN_CONTRACT", "probation") is None
     assert earlier_stage_code("FIXED_TERM", "claim") == "awaiting_decision"
-    assert earlier_stage_code("OPEN_CONTRACT", "closed_won") == "awaiting_decision"
+    assert earlier_stage_code("OPEN_CONTRACT", "closed_approved") == "awaiting_decision"
 
 
 def test_path_for_modality() -> None:
