@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -34,6 +34,8 @@ class RequestCaseOut(BaseModel):
     stage_code: str
     stage_name: str
     stage_type: str
+    opened_at: datetime
+    stage_entered_at: datetime
     path: str
     applied_on: date | None = None
     benefit_starts_on: date | None = None
@@ -77,6 +79,10 @@ class RejectionReasonOut(BaseModel):
     code: str
     label: str
     blocks_claim: bool
+
+
+class MinutaPreviewIn(BaseModel):
+    body_html: str = ""
 
 
 class MinutaTemplateIn(BaseModel):

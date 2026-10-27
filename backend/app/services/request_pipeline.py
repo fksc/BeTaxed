@@ -252,6 +252,8 @@ async def list_request_cases(
             "stage_code": stage.code,
             "stage_name": stage.name,
             "stage_type": stage.stage_type,
+            "opened_at": case.opened_at,
+            "stage_entered_at": case.stage_entered_at,
             "path": case.path,
             "applied_on": case.applied_on,
             "benefit_starts_on": case.benefit_starts_on,
@@ -344,6 +346,7 @@ async def open_request_case(
         opened_by=actor.id,
         stage_id=stage.id,
         stage_stack=[stage.id],
+        stage_entered_at=datetime.now(UTC),
         path=path,
         benefit_starts_on=current.started_on,
     )
@@ -532,9 +535,15 @@ def _push_stage(case: RequestCase, stage_id: uuid.UUID, *, closing: bool) -> Non
     if not stack or stack[-1] != stage_id:
         stack.append(stage_id)
     case.stage_stack = stack
-    case.stage_id = stage_id
+    _enter_stage(case, stage_id)
     if closing:
         case.closed_at = datetime.now(UTC)
+
+
+def _enter_stage(case: RequestCase, stage_id: uuid.UUID) -> None:
+    if case.stage_id != stage_id:
+        case.stage_entered_at = datetime.now(UTC)
+    case.stage_id = stage_id
 
 
 def _advance(case: RequestCase, stage_id: uuid.UUID | None) -> None:
@@ -585,7 +594,7 @@ async def _revert(session: AsyncSession, case: RequestCase) -> None:
     else:
         stack = [target.id]
     case.stage_stack = stack
-    case.stage_id = target.id
+    _enter_stage(case, target.id)
     if target.stage_type not in _CLOSE:
         case.closed_at = None
 

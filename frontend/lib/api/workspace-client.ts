@@ -385,6 +385,18 @@ export async function createMinutaTemplate(
   );
 }
 
+export async function previewMinutaPdf(bodyHtml: string, opts: AuthOpts): Promise<Blob> {
+  const response = await fetch(`${getApiUrl()}/v1/ops/minuta-templates/preview`, {
+    method: "POST",
+    headers: authHeaders(opts, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ body_html: bodyHtml }),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.statusText || `HTTP ${response.status}`, response.status);
+  }
+  return response.blob();
+}
+
 export async function patchMinutaTemplate(
   templateId: string,
   body: { title?: string; body_html?: string; is_active?: boolean },

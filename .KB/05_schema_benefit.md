@@ -247,6 +247,7 @@ CREATE TABLE request_case (
     opened_by UUID NOT NULL REFERENCES user_base(id),
     opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    stage_entered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     stage_stack UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
     path VARCHAR(16) NOT NULL
         CHECK (path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
@@ -318,6 +319,8 @@ No minuta types are seeded. One rejection reason is seeded: `PRIOR_SEM_TERMO`, a
 `path` is taken from the employment when the case opens. `TERMO_CERTO` and `TERMO_INCERTO` are `FIXED_TERM` and enter on the stage whose `entry_path` is `FIXED_TERM`. Anything else is `OPEN_CONTRACT` and enters on the probation entry. Recording “no probation” moves to Ready and never creates a minuta. A probation end date may set `benefit_starts_on` so the 60 months start later.
 
 A decision of won moves to the assignment’s `next_won_stage_id`. Lost moves to `next_lost_stage_id` and requires a reason and an unfavorable notice. Claim moves to `next_claim_stage_id` only when `blocks_claim` is false. The same decision operation on Claim has no claim destination, so the claim closes won or lost.
+
+`stage_entered_at` is when the case entered its current stage. It resets on every move, including a step back. Rows that existed before the column were filled from `opened_at`.
 
 `stage_stack` is the stages this case has actually entered, latest last. Staff can move the card back one visit. Dates, the minuta, and uploaded files stay. Leaving a close stage clears `closed_at`. A case that only has its current stage on the stack steps back along its path: fixed term is minuta, signature, ready, awaiting decision; an open contract is probation, ready, awaiting decision. Claim, and a close with no earlier visit recorded, step back to awaiting decision.
 

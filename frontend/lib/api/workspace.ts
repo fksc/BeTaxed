@@ -112,6 +112,8 @@ export type RequestCaseOut = {
   stage_code: string;
   stage_name: string;
   stage_type: string;
+  opened_at: string;
+  stage_entered_at: string;
   path: string;
   applied_on: string | null;
   benefit_starts_on: string | null;

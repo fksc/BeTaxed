@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { MinutaEditor } from "@/components/admins/minuta-editor";
+import { MinutaPreviewDialog } from "@/components/admins/minuta-preview-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShellPage } from "@/components/shell/shell-app-bar";
@@ -12,6 +13,7 @@ import {
   listMinutaTemplates,
   listMinutaTokens,
   patchMinutaTemplate,
+  previewMinutaPdf,
 } from "@/lib/api/workspace-client";
 import type { MinutaTemplateOut, MinutaTokenOut } from "@/lib/api/workspace";
 import { currentIdToken } from "@/lib/firebase";
@@ -27,6 +29,10 @@ export function MinutaTemplatesPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   async function reload() {
     const idToken = await currentIdToken();
@@ -94,6 +100,42 @@ export function MinutaTemplatesPage() {
     }
   }
 
+  async function onPreview() {
+    const idToken = await currentIdToken();
+    if (!idToken) {
+      setPreviewError(t("needAuth"));
+      setPreviewOpen(true);
+      return;
+    }
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewError(null);
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+    try {
+      const blob = await previewMinutaPdf(body, { idToken });
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch {
+      setPreviewError(t("previewFailed"));
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function closePreview() {
+    setPreviewOpen(false);
+    setPreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return null;
+    });
+  }
+
   async function onToggle(row: MinutaTemplateOut) {
     const idToken = await currentIdToken();
     if (!idToken) {
@@ -148,6 +190,9 @@ export function MinutaTemplatesPage() {
             <MinutaEditor key={selected ?? "new"} value={body} tokens={tokens} onChange={setBody} />
           </div>
           <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => void onPreview()}>
+              {t("preview")}
+            </Button>
             <Button type="button" size="sm" disabled={busy || !title || !code} onClick={() => void onSave()}>
               {selected ? t("save") : t("create")}
             </Button>
@@ -169,6 +214,19 @@ export function MinutaTemplatesPage() {
           </div>
         </div>
       </div>
+      <MinutaPreviewDialog
+        open={previewOpen}
+        title={t("previewTitle")}
+        loading={previewLoading}
+        error={previewError}
+        pdfUrl={previewUrl}
+        loadingLabel={t("previewLoading")}
+        saveLabel={selected ? t("save") : t("create")}
+        backLabel={t("backToEdit")}
+        saveDisabled={busy || !title || !code}
+        onSave={() => void onSave()}
+        onBack={closePreview}
+      />
     </ShellPage>
   );
 }

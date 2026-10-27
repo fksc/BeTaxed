@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from app.schemas.request_case import (
     CaseFactsIn,
     MinutaDraftIn,
+    MinutaPreviewIn,
     MinutaTemplateIn,
     MinutaTemplateOut,
     MinutaTemplatePatch,
@@ -34,6 +35,7 @@ from app.schemas.request_case import (
 )
 from app.services.contracts import require_hr_or_admin
 from app.services.minuta_facts import catalogue
+from app.services.minuta_preview import render_minuta_pdf
 from app.services.request_pipeline import (
     company_attach_signed_scan,
     list_pipeline,
@@ -160,6 +162,15 @@ async def post_minuta_template(
         raise HTTPException(status_code=409, detail="A template with that code already exists.")
     await db.refresh(row)
     return row
+
+
+@router.post("/v1/ops/minuta-templates/preview")
+async def preview_minuta_template(
+    body: MinutaPreviewIn,
+    _: UserBase = Depends(require_staff),
+) -> Response:
+    pdf = render_minuta_pdf(body.body_html)
+    return Response(content=pdf, media_type="application/pdf")
 
 
 @router.patch("/v1/ops/minuta-templates/{template_id}", response_model=MinutaTemplateOut)

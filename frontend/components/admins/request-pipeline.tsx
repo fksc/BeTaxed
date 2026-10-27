@@ -1,15 +1,16 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { GripVertical, Undo2 } from "lucide-react";
 
-import { MinutaEditor } from "@/components/admins/minuta-editor";
+import { MinutaWizard } from "@/components/admins/minuta-wizard";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -19,14 +20,10 @@ import {
 } from "@/components/ui/select";
 import {
   listMinutaTemplates,
-  listMinutaTokens,
   listPipeline,
   listRejectionReasons,
   listRequestCases,
-  refreshCaseFacts,
   runRequestOperation,
-  saveCaseFacts,
-  saveMinutaDraft,
   uploadRequestFile,
 } from "@/lib/api/workspace-client";
 import type {
@@ -73,8 +70,26 @@ function pathLabel(path: string, t: (key: string) => string): string {
   return path;
 }
 
+function stageAge(iso: string, locale: string): string {
+  const elapsed = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(elapsed)) {
+    return "";
+  }
+  const minutes = Math.max(0, Math.floor(elapsed / 60000));
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (minutes < 60) {
+    return rtf.format(-minutes, "minute");
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) {
+    return rtf.format(-hours, "hour");
+  }
+  return rtf.format(-Math.floor(hours / 24), "day");
+}
+
 export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string }) {
   const t = useTranslations("admins.cases");
+  const locale = useLocale();
   const [stages, setStages] = useState<PipelineStageOut[]>([]);
   const [rows, setRows] = useState<RequestCaseOut[]>([]);
   const [templates, setTemplates] = useState<MinutaTemplateOut[]>([]);
@@ -82,6 +97,8 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
   const [companies, setCompanies] = useState<[string, string][]>([]);
   const [companyId, setCompanyId] = useState(fixedCompanyId ?? "all");
   const [layout, setLayout] = useState<"board" | "table">("board");
+  const [sort, setSort] = useState<"opened" | "company" | "stage">("opened");
+  const [dragCaseId, setDragCaseId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [openRowId, setOpenRowId] = useState<string | null>(null);
@@ -143,6 +160,35 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
     all: t("allCompanies"),
     ...Object.fromEntries(companies),
   };
+
+  const ordered = useMemo(() => {
+    const copy = [...rows];
+    copy.sort((a, b) => {
+      if (sort === "company") {
+        const byCompany = a.company_name.localeCompare(b.company_name, locale);
+        if (byCompany !== 0) {
+          return byCompany;
+        }
+        return (a.display_name ?? "").localeCompare(b.display_name ?? "", locale);
+      }
+      if (sort === "stage") {
+        return new Date(a.stage_entered_at).getTime() - new Date(b.stage_entered_at).getTime();
+      }
+      return new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime();
+    });
+    return copy;
+  }, [rows, sort, locale]);
+
+  function dropClass(stageId: string): string {
+    if (!dragCaseId) {
+      return "";
+    }
+    const row = rows.find((item) => item.id === dragCaseId);
+    const allowed = row?.moves?.some((move) => move.stage_id === stageId);
+    return allowed
+      ? "border-primary bg-primary/10 ring-2 ring-primary/40"
+      : "opacity-40";
+  }
 
   function acceptsDrop(stageId: string): boolean {
     const caseId = dragRef.current;
@@ -214,6 +260,31 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
             </Select>
           </label>
         )}
+        <label className="space-y-1 text-xs text-muted-foreground">
+          <span className="block">{t("sort")}</span>
+          <Select
+            value={sort}
+            items={{
+              opened: t("sortOpened"),
+              company: t("sortCompany"),
+              stage: t("sortInStage"),
+            }}
+            onValueChange={(value) => {
+              if (value === "opened" || value === "company" || value === "stage") {
+                setSort(value);
+              }
+            }}
+          >
+            <SelectTrigger className="w-44" aria-label={t("sort")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="opened">{t("sortOpened")}</SelectItem>
+              <SelectItem value="company">{t("sortCompany")}</SelectItem>
+              <SelectItem value="stage">{t("sortInStage")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
         <Button
           type="button"
           size="sm"
@@ -264,7 +335,7 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {ordered.map((row) => {
                 const revert = row.moves?.find((move) => move.operation === "REVERT");
                 const open = openRowId === row.id;
                 return (
@@ -301,6 +372,9 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                         </span>
                         <div className="mt-1 text-xs text-muted-foreground">
                           {stageTypeLabel(row.stage_type, t)}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground" title={t("inStage")}>
+                          {stageAge(row.stage_entered_at, locale)}
                         </div>
                       </td>
                       <td className="px-3 py-3 text-muted-foreground">{pathLabel(row.path, t)}</td>
@@ -355,7 +429,10 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
           {stages.map((stage) => (
             <div
               key={stage.id}
-              className="w-72 shrink-0 rounded-lg border border-border bg-muted/30 data-[over=true]:border-primary data-[over=true]:bg-primary/5 data-[over=true]:ring-2 data-[over=true]:ring-primary/30"
+              className={cn(
+                "w-72 shrink-0 rounded-lg border border-border bg-muted/30 transition-opacity data-[over=true]:border-primary data-[over=true]:bg-primary/5 data-[over=true]:ring-2 data-[over=true]:ring-primary/30",
+                dropClass(stage.id),
+              )}
               onDragOver={(event) => {
                 if (!acceptsDrop(stage.id)) {
                   return;
@@ -375,6 +452,7 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                 markOver(event.currentTarget, false);
                 const caseId = event.dataTransfer.getData("text/plain") || dragRef.current;
                 dragRef.current = null;
+                setDragCaseId(null);
                 if (caseId) {
                   void onDropCard(caseId, stage.id);
                 }
@@ -387,7 +465,7 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                 </div>
               </div>
               <div className="min-h-28 space-y-2 p-2">
-                {rows
+                {ordered
                   .filter((row) => row.stage_id === stage.id)
                   .map((row) => {
                     const revert = row.moves?.find((move) => move.operation === "REVERT");
@@ -403,11 +481,13 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                             aria-label={t("dragHandle")}
                             onDragStart={(event) => {
                               dragRef.current = row.id;
+                              setDragCaseId(row.id);
                               event.dataTransfer.setData("text/plain", row.id);
                               event.dataTransfer.effectAllowed = "move";
                             }}
                             onDragEnd={() => {
                               dragRef.current = null;
+                              setDragCaseId(null);
                             }}
                           >
                             <GripVertical size={16} />
@@ -428,6 +508,9 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                               </Link>
                             )}
                             <div className="text-xs text-muted-foreground">{pathLabel(row.path, t)}</div>
+                            <div className="text-xs text-muted-foreground" title={t("inStage")}>
+                              {stageAge(row.stage_entered_at, locale)}
+                            </div>
                             {row.remaining_months != null ? (
                               <div className="text-xs text-muted-foreground">
                                 {t("remaining", { count: row.remaining_months })}
@@ -485,10 +568,10 @@ function CaseActions({
   onChanged: () => Promise<void>;
 }) {
   const t = useTranslations("admins.cases");
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [reasonId, setReasonId] = useState(reasons[0]?.id ?? "");
   const [probationOn, setProbationOn] = useState("");
   const [appliedOn, setAppliedOn] = useState("");
+  const [wizardOpen, setWizardOpen] = useState(false);
   const ops = row.operations ?? [];
 
   return (
@@ -522,48 +605,21 @@ function CaseActions({
           </Button>
         </div>
       ) : null}
-      {ops.includes("GENERATE_MINUTA") || row.draft_html ? (
-        <MinutaFacts row={row} busy={busy} onChanged={onChanged} />
-      ) : null}
       {ops.includes("GENERATE_MINUTA") ? (
-        <div className="space-y-1">
-          <Select
-            value={templateId}
-            items={Object.fromEntries(templates.map((template) => [template.id, template.title]))}
-            onValueChange={(value) => value && setTemplateId(value)}
-          >
-            <SelectTrigger aria-label={t("minuta")}>
-              <SelectValue placeholder={t("minuta")} />
-            </SelectTrigger>
-            <SelectContent>
-              {templates.map((template) => (
-                <SelectItem key={template.id} value={template.id}>
-                  {template.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy || !templateId}
-            onClick={() => void onAct(row, "GENERATE_MINUTA", { template_id: templateId })}
-          >
-            {t("generateMinuta")}
+        <>
+          <Button type="button" size="sm" variant="outline" onClick={() => setWizardOpen(true)}>
+            {t("prepareMinuta")}
           </Button>
-        </div>
-      ) : null}
-      {ops.includes("SEND_MINUTA") ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => void onAct(row, "SEND_MINUTA", {})}
-        >
-          {t("sendMinuta")}
-        </Button>
+          {wizardOpen ? (
+            <MinutaWizard
+              row={row}
+              templates={templates}
+              busy={busy}
+              onClose={() => setWizardOpen(false)}
+              onChanged={onChanged}
+            />
+          ) : null}
+        </>
       ) : null}
       {ops.includes("ATTACH_SIGNED_SCAN") ? (
         <Input
@@ -720,131 +776,6 @@ function DecisionForm({
       >
         {t("claim")}
       </Button>
-    </div>
-  );
-}
-
-function MinutaFacts({
-  row,
-  busy,
-  onChanged,
-}: {
-  row: RequestCaseOut;
-  busy: boolean;
-  onChanged: () => Promise<void>;
-}) {
-  const t = useTranslations("admins.cases");
-  const [personAddress, setPersonAddress] = useState(row.person_address ?? "");
-  const [personNif, setPersonNif] = useState(row.person_nif ?? "");
-  const [personNiss, setPersonNiss] = useState(row.person_niss ?? "");
-  const [companyAddress, setCompanyAddress] = useState(row.company_address ?? "");
-  const [signatory, setSignatory] = useState(row.company_signatory_name ?? "");
-  const [companyNif, setCompanyNif] = useState(row.company_nif ?? "");
-  const [companyNiss, setCompanyNiss] = useState(row.company_niss ?? "");
-  const [started, setStarted] = useState(row.contract_started_on ?? "");
-  const [converted, setConverted] = useState(row.converted_on ?? "");
-  const [declared, setDeclared] = useState(row.declared_on ?? "");
-  const [place, setPlace] = useState(row.signed_place ?? "");
-  const [draft, setDraft] = useState(row.draft_html ?? "");
-  const [tokens, setTokens] = useState<{ key: string }[]>([]);
-
-  useEffect(() => {
-    void (async () => {
-      const idToken = await currentIdToken();
-      if (!idToken) {
-        return;
-      }
-      const catalogue = await listMinutaTokens({ idToken });
-      setTokens(catalogue);
-    })();
-  }, []);
-
-  async function saveFacts() {
-    const idToken = await currentIdToken();
-    if (!idToken) {
-      return;
-    }
-    await saveCaseFacts(
-      row.id,
-      {
-        person_address: personAddress,
-        person_nif: personNif,
-        person_niss: personNiss,
-        company_address: companyAddress,
-        company_signatory_name: signatory,
-        company_nif: companyNif,
-        company_niss: companyNiss,
-        contract_started_on: started,
-        converted_on: converted,
-        declared_on: declared,
-        signed_place: place,
-      },
-      { idToken },
-    );
-    await onChanged();
-  }
-
-  return (
-    <div className="space-y-2 rounded-md border border-border/70 p-2">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Input aria-label={t("personAddress")} value={personAddress} placeholder={t("personAddress")} onChange={(event) => setPersonAddress(event.target.value)} />
-        <Input aria-label={t("personNif")} value={personNif} placeholder={t("personNif")} onChange={(event) => setPersonNif(event.target.value)} />
-        <Input aria-label={t("personNiss")} value={personNiss} placeholder={t("personNiss")} onChange={(event) => setPersonNiss(event.target.value)} />
-        <Input aria-label={t("companyAddress")} value={companyAddress} placeholder={t("companyAddress")} onChange={(event) => setCompanyAddress(event.target.value)} />
-        <Input aria-label={t("signatory")} value={signatory} placeholder={t("signatory")} onChange={(event) => setSignatory(event.target.value)} />
-        <Input aria-label={t("companyNif")} value={companyNif} placeholder={t("companyNif")} onChange={(event) => setCompanyNif(event.target.value)} />
-        <Input aria-label={t("companyNiss")} value={companyNiss} placeholder={t("companyNiss")} onChange={(event) => setCompanyNiss(event.target.value)} />
-        <Input aria-label={t("signedPlace")} value={place} placeholder={t("signedPlace")} onChange={(event) => setPlace(event.target.value)} />
-        <DatePicker value={started} aria-label={t("contractStart")} onChange={setStarted} />
-        <DatePicker value={converted} aria-label={t("convertedOn")} onChange={setConverted} />
-        <DatePicker value={declared} aria-label={t("declaredOn")} onChange={setDeclared} />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void saveFacts()}>
-          {t("saveFacts")}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={() => {
-            void (async () => {
-              const idToken = await currentIdToken();
-              if (!idToken) {
-                return;
-              }
-              await refreshCaseFacts(row.id, { idToken });
-              await onChanged();
-            })();
-          }}
-        >
-          {t("refreshFacts")}
-        </Button>
-      </div>
-      {row.draft_html ? (
-        <div className="space-y-2">
-          <MinutaEditor key={row.id} value={draft || row.draft_html || ""} tokens={tokens} onChange={setDraft} />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => {
-              void (async () => {
-                const idToken = await currentIdToken();
-                if (!idToken) {
-                  return;
-                }
-                await saveMinutaDraft(row.id, draft, { idToken });
-                await onChanged();
-              })();
-            }}
-          >
-            {t("saveDraft")}
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

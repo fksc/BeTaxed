@@ -68,7 +68,7 @@ export function createDocumentEditorExtensions(): Extensions {
 }
 
 export const DOCUMENT_EDITOR_PROSE_CLASS = cn(
-  "min-h-48 w-full px-3 py-2 text-sm outline-none",
+  "min-h-[257mm] w-full outline-none",
   "[&_p]:my-2 [&_p:first-child]:mt-0",
   "[&_h1]:mt-5 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold",
   "[&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold",

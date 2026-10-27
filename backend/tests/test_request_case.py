@@ -59,6 +59,21 @@ def test_path_for_modality() -> None:
     assert path_for_modality(None) == "OPEN_CONTRACT"
 
 
+def test_preview_pdf_uses_more_than_one_a4_page() -> None:
+    from weasyprint import HTML
+
+    from app.services.minuta_preview import _fetch_local, render_minuta_pdf, wrap_minuta_html
+
+    short = HTML(string=wrap_minuta_html("<p>Olá</p>"), url_fetcher=_fetch_local).render()
+    long_body = "".join(
+        f"<p>Linha {index} da declaração para ocupar a folha A4.</p>" for index in range(80)
+    )
+    long = HTML(string=wrap_minuta_html(long_body), url_fetcher=_fetch_local).render()
+    assert len(short.pages) == 1
+    assert len(long.pages) > 1
+    assert render_minuta_pdf("<p>{{ company_name }}</p>").startswith(b"%PDF")
+
+
 def test_render_minuta_fills_tokens() -> None:
     body = render_minuta(
         "<p>{{ person_name }} at {{company_name}} from {{ contract_started_on }}</p>",
