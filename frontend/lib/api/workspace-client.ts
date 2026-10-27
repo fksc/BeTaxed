@@ -353,10 +353,98 @@ export async function runRequestOperation(
   );
 }
 
-export async function listMinutaTemplates(opts: AuthOpts) {
+export async function listMinutaTemplates(opts: AuthOpts, includeInactive = false) {
+  const query = includeInactive ? "?include_inactive=true" : "";
   return apiJson<import("@/lib/api/workspace").MinutaTemplateOut[]>(
-    "/v1/ops/minuta-templates",
+    `/v1/ops/minuta-templates${query}`,
     { method: "GET" },
+    opts,
+  );
+}
+
+export async function listMinutaTokens(opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").MinutaTokenOut[]>(
+    "/v1/ops/minuta-tokens",
+    { method: "GET" },
+    opts,
+  );
+}
+
+export async function createMinutaTemplate(
+  body: { code: string; title: string; body_html: string },
+  opts: AuthOpts,
+) {
+  return apiJson<import("@/lib/api/workspace").MinutaTemplateOut>(
+    "/v1/ops/minuta-templates",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function patchMinutaTemplate(
+  templateId: string,
+  body: { title?: string; body_html?: string; is_active?: boolean },
+  opts: AuthOpts,
+) {
+  return apiJson<import("@/lib/api/workspace").MinutaTemplateOut>(
+    `/v1/ops/minuta-templates/${templateId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function saveCaseFacts(
+  caseId: string,
+  body: Record<string, string | null>,
+  opts: AuthOpts,
+) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    `/v1/ops/request-cases/${caseId}/facts`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
+export async function refreshCaseFacts(caseId: string, opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    `/v1/ops/request-cases/${caseId}/refresh-facts`,
+    { method: "POST" },
+    opts,
+  );
+}
+
+export async function saveMinutaDraft(caseId: string, bodyHtml: string, opts: AuthOpts) {
+  return apiJson<import("@/lib/api/workspace").RequestCaseOut>(
+    `/v1/ops/request-cases/${caseId}/minuta-draft`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body_html: bodyHtml }),
+    },
+    opts,
+  );
+}
+
+export async function patchPersonResidence(employeeId: string, residence: string, opts: AuthOpts) {
+  return apiJson<{ id: string; residence: string | null }>(
+    `/v1/ops/people/${employeeId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ residence }),
+    },
     opts,
   );
 }
@@ -644,6 +732,8 @@ export async function patchOpsCompany(
     trading_name?: string;
     locale?: string;
     max_members?: number;
+    registered_address?: string;
+    signatory_name?: string;
   },
   opts: AuthOpts,
 ): Promise<OpsCompanyDetailOut> {

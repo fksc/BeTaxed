@@ -46,6 +46,19 @@ class RequestCaseOut(BaseModel):
     can_claim: bool | None = None
     can_attach_scan: bool | None = None
     remaining_months: int | None = None
+    person_name: str | None = None
+    person_address: str | None = None
+    person_nif: str | None = None
+    person_niss: str | None = None
+    company_address: str | None = None
+    company_signatory_name: str | None = None
+    company_nif: str | None = None
+    company_niss: str | None = None
+    contract_started_on: date | None = None
+    converted_on: date | None = None
+    declared_on: date | None = None
+    signed_place: str | None = None
+    draft_html: str | None = None
 
 
 class OpenRequestCaseIn(BaseModel):
@@ -69,6 +82,37 @@ class RejectionReasonOut(BaseModel):
 class MinutaTemplateIn(BaseModel):
     code: str
     title: str
+    body_html: str
+
+
+class MinutaTemplatePatch(BaseModel):
+    title: str | None = None
+    body_html: str | None = None
+    is_active: bool | None = None
+
+
+class MinutaTokenOut(BaseModel):
+    key: str
+    group: str
+
+
+class CaseFactsIn(BaseModel):
+    person_name: str | None = None
+    person_address: str | None = None
+    person_nif: str | None = None
+    person_niss: str | None = None
+    company_name: str | None = None
+    company_address: str | None = None
+    company_signatory_name: str | None = None
+    company_nif: str | None = None
+    company_niss: str | None = None
+    contract_started_on: date | None = None
+    converted_on: date | None = None
+    declared_on: date | None = None
+    signed_place: str | None = None
+
+
+class MinutaDraftIn(BaseModel):
     body_html: str
 
 

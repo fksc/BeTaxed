@@ -306,6 +306,11 @@ async def list_company_people(
             stage_name = stage_names.get(employee.id)
             if stage_name is not None:
                 row["request_case_stage"] = stage_name
+            if employee.address_enc is not None:
+                try:
+                    row["residence"] = crypto.decrypt_address(employee.address_enc)
+                except Exception:
+                    row["residence"] = None
             if outlook is not None:
                 row["benefit_outlook"] = outlook.outlook
                 if outlook.reason is not None:

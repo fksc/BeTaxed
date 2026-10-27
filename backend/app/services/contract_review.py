@@ -54,6 +54,13 @@ def apply_contract_extract(doc: EmploymentDocument, extract, employment) -> str:
     doc.doc_kind = extract.doc_kind
     doc.signed_on = extract.signed_on
     doc.term_end_on = extract.term_end_on
+    doc.employer_legal_name = extract.employer_legal_name
+    doc.employer_address = extract.employer_address
+    doc.signatory_name = extract.signatory_name
+    doc.term_started_on = extract.term_started_on
+    doc.converted_on = extract.converted_on
+    doc.declared_on = extract.declared_on
+    doc.signing_place = extract.signing_place
     doc.review_leftover = extract.leftover
     doc.review_error = None
     doc.review_status = "REVIEWED"
@@ -100,11 +107,32 @@ async def _reviewed_same_hash(
     ).scalar_one_or_none()
     if doc is None or doc.doc_kind is None:
         return None
+    from app.security.dek_store import get_or_create_pii_crypto
+
+    crypto = (
+        await get_or_create_pii_crypto(session, company_id=company_id)
+        if company_id is not None
+        else None
+    )
+    address = None
+    employer_niss = None
+    if crypto is not None:
+        address = _decrypt_blob(crypto.decrypt_address, doc.employee_address_enc)
+        employer_niss = _decrypt_blob(crypto.decrypt_niss, doc.employer_niss_enc)
     return ContractExtract(
         doc_kind=doc.doc_kind,
         signed_on=doc.signed_on,
         term_end_on=doc.term_end_on,
         leftover={"extractor": "sha256"},
+        employer_legal_name=doc.employer_legal_name,
+        employer_address=doc.employer_address,
+        employer_niss=employer_niss,
+        signatory_name=doc.signatory_name,
+        employee_address=address,
+        term_started_on=doc.term_started_on,
+        converted_on=doc.converted_on,
+        declared_on=doc.declared_on,
+        signing_place=doc.signing_place,
     )
 
 
@@ -186,6 +214,14 @@ async def review_employment_document(
             return doc
 
     event_type = apply_contract_extract(doc, extract, employment)
+    if employee.company_id is not None:
+        from app.models import Company
+        from app.security.dek_store import get_or_create_pii_crypto
+
+        company = await session.get(Company, employee.company_id)
+        crypto = await get_or_create_pii_crypto(session, company_id=employee.company_id)
+        if company is not None:
+            await remember_minuta_profile(company, employee, crypto, extract, doc)
     payload = review_event_payload(doc, employee, employment)
     await emit_domain_event(
         session,
@@ -197,3 +233,47 @@ async def review_employment_document(
         payload=payload,
     )
     return doc
+
+
+def _decrypt_blob(fn, blob: bytes | None) -> str | None:
+    if blob is None:
+        return None
+    try:
+        text = fn(blob)
+    except Exception:
+        return None
+    cleaned = str(text).strip() if text else ""
+    return cleaned or None
+
+
+def _same_name(left: str, right: str) -> bool:
+    return " ".join(left.lower().split()) == " ".join(right.lower().split())
+
+
+def remember_minuta_profile(company, employee, crypto, extract: ContractExtract, doc) -> bool:
+    """Fill empty profile fields from a contract extract. True when the legal name differs."""
+    from app.services.contract_inbox import _digits
+
+    if employee is not None and extract.employee_address and employee.address_enc is None:
+        employee.address_enc = crypto.encrypt_address(extract.employee_address)
+    if extract.employee_address and doc is not None:
+        doc.employee_address_enc = crypto.encrypt_address(extract.employee_address)
+    if (
+        employee is not None
+        and extract.full_name
+        and extract.full_name.strip()
+        and employee.name_enc is None
+    ):
+        employee.name_enc = crypto.encrypt_name(extract.full_name)
+    if extract.employer_address and not company.registered_address:
+        company.registered_address = extract.employer_address.strip()
+    if extract.signatory_name and not company.signatory_name:
+        company.signatory_name = extract.signatory_name.strip()
+    if _digits(extract.employer_niss) and company.employer_niss_enc is None:
+        company.employer_niss_enc = crypto.encrypt_niss(extract.employer_niss)
+        if company.employer_niss_hash is None:
+            company.employer_niss_hash = crypto.niss_hash(extract.employer_niss)
+    if _digits(extract.employer_niss) and doc is not None:
+        doc.employer_niss_enc = crypto.encrypt_niss(extract.employer_niss)
+    printed = (extract.employer_legal_name or "").strip()
+    return bool(printed and company.legal_name and not _same_name(printed, company.legal_name))

@@ -99,6 +99,8 @@ class Company(Base):
     )
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     trading_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    registered_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    signatory_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     nif_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     employer_niss_hash: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     employer_niss_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)

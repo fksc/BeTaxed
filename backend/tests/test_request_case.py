@@ -228,6 +228,8 @@ def test_open_case_follows_the_contract_and_company_omits_months(
                 assert by_path["FIXED_TERM"]["stage_code"] == "signature"
                 assert by_path["OPEN_CONTRACT"]["stage_code"] == "ready"
                 assert "remaining_months" not in company_rows[0]
+                assert "person_nif" not in company_rows[0]
+                assert "draft_html" not in company_rows[0]
                 assert "operations" not in company_rows[0]
                 assert "moves" not in company_rows[0]
                 assert any(

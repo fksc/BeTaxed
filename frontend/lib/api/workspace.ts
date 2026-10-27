@@ -83,6 +83,7 @@ export type PersonOut = {
   benefit_block?: BenefitBlockOut | null;
   term_benefit?: TermBenefitOut | null;
   request_case_stage?: string | null;
+  residence?: string | null;
 };
 
 export type PipelineStageOut = {
@@ -123,6 +124,19 @@ export type RequestCaseOut = {
   can_claim?: boolean;
   can_attach_scan?: boolean;
   remaining_months?: number | null;
+  person_name?: string | null;
+  person_address?: string | null;
+  person_nif?: string | null;
+  person_niss?: string | null;
+  company_address?: string | null;
+  company_signatory_name?: string | null;
+  company_nif?: string | null;
+  company_niss?: string | null;
+  contract_started_on?: string | null;
+  converted_on?: string | null;
+  declared_on?: string | null;
+  signed_place?: string | null;
+  draft_html?: string | null;
 };
 
 export type MinutaTemplateOut = {
@@ -131,6 +145,11 @@ export type MinutaTemplateOut = {
   title: string;
   body_html: string;
   is_active: boolean;
+};
+
+export type MinutaTokenOut = {
+  key: string;
+  group: string;
 };
 
 export type RejectionReasonOut = {
@@ -330,6 +349,8 @@ export type OpsCompanyDetailOut = OpsCompanyListOut & {
   members: MemberOut[];
   invites: InviteOut[];
   invite_url?: string | null;
+  registered_address?: string | null;
+  signatory_name?: string | null;
 };
 
 export type PublicInviteOut = {

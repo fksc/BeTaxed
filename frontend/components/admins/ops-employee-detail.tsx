@@ -12,7 +12,9 @@ import {
   listPeople,
   listRequestCases,
   openPersonContract,
+  patchPersonResidence,
 } from "@/lib/api/workspace-client";
+import { Input } from "@/components/ui/input";
 import type { PersonOut, RequestCaseOut } from "@/lib/api/workspace";
 import { paths } from "@/lib/app-paths";
 import { currentIdToken } from "@/lib/firebase";
@@ -34,6 +36,7 @@ export function OpsEmployeeDetailPage({
   const [cases, setCases] = useState<RequestCaseOut[]>([]);
   const [missing, setMissing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [residence, setResidence] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +58,7 @@ export function OpsEmployeeDetailPage({
         const match = people.find((row) => row.id === employeeId) ?? null;
         setCompanyName(company.legal_name);
         setPerson(match);
+        setResidence(match?.residence ?? "");
         setCases(requests.filter((row) => row.employee_id === employeeId));
         setMissing(match == null);
         setError(null);
@@ -113,6 +117,29 @@ export function OpsEmployeeDetailPage({
                   }
                 />
                 <Fact label={t("status")} value={tw(`people.status.${person.status}`)} />
+                <label className="space-y-1 sm:col-span-2">
+                  <span className="text-xs text-muted-foreground">{t("residence")}</span>
+                  <div className="flex gap-2">
+                    <Input value={residence} onChange={(event) => setResidence(event.target.value)} />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        void (async () => {
+                          const idToken = await currentIdToken();
+                          if (!idToken) {
+                            return;
+                          }
+                          const saved = await patchPersonResidence(person.id, residence, { idToken });
+                          setResidence(saved.residence ?? "");
+                        })();
+                      }}
+                    >
+                      {t("saveResidence")}
+                    </Button>
+                  </div>
+                </label>
                 <Fact
                   label={t("file")}
                   value={

@@ -4,9 +4,10 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { GripVertical, Undo2 } from "lucide-react";
 
+import { MinutaEditor } from "@/components/admins/minuta-editor";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
 import {
@@ -18,10 +19,14 @@ import {
 } from "@/components/ui/select";
 import {
   listMinutaTemplates,
+  listMinutaTokens,
   listPipeline,
   listRejectionReasons,
   listRequestCases,
+  refreshCaseFacts,
   runRequestOperation,
+  saveCaseFacts,
+  saveMinutaDraft,
   uploadRequestFile,
 } from "@/lib/api/workspace-client";
 import type {
@@ -334,6 +339,7 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                             reasons={reasons}
                             busy={busyId === row.id}
                             onAct={act}
+                            onChanged={() => reload()}
                           />
                         </td>
                       </tr>
@@ -448,6 +454,7 @@ export function RequestPipeline({ fixedCompanyId }: { fixedCompanyId?: string })
                             reasons={reasons}
                             busy={busyId === row.id}
                             onAct={act}
+                            onChanged={() => reload()}
                           />
                         </div>
                       </div>
@@ -468,12 +475,14 @@ function CaseActions({
   reasons,
   busy,
   onAct,
+  onChanged,
 }: {
   row: RequestCaseOut;
   templates: MinutaTemplateOut[];
   reasons: RejectionReasonOut[];
   busy: boolean;
   onAct: (row: RequestCaseOut, code: string, payload: Record<string, unknown>) => Promise<void>;
+  onChanged: () => Promise<void>;
 }) {
   const t = useTranslations("admins.cases");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
@@ -512,6 +521,9 @@ function CaseActions({
             {t("noProbation")}
           </Button>
         </div>
+      ) : null}
+      {ops.includes("GENERATE_MINUTA") || row.draft_html ? (
+        <MinutaFacts row={row} busy={busy} onChanged={onChanged} />
       ) : null}
       {ops.includes("GENERATE_MINUTA") ? (
         <div className="space-y-1">
@@ -708,6 +720,131 @@ function DecisionForm({
       >
         {t("claim")}
       </Button>
+    </div>
+  );
+}
+
+function MinutaFacts({
+  row,
+  busy,
+  onChanged,
+}: {
+  row: RequestCaseOut;
+  busy: boolean;
+  onChanged: () => Promise<void>;
+}) {
+  const t = useTranslations("admins.cases");
+  const [personAddress, setPersonAddress] = useState(row.person_address ?? "");
+  const [personNif, setPersonNif] = useState(row.person_nif ?? "");
+  const [personNiss, setPersonNiss] = useState(row.person_niss ?? "");
+  const [companyAddress, setCompanyAddress] = useState(row.company_address ?? "");
+  const [signatory, setSignatory] = useState(row.company_signatory_name ?? "");
+  const [companyNif, setCompanyNif] = useState(row.company_nif ?? "");
+  const [companyNiss, setCompanyNiss] = useState(row.company_niss ?? "");
+  const [started, setStarted] = useState(row.contract_started_on ?? "");
+  const [converted, setConverted] = useState(row.converted_on ?? "");
+  const [declared, setDeclared] = useState(row.declared_on ?? "");
+  const [place, setPlace] = useState(row.signed_place ?? "");
+  const [draft, setDraft] = useState(row.draft_html ?? "");
+  const [tokens, setTokens] = useState<{ key: string }[]>([]);
+
+  useEffect(() => {
+    void (async () => {
+      const idToken = await currentIdToken();
+      if (!idToken) {
+        return;
+      }
+      const catalogue = await listMinutaTokens({ idToken });
+      setTokens(catalogue);
+    })();
+  }, []);
+
+  async function saveFacts() {
+    const idToken = await currentIdToken();
+    if (!idToken) {
+      return;
+    }
+    await saveCaseFacts(
+      row.id,
+      {
+        person_address: personAddress,
+        person_nif: personNif,
+        person_niss: personNiss,
+        company_address: companyAddress,
+        company_signatory_name: signatory,
+        company_nif: companyNif,
+        company_niss: companyNiss,
+        contract_started_on: started,
+        converted_on: converted,
+        declared_on: declared,
+        signed_place: place,
+      },
+      { idToken },
+    );
+    await onChanged();
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border/70 p-2">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Input aria-label={t("personAddress")} value={personAddress} placeholder={t("personAddress")} onChange={(event) => setPersonAddress(event.target.value)} />
+        <Input aria-label={t("personNif")} value={personNif} placeholder={t("personNif")} onChange={(event) => setPersonNif(event.target.value)} />
+        <Input aria-label={t("personNiss")} value={personNiss} placeholder={t("personNiss")} onChange={(event) => setPersonNiss(event.target.value)} />
+        <Input aria-label={t("companyAddress")} value={companyAddress} placeholder={t("companyAddress")} onChange={(event) => setCompanyAddress(event.target.value)} />
+        <Input aria-label={t("signatory")} value={signatory} placeholder={t("signatory")} onChange={(event) => setSignatory(event.target.value)} />
+        <Input aria-label={t("companyNif")} value={companyNif} placeholder={t("companyNif")} onChange={(event) => setCompanyNif(event.target.value)} />
+        <Input aria-label={t("companyNiss")} value={companyNiss} placeholder={t("companyNiss")} onChange={(event) => setCompanyNiss(event.target.value)} />
+        <Input aria-label={t("signedPlace")} value={place} placeholder={t("signedPlace")} onChange={(event) => setPlace(event.target.value)} />
+        <DatePicker value={started} aria-label={t("contractStart")} onChange={setStarted} />
+        <DatePicker value={converted} aria-label={t("convertedOn")} onChange={setConverted} />
+        <DatePicker value={declared} aria-label={t("declaredOn")} onChange={setDeclared} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void saveFacts()}>
+          {t("saveFacts")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => {
+            void (async () => {
+              const idToken = await currentIdToken();
+              if (!idToken) {
+                return;
+              }
+              await refreshCaseFacts(row.id, { idToken });
+              await onChanged();
+            })();
+          }}
+        >
+          {t("refreshFacts")}
+        </Button>
+      </div>
+      {row.draft_html ? (
+        <div className="space-y-2">
+          <MinutaEditor key={row.id} value={draft || row.draft_html || ""} tokens={tokens} onChange={setDraft} />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                const idToken = await currentIdToken();
+                if (!idToken) {
+                  return;
+                }
+                await saveMinutaDraft(row.id, draft, { idToken });
+                await onChanged();
+              })();
+            }}
+          >
+            {t("saveDraft")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

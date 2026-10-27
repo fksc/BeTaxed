@@ -61,6 +61,16 @@ class PersonOut(BaseModel):
     benefit_block: BenefitBlockOut | None = None
     term_benefit: TermBenefitOut | None = None
     request_case_stage: str | None = None
+    residence: str | None = None
+
+
+class PersonResidenceIn(BaseModel):
+    residence: str | None = None
+
+
+class PersonResidenceOut(BaseModel):
+    id: uuid.UUID
+    residence: str | None = None
 
 
 class StatusOverrideIn(BaseModel):

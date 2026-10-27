@@ -17,6 +17,7 @@ export const paths = {
   adminsDashboard: "/admins/dashboard",
   adminsFlags: "/admins/flags",
   adminsCases: "/admins/cases",
+  adminsTemplates: "/admins/templates",
   adminsInvoices: "/admins/invoices",
   adminsCompanies: "/admins/companies",
   adminsCompanyNew: "/admins/companies/new",

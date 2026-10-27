@@ -5,6 +5,8 @@ from __future__ import annotations
 import uuid
 from urllib.parse import quote
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
 from sqlalchemy import select
@@ -14,9 +16,15 @@ from app.db import get_db
 from app.deps.context import CompanyContext, get_company_context
 from app.models import MinutaTemplate, RejectionReason, UserBase
 from app.routers.ops import require_staff
+from sqlalchemy.exc import IntegrityError
+
 from app.schemas.request_case import (
+    CaseFactsIn,
+    MinutaDraftIn,
     MinutaTemplateIn,
     MinutaTemplateOut,
+    MinutaTemplatePatch,
+    MinutaTokenOut,
     OpenRequestCaseIn,
     OperationIn,
     PipelineStageOut,
@@ -25,13 +33,17 @@ from app.schemas.request_case import (
     RequestFileOut,
 )
 from app.services.contracts import require_hr_or_admin
+from app.services.minuta_facts import catalogue
 from app.services.request_pipeline import (
     company_attach_signed_scan,
     list_pipeline,
     list_request_cases,
     open_request_case,
     read_request_file,
+    refresh_case_facts,
     run_operation,
+    save_case_facts,
+    save_minuta_draft,
     sent_minuta_html,
     store_request_file,
 )
@@ -111,18 +123,21 @@ async def get_rejection_reasons(
     return list(rows.all())
 
 
+@router.get("/v1/ops/minuta-tokens", response_model=list[MinutaTokenOut])
+async def get_minuta_tokens(_: UserBase = Depends(require_staff)) -> list[dict[str, str]]:
+    return catalogue()
+
+
 @router.get("/v1/ops/minuta-templates", response_model=list[MinutaTemplateOut])
 async def get_minuta_templates(
+    include_inactive: bool = Query(default=False),
     _: UserBase = Depends(require_staff),
     db: AsyncSession = Depends(get_db),
 ) -> list[MinutaTemplate]:
-    rows = (
-        await db.execute(
-            select(MinutaTemplate)
-            .where(MinutaTemplate.is_active.is_(True))
-            .order_by(MinutaTemplate.title)
-        )
-    ).scalars()
+    query = select(MinutaTemplate).order_by(MinutaTemplate.title)
+    if not include_inactive:
+        query = query.where(MinutaTemplate.is_active.is_(True))
+    rows = (await db.execute(query)).scalars()
     return list(rows.all())
 
 
@@ -138,9 +153,98 @@ async def post_minuta_template(
 ) -> MinutaTemplate:
     row = MinutaTemplate(code=body.code.strip(), title=body.title.strip(), body_html=body.body_html)
     db.add(row)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="A template with that code already exists.")
+    await db.refresh(row)
+    return row
+
+
+@router.patch("/v1/ops/minuta-templates/{template_id}", response_model=MinutaTemplateOut)
+async def patch_minuta_template(
+    template_id: uuid.UUID,
+    body: MinutaTemplatePatch,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> MinutaTemplate:
+    row = await db.get(MinutaTemplate, template_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Minuta not found.")
+    if body.title is not None:
+        title = body.title.strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="Title is required.")
+        row.title = title
+    if body.body_html is not None:
+        row.body_html = body.body_html
+    if body.is_active is not None:
+        row.is_active = body.is_active
+    row.updated_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(row)
     return row
+
+
+async def _staff_case(db: AsyncSession, case_id: uuid.UUID) -> dict:
+    from app.models import RequestCase
+
+    case = await db.get(RequestCase, case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    rows = await list_request_cases(db, company_id=case.company_id, staff=True)
+    match = next((row for row in rows if row["id"] == case.id), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    return match
+
+
+@router.patch(
+    "/v1/ops/request-cases/{case_id}/facts",
+    response_model=RequestCaseOut,
+    response_model_exclude_none=True,
+)
+async def patch_case_facts(
+    case_id: uuid.UUID,
+    body: CaseFactsIn,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await save_case_facts(db, case_id, body.model_dump(exclude_unset=True))
+    await db.commit()
+    return await _staff_case(db, case_id)
+
+
+@router.post(
+    "/v1/ops/request-cases/{case_id}/refresh-facts",
+    response_model=RequestCaseOut,
+    response_model_exclude_none=True,
+)
+async def post_refresh_facts(
+    case_id: uuid.UUID,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await refresh_case_facts(db, case_id)
+    await db.commit()
+    return await _staff_case(db, case_id)
+
+
+@router.put(
+    "/v1/ops/request-cases/{case_id}/minuta-draft",
+    response_model=RequestCaseOut,
+    response_model_exclude_none=True,
+)
+async def put_minuta_draft(
+    case_id: uuid.UUID,
+    body: MinutaDraftIn,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    await save_minuta_draft(db, case_id, body.body_html)
+    await db.commit()
+    return await _staff_case(db, case_id)
 
 
 @router.post(

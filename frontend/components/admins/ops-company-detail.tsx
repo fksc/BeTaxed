@@ -134,6 +134,8 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [headcounts, setHeadcounts] = useState<HeadcountMonthOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [maxMembers, setMaxMembers] = useState("3");
+  const [address, setAddress] = useState("");
+  const [signatory, setSignatory] = useState("");
   const [busy, setBusy] = useState(false);
   const [idToken, setIdToken] = useState<string | null>(null);
   const nowYm = currentYearMonth();
@@ -191,6 +193,8 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     setHeadcounts(nextHeadcounts);
     setEstablishments(sites);
     setMaxMembers(String(detail.max_members));
+    setAddress(detail.registered_address ?? "");
+    setSignatory(detail.signatory_name ?? "");
     setError(null);
   }
 
@@ -221,6 +225,27 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   function goTab(next: HubTab) {
     const href = next === "overview" ? pathname : `${pathname}?tab=${next}`;
     router.replace(href);
+  }
+
+  async function onSaveProfile() {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const detail = await patchOpsCompany(
+        companyId,
+        { registered_address: address, signatory_name: signatory },
+        { idToken: token },
+      );
+      setRow(detail);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("saveFailed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSaveCap() {
@@ -406,6 +431,23 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
                 icon={<CalendarDays size={14} />}
               />
             </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("profileTitle")}</CardTitle>
+                <CardDescription>{t("profileHint")}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-end gap-3">
+                <Field label={t("registeredAddress")} className="min-w-64 flex-1">
+                  <Input value={address} onChange={(event) => setAddress(event.target.value)} />
+                </Field>
+                <Field label={t("signatory")} className="min-w-48">
+                  <Input value={signatory} onChange={(event) => setSignatory(event.target.value)} />
+                </Field>
+                <Button type="button" size="sm" disabled={busy} onClick={() => void onSaveProfile()}>
+                  {t("saveProfile")}
+                </Button>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle>{t("capTitle")}</CardTitle>

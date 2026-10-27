@@ -19,7 +19,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -130,6 +130,9 @@ class MinutaTemplate(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class RequestCase(Base):
@@ -177,6 +180,19 @@ class RequestCase(Base):
     path: Mapped[str] = mapped_column(String(16), nullable=False)
     probation_ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     benefit_starts_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    person_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    person_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    person_nif_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    person_niss_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    company_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    company_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    company_signatory_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    company_nif_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    company_niss_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    contract_started_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    converted_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    declared_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    signed_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
     applied_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     applied_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=True

@@ -252,6 +252,19 @@ CREATE TABLE request_case (
         CHECK (path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
     probation_ends_on DATE,
     benefit_starts_on DATE,
+    person_name VARCHAR(255),               -- snapshot for this filing
+    person_address TEXT,
+    person_nif_enc BYTEA,
+    person_niss_enc BYTEA,
+    company_name VARCHAR(255),
+    company_address TEXT,
+    company_signatory_name VARCHAR(255),
+    company_nif_enc BYTEA,
+    company_niss_enc BYTEA,
+    contract_started_on DATE,
+    converted_on DATE,
+    declared_on DATE,
+    signed_place VARCHAR(255),
     applied_on DATE,
     applied_by UUID REFERENCES user_base(id),
     decision_on DATE,
@@ -310,6 +323,26 @@ A decision of won moves to the assignment’s `next_won_stage_id`. Lost moves to
 
 Remaining months are derived for staff when the stage type is close won, from `benefit_starts_on` when set, otherwise the employment start. Company payloads omit that number.
 
-`{{ key }}` in a minuta body is filled from the person and the company. Staff can edit `body_html` before send. Tokens: `person_name`, `company_name`, `contract_started_on`, `benefit_starts_on`.
+Opening a case copies the company profile, the employee profile, and the latest reviewed contract onto the case. Staff edit that snapshot. Generate reads the snapshot. A later profile edit does not rewrite it. Refresh copies only fields that are still empty. If `declared_on` is empty at generate, it becomes today.
+
+`{{ key }}` is an allowlisted token. Unknown keys render blank. NIF and NISS on the case stay encrypted and are decrypted only while rendering a minuta for staff or for that company's download.
+
+| Token | Snapshot column | Copied from |
+|---|---|---|
+| `company_name` | `company_name` | `company.legal_name` |
+| `company_address` | `company_address` | `company.registered_address` |
+| `company_nif` | `company_nif_enc` | `company.nif_enc` |
+| `company_niss` | `company_niss_enc` | `company.employer_niss_enc` |
+| `company_signatory_name` | `company_signatory_name` | `company.signatory_name` |
+| `person_name` | `person_name` | employee `name_enc` |
+| `person_address` | `person_address` | employee `address_enc` |
+| `person_nif` | `person_nif_enc` | employee `nif_enc` |
+| `person_niss` | `person_niss_enc` | employee `niss_enc` |
+| `contract_started_on` | `contract_started_on` | document `term_started_on`, else a `TERMO` `signed_on`, else `employment.started_on` |
+| `converted_on` | `converted_on` | document `converted_on`, else a conversion/`SEM_TERMO` `signed_on`, else `benefit_starts_on` |
+| `declared_on` | `declared_on` | document `declared_on`, else today at generate |
+| `signed_place` | `signed_place` | document `signing_place` |
+
+Each date also has `*_pt` (`10 de maio de 2021`) and `*_en` (`May 10, 2021`). The bare key stays ISO. Staff author templates in TipTap at `/admins/templates`. `GET /v1/ops/minuta-tokens` is the insert list. No minuta type names are seeded.
 
 Signed scans may be uploaded in bulk with `request_case_id` empty until staff attach one to a case that is on a stage with the attach operation.
