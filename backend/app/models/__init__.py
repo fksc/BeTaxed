@@ -35,6 +35,7 @@ from app.models.request_case import (
     PipelineStageOperation,
     RejectionReason,
     RequestCase,
+    RequestCaseEvent,
     RequestCaseFile,
     RequestCaseMinuta,
 )
@@ -77,6 +78,7 @@ __all__ = [
     "PipelineStageOperation",
     "RejectionReason",
     "RequestCase",
+    "RequestCaseEvent",
     "RequestCaseFile",
     "RequestCaseMinuta",
     "Payment",

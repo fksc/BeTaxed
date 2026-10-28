@@ -655,7 +655,9 @@
       "filed": "Filed",
       "benefitStart": "Benefit start",
       "showContract": "Show contract",
-      "possible": "Possible benefit"
+      "possible": "Possible benefit",
+      "log": "Log",
+      "logEmpty": "No moves yet."
     },
     "companyDetail": {
       "crumb": "Company",
@@ -851,5 +853,10 @@
     "failed": "Could not accept this invite.",
     "missing": "This invite was not found.",
     "askResend": "This invite is no longer valid. Ask an admin to send it again."
+  },
+  "caseHistory": {
+    "opened": "Opened in {stage}",
+    "moved": "Moved from {from} to {to}",
+    "document": "Document"
   }
 }

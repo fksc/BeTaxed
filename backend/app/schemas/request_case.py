@@ -24,6 +24,20 @@ class RequestMoveOut(BaseModel):
     outcome: str | None = None
 
 
+class RequestCaseEventOut(BaseModel):
+    id: uuid.UUID
+    at: datetime
+    actor_id: uuid.UUID | None = None
+    from_stage_id: uuid.UUID | None = None
+    to_stage_id: uuid.UUID
+    from_stage_name: str | None = None
+    to_stage_name: str
+    from_stage_code: str | None = None
+    to_stage_code: str
+    operation: str | None = None
+    payload: dict = Field(default_factory=dict)
+
+
 class RequestCaseOut(BaseModel):
     id: uuid.UUID
     company_id: uuid.UUID
@@ -61,6 +75,7 @@ class RequestCaseOut(BaseModel):
     declared_on: date | None = None
     signed_place: str | None = None
     draft_html: str | None = None
+    events: list[RequestCaseEventOut] = Field(default_factory=list)
 
 
 class OpenRequestCaseIn(BaseModel):

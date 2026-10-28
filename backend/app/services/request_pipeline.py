@@ -20,6 +20,7 @@ from app.models import (
     PipelineStageOperation,
     RejectionReason,
     RequestCase,
+    RequestCaseEvent,
     RequestCaseFile,
     RequestCaseMinuta,
     SsBatch,
@@ -270,7 +271,7 @@ async def list_request_cases(
         if staff:
             item["operations"] = codes
             moves = _moves_for_stage(links, ops, stage.id)
-            previous = _previous_stage_id(case, stage, stages_by_code)
+            previous = await _previous_stage_id(session, case, stage, stages_by_code)
             if previous is not None:
                 moves.append(
                     {"operation": "REVERT", "stage_id": previous, "outcome": None}
@@ -292,6 +293,7 @@ async def list_request_cases(
                 start, as_of_by_company[case.company_id]
             )
         out.append(item)
+    await _attach_events(session, out)
     return out
 
 
@@ -353,6 +355,15 @@ async def open_request_case(
     session.add(case)
     await copy_case_facts(session, case, only_empty=False)
     await session.flush()
+    await _append_event(
+        session,
+        case,
+        from_stage_id=None,
+        to_stage_id=stage.id,
+        actor_id=actor.id,
+        operation=None,
+        payload={},
+    )
     return case
 
 
@@ -368,7 +379,7 @@ async def run_operation(
     if case is None or (case.closed_at is not None and code != "REVERT"):
         raise HTTPException(status_code=404, detail="Case not found.")
     if code == "REVERT":
-        await _revert(session, case)
+        await _revert(session, case, actor)
         await session.flush()
         return case
     assignment = await _assignment(session, case.stage_id, code)
@@ -381,7 +392,7 @@ async def run_operation(
                 raise HTTPException(status_code=400, detail="Probation end is required.")
             case.probation_ends_on = date.fromisoformat(raw)
             case.benefit_starts_on = case.probation_ends_on
-        _advance(case, assignment.next_stage_id)
+        await _advance(session, case, assignment.next_stage_id, actor_id=actor.id, operation=code, payload=payload)
     elif code == "GENERATE_MINUTA":
         template_id = payload.get("template_id")
         if not template_id:
@@ -406,7 +417,7 @@ async def run_operation(
         if payload.get("body_html"):
             minuta.body_html = payload["body_html"]
         minuta.sent_at = datetime.now(UTC)
-        _advance(case, assignment.next_stage_id)
+        await _advance(session, case, assignment.next_stage_id, actor_id=actor.id, operation=code, payload=payload)
     elif code == "ATTACH_SIGNED_SCAN":
         file_row = await session.get(RequestCaseFile, uuid.UUID(payload["file_id"]))
         if (
@@ -416,12 +427,12 @@ async def run_operation(
         ):
             raise HTTPException(status_code=404, detail="Signed scan not found.")
         file_row.request_case_id = case.id
-        _advance(case, assignment.next_stage_id)
+        await _advance(session, case, assignment.next_stage_id, actor_id=actor.id, operation=code, payload=payload)
     elif code == "RECORD_FILING":
         raw = payload.get("applied_on") or date.today().isoformat()
         case.applied_on = date.fromisoformat(raw)
         case.applied_by = actor.id
-        _advance(case, assignment.next_stage_id)
+        await _advance(session, case, assignment.next_stage_id, actor_id=actor.id, operation=code, payload=payload)
     elif code == "RECORD_DECISION":
         outcome = payload.get("outcome")
         reason = None
@@ -446,7 +457,14 @@ async def run_operation(
             outcome,
             blocks_claim=bool(reason and reason.blocks_claim),
         )
-        await _move(session, case, destination)
+        await _move(
+            session,
+            case,
+            destination,
+            actor_id=actor.id,
+            operation=code,
+            payload=payload,
+        )
     else:
         raise HTTPException(status_code=400, detail="Unknown operation.")
     await session.flush()
@@ -525,12 +543,108 @@ async def company_attach_signed_scan(
         request_case_id=case.id,
     )
     stored.request_case_id = case.id
-    _advance(case, assignment.next_stage_id)
+    await _advance(
+        session,
+        case,
+        assignment.next_stage_id,
+        actor_id=actor.id,
+        operation="ATTACH_SIGNED_SCAN",
+        payload={"file_id": str(stored.id)},
+    )
     await session.flush()
     return case
 
 
-def _push_stage(case: RequestCase, stage_id: uuid.UUID, *, closing: bool) -> None:
+def _event_payload(payload: dict | None) -> dict:
+    if not payload:
+        return {}
+    return {
+        key: value
+        for key, value in payload.items()
+        if key != "body_html" and value is not None
+    }
+
+
+async def _append_event(
+    session: AsyncSession,
+    case: RequestCase,
+    *,
+    from_stage_id: uuid.UUID | None,
+    to_stage_id: uuid.UUID,
+    actor_id: uuid.UUID | None,
+    operation: str | None,
+    payload: dict | None,
+) -> None:
+    session.add(
+        RequestCaseEvent(
+            request_case_id=case.id,
+            at=datetime.now(UTC),
+            actor_id=actor_id,
+            from_stage_id=from_stage_id,
+            to_stage_id=to_stage_id,
+            operation=operation,
+            payload=_event_payload(payload),
+        )
+    )
+
+
+async def _attach_events(session: AsyncSession, items: list[dict]) -> None:
+    if not items:
+        return
+    case_ids = [item["id"] for item in items]
+    events = (
+        (
+            await session.execute(
+                select(RequestCaseEvent)
+                .where(RequestCaseEvent.request_case_id.in_(case_ids))
+                .order_by(RequestCaseEvent.at.asc(), RequestCaseEvent.id.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    stage_ids = {event.to_stage_id for event in events}
+    stage_ids.update(event.from_stage_id for event in events if event.from_stage_id)
+    stages = {
+        stage.id: stage
+        for stage in (
+            await session.execute(select(PipelineStage).where(PipelineStage.id.in_(stage_ids)))
+        ).scalars()
+    } if stage_ids else {}
+    grouped: dict[uuid.UUID, list[dict]] = {item["id"]: [] for item in items}
+    for event in events:
+        origin = stages.get(event.from_stage_id) if event.from_stage_id else None
+        destination = stages.get(event.to_stage_id)
+        grouped.setdefault(event.request_case_id, []).append(
+            {
+                "id": event.id,
+                "at": event.at,
+                "actor_id": event.actor_id,
+                "from_stage_id": event.from_stage_id,
+                "to_stage_id": event.to_stage_id,
+                "from_stage_name": None if origin is None else origin.name,
+                "to_stage_name": "" if destination is None else destination.name,
+                "from_stage_code": None if origin is None else origin.code,
+                "to_stage_code": "" if destination is None else destination.code,
+                "operation": event.operation,
+                "payload": event.payload or {},
+            }
+        )
+    for item in items:
+        item["events"] = grouped.get(item["id"], [])
+
+
+async def _record_stage(
+    session: AsyncSession,
+    case: RequestCase,
+    stage_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID | None,
+    operation: str | None,
+    payload: dict | None,
+    closing: bool,
+) -> None:
+    origin = case.stage_id
     stack = list(case.stage_stack or [])
     if not stack or stack[-1] != stage_id:
         stack.append(stage_id)
@@ -538,6 +652,16 @@ def _push_stage(case: RequestCase, stage_id: uuid.UUID, *, closing: bool) -> Non
     _enter_stage(case, stage_id)
     if closing:
         case.closed_at = datetime.now(UTC)
+    if origin != stage_id:
+        await _append_event(
+            session,
+            case,
+            from_stage_id=origin,
+            to_stage_id=stage_id,
+            actor_id=actor_id,
+            operation=operation,
+            payload=payload,
+        )
 
 
 def _enter_stage(case: RequestCase, stage_id: uuid.UUID) -> None:
@@ -546,27 +670,71 @@ def _enter_stage(case: RequestCase, stage_id: uuid.UUID) -> None:
     case.stage_id = stage_id
 
 
-def _advance(case: RequestCase, stage_id: uuid.UUID | None) -> None:
+async def _advance(
+    session: AsyncSession,
+    case: RequestCase,
+    stage_id: uuid.UUID | None,
+    *,
+    actor_id: uuid.UUID | None,
+    operation: str | None,
+    payload: dict | None,
+) -> None:
     if stage_id is None:
         raise HTTPException(status_code=400, detail="This operation does not advance.")
-    _push_stage(case, stage_id, closing=False)
+    await _record_stage(
+        session,
+        case,
+        stage_id,
+        actor_id=actor_id,
+        operation=operation,
+        payload=payload,
+        closing=False,
+    )
 
 
-async def _move(session: AsyncSession, case: RequestCase, stage_id: uuid.UUID) -> None:
+async def _move(
+    session: AsyncSession,
+    case: RequestCase,
+    stage_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID | None,
+    operation: str | None,
+    payload: dict | None,
+) -> None:
     stage = await session.get(PipelineStage, stage_id)
     if stage is None:
         raise HTTPException(status_code=400, detail="Destination stage is missing.")
-    _push_stage(case, stage.id, closing=stage.stage_type in _CLOSE)
+    await _record_stage(
+        session,
+        case,
+        stage.id,
+        actor_id=actor_id,
+        operation=operation,
+        payload=payload,
+        closing=stage.stage_type in _CLOSE,
+    )
 
 
-def _previous_stage_id(
+async def _previous_stage_id(
+    session: AsyncSession,
     case: RequestCase,
     stage: PipelineStage,
     stages_by_code: dict[str, PipelineStage],
 ) -> uuid.UUID | None:
-    stack = list(case.stage_stack or [])
-    if len(stack) >= 2 and stack[-1] == case.stage_id:
-        return stack[-2]
+    last = (
+        await session.execute(
+            select(RequestCaseEvent)
+            .where(RequestCaseEvent.request_case_id == case.id)
+            .order_by(RequestCaseEvent.at.desc(), RequestCaseEvent.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if (
+        last is not None
+        and last.to_stage_id == case.stage_id
+        and last.from_stage_id is not None
+    ):
+        return last.from_stage_id
     code = earlier_stage_code(case.path, stage.code)
     if code is None:
         return None
@@ -574,7 +742,7 @@ def _previous_stage_id(
     return None if earlier is None else earlier.id
 
 
-async def _revert(session: AsyncSession, case: RequestCase) -> None:
+async def _revert(session: AsyncSession, case: RequestCase, actor: UserBase) -> None:
     current = await session.get(PipelineStage, case.stage_id)
     if current is None:
         raise HTTPException(status_code=400, detail="This case has no stage.")
@@ -582,7 +750,7 @@ async def _revert(session: AsyncSession, case: RequestCase) -> None:
         row.code: row
         for row in (await session.execute(select(PipelineStage))).scalars().all()
     }
-    target_id = _previous_stage_id(case, current, stages)
+    target_id = await _previous_stage_id(session, case, current, stages)
     if target_id is None:
         raise HTTPException(status_code=400, detail="This case is already at the start.")
     target = await session.get(PipelineStage, target_id)
@@ -594,9 +762,19 @@ async def _revert(session: AsyncSession, case: RequestCase) -> None:
     else:
         stack = [target.id]
     case.stage_stack = stack
+    origin = case.stage_id
     _enter_stage(case, target.id)
     if target.stage_type not in _CLOSE:
         case.closed_at = None
+    await _append_event(
+        session,
+        case,
+        from_stage_id=origin,
+        to_stage_id=target.id,
+        actor_id=actor.id,
+        operation="REVERT",
+        payload={},
+    )
 
 
 async def _assignment(

@@ -7,6 +7,7 @@ import { GripVertical, Undo2 } from "lucide-react";
 import { MinutaWizard } from "@/components/admins/minuta-wizard";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { CaseHistory } from "@/components/case-history";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
@@ -576,6 +577,7 @@ function CaseActions({
 
   return (
     <div className="space-y-2">
+      <CaseHistory events={row.events ?? []} />
       {ops.includes("RECORD_PROBATION") ? (
         <div className="space-y-1">
           <DatePicker

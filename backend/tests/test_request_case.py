@@ -251,6 +251,13 @@ def test_open_case_follows_the_contract_and_company_omits_months(
                     move["operation"] == "ATTACH_SIGNED_SCAN"
                     for move in by_path["FIXED_TERM"]["moves"]
                 )
+                assert [event["to_stage_code"] for event in by_path["FIXED_TERM"]["events"]] == [
+                    "minuta",
+                    "signature",
+                ]
+                assert by_path["FIXED_TERM"]["events"][0]["from_stage_id"] is None
+                assert by_path["FIXED_TERM"]["events"][1]["operation"] == "SEND_MINUTA"
+                assert company_rows[0]["events"]
                 reverted = await run_operation(
                     session,
                     case_id=open_case.id,
@@ -261,6 +268,11 @@ def test_open_case_follows_the_contract_and_company_omits_months(
                 await session.flush()
                 back = await session.get(PipelineStage, reverted.stage_id)
                 assert back is not None and back.code == "probation"
+                trailed = await list_request_cases(session, company_id=company_id, staff=True)
+                open_events = next(row["events"] for row in trailed if row["id"] == open_case.id)
+                assert open_events[-1]["operation"] == "REVERT"
+                assert open_events[-1]["to_stage_code"] == "probation"
+                assert open_events[-1]["from_stage_code"] == "ready"
                 await run_operation(
                     session,
                     case_id=open_case.id,

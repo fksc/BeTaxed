@@ -19,7 +19,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, BYTEA, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -264,4 +264,38 @@ class RequestCaseFile(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class RequestCaseEvent(Base):
+    """Append-only stage log. The current stage stays on the case."""
+
+    __tablename__ = "request_case_event"
+    __table_args__ = (
+        Index("idx_request_case_event_case", "request_case_id", "at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()")
+    )
+    request_case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("request_case.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    actor_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=True
+    )
+    from_stage_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pipeline_stage.id"), nullable=True
+    )
+    to_stage_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pipeline_stage.id"), nullable=False
+    )
+    operation: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    payload: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
     )

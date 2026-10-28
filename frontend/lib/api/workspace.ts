@@ -139,6 +139,21 @@ export type RequestCaseOut = {
   declared_on?: string | null;
   signed_place?: string | null;
   draft_html?: string | null;
+  events?: RequestCaseEvent[];
+};
+
+export type RequestCaseEvent = {
+  id: string;
+  at: string;
+  actor_id?: string | null;
+  from_stage_id?: string | null;
+  to_stage_id: string;
+  from_stage_name?: string | null;
+  to_stage_name: string;
+  from_stage_code?: string | null;
+  to_stage_code: string;
+  operation?: string | null;
+  payload?: Record<string, unknown>;
 };
 
 export type MinutaTemplateOut = {

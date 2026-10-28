@@ -280,6 +280,17 @@ CREATE UNIQUE INDEX uq_request_case_open_employment
     ON request_case (employment_id)
     WHERE closed_at IS NULL;
 
+CREATE TABLE request_case_event (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_case_id UUID NOT NULL REFERENCES request_case(id) ON DELETE CASCADE,
+    at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actor_id UUID REFERENCES user_base(id),
+    from_stage_id UUID REFERENCES pipeline_stage(id),
+    to_stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    operation VARCHAR(64),
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
 CREATE TABLE request_case_minuta (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_case_id UUID NOT NULL REFERENCES request_case(id),
@@ -322,7 +333,9 @@ A decision of won moves to the assignment’s `next_won_stage_id`. Lost moves to
 
 `stage_entered_at` is when the case entered its current stage. It resets on every move, including a step back. Rows that existed before the column were filled from `opened_at`.
 
-`stage_stack` is the stages this case has actually entered, latest last. Staff can move the card back one visit. Dates, the minuta, and uploaded files stay. Leaving a close stage clears `closed_at`. A case that only has its current stage on the stack steps back along its path: fixed term is minuta, signature, ready, awaiting decision; an open contract is probation, ready, awaiting decision. Claim, and a close with no earlier visit recorded, step back to awaiting decision.
+`request_case_event` is the history. Each row is one move: when, who, the stage left, the stage entered, the operation code, and the payload that operation submitted (a date, a reason id, a file id). Opening a case is the first row, with no stage left behind. The table does not name favorable, claim, or won. The stage on the row is the record. One step back reads the previous row's `from_stage_id`. A case that only has its opening row steps back along its path, the same fallback as before. Existing cases were backfilled with one opening row for the stage they were already in.
+
+`stage_stack` is still the stages this case has visited, latest last. The event log is the history staff and the company read. Dates, the minuta, and uploaded files stay. Leaving a close stage clears `closed_at`.
 
 Remaining months are derived for staff when the stage type is close won, from `benefit_starts_on` when set, otherwise the employment start. Company payloads omit that number.
 

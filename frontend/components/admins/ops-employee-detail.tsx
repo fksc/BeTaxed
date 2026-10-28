@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 
+import { CaseHistory } from "@/components/case-history";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellPage } from "@/components/shell/shell-app-bar";
@@ -214,6 +215,29 @@ export function OpsEmployeeDetailPage({
                 >
                   {tk("pipeline")}
                 </Link>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">{t("log")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {cases.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t("noCase")}</p>
+                ) : (
+                  cases.map((item) => (
+                    <div key={item.id} className="space-y-2">
+                      {cases.length > 1 ? (
+                        <div className="text-xs font-medium">{item.stage_name}</div>
+                      ) : null}
+                      {(item.events ?? []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">{t("logEmpty")}</p>
+                      ) : (
+                        <CaseHistory events={item.events ?? []} className="space-y-1" />
+                      )}
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
             {person.term_benefit?.flagged ? (

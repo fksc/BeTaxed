@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { CaseHistory } from "@/components/case-history";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShellPage } from "@/components/shell/shell-app-bar";
@@ -127,6 +128,21 @@ export function CompanyRequestsPage() {
                     }}
                   />
                 ) : null}
+              </div>
+              <div className="mt-2">
+                <CaseHistory
+                  events={row.events ?? []}
+                  onOpenFile={(fileId) => {
+                    void (async () => {
+                      const idToken = await currentIdToken();
+                      const companyId = loadCompanyId();
+                      if (!idToken || !companyId) {
+                        return;
+                      }
+                      await openRequestNotice(fileId, { idToken, companyId });
+                    })();
+                  }}
+                />
               </div>
             </div>
           ))

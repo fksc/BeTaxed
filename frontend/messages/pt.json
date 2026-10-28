@@ -655,7 +655,9 @@
       "filed": "Entregue",
       "benefitStart": "Início do benefício",
       "showContract": "Ver contrato",
-      "possible": "Benefício possível"
+      "possible": "Benefício possível",
+      "log": "Registo",
+      "logEmpty": "Ainda sem movimentos."
     },
     "companyDetail": {
       "crumb": "Empresa",
@@ -851,5 +853,10 @@
     "failed": "Não foi possível aceitar este convite.",
     "missing": "Este convite não foi encontrado.",
     "askResend": "Este convite já não é válido. Peça a um admin para o reenviar."
+  },
+  "caseHistory": {
+    "opened": "Aberto em {stage}",
+    "moved": "Passou de {from} para {to}",
+    "document": "Documento"
   }
 }
