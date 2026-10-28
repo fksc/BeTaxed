@@ -9,6 +9,7 @@ export const paths = {
   companies: "/companies",
   companiesDashboard: "/companies/dashboard",
   companiesPeople: "/companies/people",
+  companiesRequests: "/companies/requests",
   companiesDeclarations: "/companies/declarations",
   companiesInvoices: "/companies/invoices",
   companiesSettings: "/companies/settings",
@@ -16,10 +17,13 @@ export const paths = {
   adminsDashboard: "/admins/dashboard",
   adminsFlags: "/admins/flags",
   adminsCases: "/admins/cases",
+  adminsTemplates: "/admins/templates",
   adminsInvoices: "/admins/invoices",
   adminsCompanies: "/admins/companies",
   adminsCompanyNew: "/admins/companies/new",
   adminsCompany: (id: string) => `/admins/companies/${id}`,
+  adminsEmployee: (companyId: string, employeeId: string) =>
+    `/admins/companies/${companyId}/people/${employeeId}`,
   adminsSettings: "/admins/settings",
   invite: (token: string) => `/invite/${token}`,
 } as const;

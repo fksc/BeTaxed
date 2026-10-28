@@ -26,6 +26,7 @@ from app.models import (
 from app.security.dek_store import get_or_create_pii_crypto
 from app.services.domain_events import emit_domain_event
 from app.services.teaser import _decrypt_dob, age_on, tsu_looks_unused
+from app.services.request_pipeline import open_case_stage_names
 from app.services.term_benefit import (
     assess_term_benefit,
     classify_hiring_benefit,
@@ -256,6 +257,9 @@ async def list_company_people(
     for event in leave_events:
         latest_leave.setdefault(event.employee_id, event.leave_type)
 
+    stage_names = (
+        await open_case_stage_names(session, ids) if staff else {}
+    )
     out: list[dict] = []
     for employee in employees:
         current = _current_employment(by_emp.get(employee.id, []))
@@ -299,6 +303,14 @@ async def list_company_people(
             )
             if current is not None and current.started_on is not None:
                 row["contract_started_on"] = current.started_on
+            stage_name = stage_names.get(employee.id)
+            if stage_name is not None:
+                row["request_case_stage"] = stage_name
+            if employee.address_enc is not None:
+                try:
+                    row["residence"] = crypto.decrypt_address(employee.address_enc)
+                except Exception:
+                    row["residence"] = None
             if outlook is not None:
                 row["benefit_outlook"] = outlook.outlook
                 if outlook.reason is not None:

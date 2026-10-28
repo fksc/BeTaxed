@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { FileText, Users, UserCheck, CalendarDays } from "lucide-react";
+import { Columns3, Eye, FileText, ListPlus, RefreshCw, Upload, UserCheck, Users, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   runContractUploads,
   type ContractUploadRow,
 } from "@/components/workspace/contract-batch-modal";
+import { RequestPipeline } from "@/components/admins/request-pipeline";
 import { MembersPanel } from "@/components/workspace/members-panel";
 import { StatCard } from "@/components/workspace/stat-card";
 import {
@@ -33,6 +34,7 @@ import {
   listPeople,
   listSsBatches,
   openPersonContract,
+  openRequestCase,
   patchOpsCompany,
   patchPersonStatus,
 } from "@/lib/api/workspace-client";
@@ -51,7 +53,7 @@ import { paths } from "@/lib/app-paths";
 import { currentIdToken } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 
-const HUB_TABS = ["overview", "vinculos", "employees", "already", "documents"] as const;
+const HUB_TABS = ["overview", "vinculos", "employees", "pipeline", "already", "documents"] as const;
 type HubTab = (typeof HUB_TABS)[number];
 const STATUSES = ["ACTIVE", "ON_LEAVE", "TERMINATED"] as const;
 const LEAVE_TYPES = ["PARENTAL", "SICKNESS", "UNPAID", "OTHER"] as const;
@@ -132,6 +134,8 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [headcounts, setHeadcounts] = useState<HeadcountMonthOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [maxMembers, setMaxMembers] = useState("3");
+  const [address, setAddress] = useState("");
+  const [signatory, setSignatory] = useState("");
   const [busy, setBusy] = useState(false);
   const [idToken, setIdToken] = useState<string | null>(null);
   const nowYm = currentYearMonth();
@@ -149,6 +153,23 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [uploadRows, setUploadRows] = useState<ContractUploadRow[] | null>(null);
   const [uploadRunning, setUploadRunning] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<string | null>(null);
+
+  async function addToPipeline(employeeId: string) {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      setError(t("needAuth"));
+      return;
+    }
+    setBusyId(employeeId);
+    try {
+      await openRequestCase(employeeId, { idToken: token });
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("needAuth"));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   async function reload(nextEstablishmentId = establishmentId) {
     const token = await currentIdToken();
@@ -172,6 +193,8 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     setHeadcounts(nextHeadcounts);
     setEstablishments(sites);
     setMaxMembers(String(detail.max_members));
+    setAddress(detail.registered_address ?? "");
+    setSignatory(detail.signatory_name ?? "");
     setError(null);
   }
 
@@ -202,6 +225,27 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   function goTab(next: HubTab) {
     const href = next === "overview" ? pathname : `${pathname}?tab=${next}`;
     router.replace(href);
+  }
+
+  async function onSaveProfile() {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const detail = await patchOpsCompany(
+        companyId,
+        { registered_address: address, signatory_name: signatory },
+        { idToken: token },
+      );
+      setRow(detail);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("saveFailed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSaveCap() {
@@ -308,6 +352,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     { id: "overview", label: t("tabOverview") },
     { id: "vinculos", label: t("tabVinculos") },
     { id: "employees", label: t("tabEmployees") },
+    { id: "pipeline", label: t("tabPipeline") },
     { id: "already", label: t("tabAlready") },
     { id: "documents", label: t("tabDocuments") },
   ];
@@ -386,6 +431,23 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
                 icon={<CalendarDays size={14} />}
               />
             </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("profileTitle")}</CardTitle>
+                <CardDescription>{t("profileHint")}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-end gap-3">
+                <Field label={t("registeredAddress")} className="min-w-64 flex-1">
+                  <Input value={address} onChange={(event) => setAddress(event.target.value)} />
+                </Field>
+                <Field label={t("signatory")} className="min-w-48">
+                  <Input value={signatory} onChange={(event) => setSignatory(event.target.value)} />
+                </Field>
+                <Button type="button" size="sm" disabled={busy} onClick={() => void onSaveProfile()}>
+                  {t("saveProfile")}
+                </Button>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle>{t("capTitle")}</CardTitle>
@@ -505,8 +567,11 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
           </Card>
         ) : null}
 
+        {tab === "pipeline" ? <RequestPipeline fixedCompanyId={companyId} /> : null}
+
         {tab === "employees" ? (
           <StaffPeopleCard
+            companyId={companyId}
             people={people}
             establishments={establishments}
             establishmentId={establishmentId}
@@ -526,6 +591,7 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
               fileRef.current?.click();
             }}
             onStatus={(employeeId, status, leave) => void onPersonStatus(employeeId, status, leave)}
+            onAddToPipeline={(employeeId) => void addToPipeline(employeeId)}
           />
         ) : null}
 
@@ -683,7 +749,47 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   );
 }
 
+function RoundAction({
+  label,
+  children,
+  disabled,
+  onClick,
+  href,
+}: {
+  label: string;
+  children: ReactNode;
+  disabled?: boolean;
+  onClick?: () => void;
+  href?: string;
+}) {
+  const className =
+    "inline-flex size-8 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-muted disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.5";
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          href ? (
+            <Link href={href} aria-label={label} className={className} />
+          ) : (
+            <button
+              type="button"
+              aria-label={label}
+              disabled={disabled}
+              onClick={onClick}
+              className={className}
+            />
+          )
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function StaffPeopleCard({
+  companyId,
   people,
   establishments,
   establishmentId,
@@ -694,8 +800,10 @@ function StaffPeopleCard({
   onLeave,
   onShow,
   onUploadClick,
+  onAddToPipeline,
   onStatus,
 }: {
+  companyId: string;
   people: PersonOut[];
   establishments: EstablishmentOut[];
   establishmentId: string;
@@ -706,6 +814,7 @@ function StaffPeopleCard({
   onLeave: (employeeId: string, leave: (typeof LEAVE_TYPES)[number]) => void;
   onShow: (employeeId: string, documentId: string) => void;
   onUploadClick: (employeeId: string) => void;
+  onAddToPipeline: (employeeId: string) => void;
   onStatus: (
     employeeId: string,
     status: (typeof STATUSES)[number],
@@ -713,6 +822,7 @@ function StaffPeopleCard({
   ) => void;
 }) {
   const t = useTranslations("admins.companyDetail");
+  const tc = useTranslations("admins.cases");
   const tw = useTranslations("workspace");
   const format = useFormatter();
   const [filterModality, setFilterModality] = useState("all");
@@ -1043,9 +1153,12 @@ function StaffPeopleCard({
                           </TooltipContent>
                         </Tooltip>
                       ) : (
-                        <div className="font-medium">
+                        <Link
+                          href={paths.adminsEmployee(companyId, row.id)}
+                          className="font-medium hover:underline"
+                        >
                           {row.display_name || tw("people.unnamed")}
-                        </div>
+                        </Link>
                       )}
                       <div className="text-xs text-muted-foreground">
                         {sourceLabel(row.status_source, tw)}
@@ -1144,31 +1257,44 @@ function StaffPeopleCard({
                       </td>
                     ) : null}
                     <td className="py-2 align-top">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busyId === row.id || uploadsLocked}
-                        onClick={() => onUploadClick(row.id)}
-                      >
-                        {row.has_contract ? tw("people.reupload") : tw("people.upload")}
-                      </Button>
-                      {row.has_contract && row.document_id ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="ml-2"
-                          disabled={uploadsLocked}
-                          onClick={() => {
-                            if (row.document_id) {
-                              onShow(row.id, row.document_id);
-                            }
-                          }}
+                      <div className="flex items-center gap-1">
+                        <RoundAction
+                          label={row.has_contract ? tw("people.reupload") : tw("people.upload")}
+                          disabled={busyId === row.id || uploadsLocked}
+                          onClick={() => onUploadClick(row.id)}
                         >
-                          {tw("people.show")}
-                        </Button>
-                      ) : null}
+                          {row.has_contract ? <RefreshCw /> : <Upload />}
+                        </RoundAction>
+                        {row.has_contract && row.document_id ? (
+                          <RoundAction
+                            label={tw("people.show")}
+                            disabled={uploadsLocked}
+                            onClick={() => {
+                              if (row.document_id) {
+                                onShow(row.id, row.document_id);
+                              }
+                            }}
+                          >
+                            <Eye />
+                          </RoundAction>
+                        ) : null}
+                        {row.request_case_stage ? (
+                          <RoundAction
+                            label={row.request_case_stage}
+                            href={paths.adminsEmployee(companyId, row.id)}
+                          >
+                            <Columns3 />
+                          </RoundAction>
+                        ) : row.benefit_outlook === "might" ? (
+                          <RoundAction
+                            label={tc("addToPipeline")}
+                            disabled={busyId === row.id}
+                            onClick={() => onAddToPipeline(row.id)}
+                          >
+                            <ListPlus />
+                          </RoundAction>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

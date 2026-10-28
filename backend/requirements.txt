@@ -11,6 +11,7 @@ cryptography>=44.0.2
 google-cloud-storage>=3.1.0
 google-cloud-tasks>=2.19.0
 openpyxl==3.1.5
+weasyprint==66.0
 redis>=5.2.1
 google-genai>=1.0.0
 

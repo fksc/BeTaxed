@@ -54,6 +54,15 @@ CREATE TABLE employment_document (
         CHECK (doc_kind IS NULL OR doc_kind IN ('SEM_TERMO', 'TERMO', 'CONVERSION')),
     signed_on DATE,                         -- permanent contract date starts the 60-month clock when applicable
     term_end_on DATE,                       -- paper end for termo (e.g. 1-year CDD); null for sem termo
+    employer_legal_name VARCHAR(255),
+    employer_address TEXT,
+    employer_niss_enc BYTEA,
+    signatory_name VARCHAR(255),
+    employee_address_enc BYTEA,
+    term_started_on DATE,                   -- fixed-term start when the PDF states it
+    converted_on DATE,                      -- date the paper says it became sem termo
+    declared_on DATE,
+    signing_place VARCHAR(255),
     matches_ss VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN'
         CHECK (matches_ss IN ('UNKNOWN', 'MATCH', 'MISMATCH')),
     review_status VARCHAR(16) NOT NULL DEFAULT 'PENDING'
@@ -73,6 +82,7 @@ CREATE TABLE employment_document (
 - Company sees “please upload this person’s contract”, not “upload because they are 28 and on termo”. Company APIs never expose `matches_ss = MISMATCH` or SS-vs-PDF field diffs (recipe-adjacent). Staff ops queue does.
 - **Upload → review:** persist the file with `review_status = PENDING`. Emit `CONTRACT_UPLOADED` (`KB/08`). A worker (Gemini, or DEV stub) fills typed columns, sets `MATCH` / `MISMATCH`, emits `CONTRACT_REVIEWED` or `CONTRACT_SS_MISMATCH`. Do **not** auto-rewrite `employment.*`. Staff confirm copies modality / `signed_on` / `term_end_on` onto employment with `source = CONTRACT`.
 - **Batch upload** (`POST /v1/contracts`): many PDFs, no employee id on the request. Objects go to `{company_id}/contracts/{file_id}/{filename}` in the bucket (`gcloud storage`, Python client — not `gsutil`). Each file is a row in `contract_inbox` until it links. The worker reads employee NIF, full name, and NISS from the PDF and stops at the first unique hit: **NIF, then name, then NISS**. Employer NIF is checked against `company.nif_enc` only. Zero or several people stay `UNMATCHED`. A link stores the PDF NIF on `employee` when that column is empty. A file whose `sha256` already has a saved extract for that company is not sent to Gemini again; matching still runs, and the same employee keeps the existing document.
+- The same extract also reads employer legal name, seat, employer NISS, signatory, employee residence, term start, conversion date, declaration date, and signing place. Those land on the document (and on `contract_inbox` so a repeat hash skips Gemini). Empty company address, signatory, and employer NISS are filled. Empty employee name and residence are filled. A different stored NIF or legal name is flagged and left in place. `signed_on` / `term_end_on` / `doc_kind` stay the SS-compare fields. This still does not rewrite `employment`.
 - **Flow (locked as product, not as Pass-1 math):** teaser from SS only → client uploads contracts → LLM/ops vs the extract → `MATCH` / `MISMATCH`. Do not auto-rewrite the public teaser from PDFs.
 
 ## Table: contract_inbox
@@ -100,6 +110,16 @@ CREATE TABLE contract_inbox (
         CHECK (doc_kind IS NULL OR doc_kind IN ('SEM_TERMO', 'TERMO', 'CONVERSION')),
     signed_on DATE,
     term_end_on DATE,
+    employer_legal_name VARCHAR(255),
+    employer_address TEXT,
+    employer_niss_enc BYTEA,
+    signatory_name VARCHAR(255),
+    employee_address_enc BYTEA,
+    term_started_on DATE,
+    converted_on DATE,
+    declared_on DATE,
+    signing_place VARCHAR(255),
+    legal_name_mismatch BOOLEAN,
     error TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     processed_at TIMESTAMPTZ

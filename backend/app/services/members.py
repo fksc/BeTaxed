@@ -195,6 +195,8 @@ async def ops_company_detail(session: AsyncSession, company: Company) -> dict:
     bundle = await members_bundle(session, company)
     base["members"] = bundle["members"]
     base["invites"] = bundle["invites"]
+    base["registered_address"] = company.registered_address
+    base["signatory_name"] = company.signatory_name
     return base
 
 
@@ -623,6 +625,10 @@ async def patch_ops_company(
     trading_name: str | None,
     locale: str | None,
     max_members: int | None,
+    registered_address: str | None = None,
+    signatory_name: str | None = None,
+    address_set: bool = False,
+    signatory_set: bool = False,
 ) -> Company:
     if legal_name is not None:
         name = legal_name.strip()
@@ -644,6 +650,10 @@ async def patch_ops_company(
                 detail="max_members cannot be below seats already in use.",
             )
         company.max_members = max_members
+    if address_set:
+        company.registered_address = (registered_address or "").strip() or None
+    if signatory_set:
+        company.signatory_name = (signatory_name or "").strip() or None
     return company
 
 

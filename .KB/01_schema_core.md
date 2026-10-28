@@ -51,6 +51,8 @@ CREATE TABLE company (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     legal_name VARCHAR(255) NOT NULL,
     trading_name VARCHAR(255),
+    registered_address TEXT,               -- seat, one line, for minutas
+    signatory_name VARCHAR(255),           -- representative who signs a minuta
     nif_enc BYTEA,
     employer_niss_hash BYTEA,
     employer_niss_enc BYTEA,
@@ -77,6 +79,7 @@ CREATE UNIQUE INDEX idx_company_employer_niss_hash
 
 **Rules:**
 - `employer_niss_hash` matches the SS export (Power Query name in the sample: `{niss}_vinculos_{date}`). After convert, later batches must match this hash.
+- `registered_address` and `signatory_name` are the employer lines on a hiring-benefit minuta (`KB/05`). A contract extract fills them only when the column is empty. A different legal name on the PDF is a mismatch flag, not an overwrite.
 - Access-condition booleans (`ss_regularized`, `at_regularized`, `payroll_not_in_arrears`) are a **current checklist**, not the recipe. SS/AT no-debt **certificates** are dated (`issued_on` + `valid_until`, default 4 months) on `company_certificate` (`KB/05`, DEV-838). Snapshot gates onto `company_application` at submit so a later cert cannot rewrite history.
 - `invoicing_method` may be null until finance sets it. `certified_vendor_name` stays null until they pick the certified tool (DEV-841).
 - Soft-delete with `deleted_at`.

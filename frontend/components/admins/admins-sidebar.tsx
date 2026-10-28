@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, CreditCard, FileInput, Flag, LayoutDashboard } from "lucide-react";
+import { Building2, CreditCard, FileInput, FileText, Flag, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { NavUser } from "@/components/shell/nav-user";
@@ -41,6 +41,12 @@ export function AdminsSidebar() {
       href: paths.adminsCases,
       label: t("nav.cases"),
       icon: FileInput,
+      soon: false,
+    },
+    {
+      href: paths.adminsTemplates,
+      label: t("nav.templates"),
+      icon: FileText,
       soon: false,
     },
     {

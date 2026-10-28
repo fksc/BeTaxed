@@ -21,6 +21,9 @@ Legend: **Y** = allowed, **—** = no, **ops** = BeTaxed staff only.
 | See invoices / pay | — | Y | — | Y | ops |
 | Manual invoice resolve | — | — | — | — | ops |
 | Read benefit_case / saving_month (incl. flag vs grant) | — | — | — | — | ops |
+| Open a request case and run its stage operations | — | — | — | — | ops |
+| Read request-case stage for own company | — | Y | Y | Y | ops |
+| Download a sent minuta and upload signed scans | — | Y | Y | — | ops |
 | Change commercial_terms | — | — | — | — | ops |
 | Create company (sales-led) + first admin invite | — | — | — | — | ops |
 | Invite / resend / cancel company members | — | Y | — | — | ops |

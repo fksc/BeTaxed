@@ -46,6 +46,7 @@ There is no talent/employee login in v1. Employees are **data**, not actors.
 | StoredFile | GCS object (SS export, contract, certificate, proforma). |
 | IncentiveRegime | Versioned legal/commercial parameters (internal). |
 | BenefitCase | Per-employee 5-year file for a regime (**internal**). |
+| RequestCase | Staff work on one person after the flag. Company sees the stage, not the recipe. |
 | SavingMonth | Per employee per month saving + fee (**internal**, billing fuel). |
 | Invoice / Payment | What the company sees and pays. |
 
@@ -101,7 +102,7 @@ Filterable / billable / event fields are typed columns. JSONB only for parser le
 Company/employee records: `deleted_at` / `is_active`. Declined pass-1 intake: **hard delete** files + parsed rows + teaser run (`KB/10_product_flow.md#wipe-on-decline`).
 
 **5. Recipe stays internal.**
-`benefit_case`, `saving_month`, regime parameters, and per-employee eligibility are **not** on company-facing APIs. Invoices show fee totals, not how savings were computed.
+`benefit_case`, `saving_month`, regime parameters, and per-employee eligibility are **not** on company-facing APIs. Invoices show fee totals, not how savings were computed. A `request_case` stage is visible to that company. The flag, rates, and remaining months are not.
 
 **6. NISS is never the primary key.**
 Internal UUID everywhere. Join uploads with `niss_hash`.
@@ -147,7 +148,7 @@ Leave **open** rows unlocked. Do not implement a silent default in product copy 
 | `KB/02_schema_employment.md` | People, jobs, pay, events. |
 | `KB/03_schema_ss_ingest.md` | Declarations, raw sheets, diffs, headcount. |
 | `KB/04_schema_documents.md` | Files and contracts. |
-| `KB/05_schema_benefit.md` | Internal eligibility and savings ledger. |
+| `KB/05_schema_benefit.md` | Internal ledger, and the request-case pipeline. |
 | `KB/06_schema_billing.md` | Invoices and payments. |
 | `KB/07_security_encryption.md` | Encryption and isolation. |
 | `KB/08_schema_communications.md` | Domain events, in-app notifications, Redis SSE. |

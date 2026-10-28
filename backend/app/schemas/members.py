@@ -22,6 +22,8 @@ class CompanyPatchIn(BaseModel):
     trading_name: str | None = Field(default=None, max_length=255)
     locale: str | None = Field(default=None, max_length=10)
     max_members: int | None = Field(default=None, ge=1, le=500)
+    registered_address: str | None = None
+    signatory_name: str | None = Field(default=None, max_length=255)
 
 
 class MemberInviteIn(BaseModel):
@@ -82,6 +84,8 @@ class OpsCompanyListOut(BaseModel):
 class OpsCompanyDetailOut(OpsCompanyListOut):
     members: list[MemberOut]
     invites: list[InviteOut]
+    registered_address: str | None = None
+    signatory_name: str | None = None
 
 
 class PublicInviteOut(BaseModel):

@@ -166,3 +166,199 @@ CREATE TABLE saving_month (
 - `billable = FALSE` if terminated, clawback, or **leave** (OD-4 locked: no success fee on leave months).
 - Once `locked_at` is set, do not update amounts. Corrections = new month or credit note.
 - Company invoices **sum fee_amount** where billable; they do not list employees (`KB/06`).
+
+---
+
+## Request case (DEV-882) {#request-case}
+
+The staff flag says who can still benefit. It is not a case. A `request_case` row is created when BeTaxed staff add that person to the pipeline. Company users see the stage of their own cases, a sent minuta, and an unfavorable notice. They do not see the flag, rates, or remaining months.
+
+`benefit_case` stays the internal ledger. `request_case.benefit_case_id` may point at it. Neither row files with Segurança Social by itself.
+
+### Stage types
+
+A stage is a row, not a hardcoded name. Staff can add or remove stages. The code knows the type and the operations assigned to the current stage.
+
+| `stage_type` | Meaning |
+|---|---|
+| `WORK` | BeTaxed staff act |
+| `WAIT_CLIENT` | Waiting on the company |
+| `WAIT_SS` | Waiting on Segurança Social |
+| `CLOSE_WON` | Closed, approved. Like a CRM closed-won |
+| `CLOSE_LOST` | Closed, refused. Like a CRM closed-lost |
+
+Close approved and close rejected are terminal. Claim is not a close type. A claim is a work stage that later closes approved or rejected.
+
+`ss_submission_ref` and `ss_status_read_at` stay empty until a Segurança Social sub-account can submit or read status. That result updates this case. It does not create a second case.
+
+### Tables
+
+```sql
+CREATE TABLE pipeline_stage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL,
+    stage_type VARCHAR(16) NOT NULL
+        CHECK (stage_type IN ('WORK', 'WAIT_CLIENT', 'WAIT_SS', 'CLOSE_WON', 'CLOSE_LOST')),
+    position INTEGER NOT NULL,
+    entry_path VARCHAR(16)
+        CHECK (entry_path IS NULL OR entry_path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE pipeline_operation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    name VARCHAR(128) NOT NULL
+);
+
+CREATE TABLE pipeline_stage_operation (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    operation_id UUID NOT NULL REFERENCES pipeline_operation(id),
+    next_stage_id UUID REFERENCES pipeline_stage(id),
+    next_won_stage_id UUID REFERENCES pipeline_stage(id),
+    next_lost_stage_id UUID REFERENCES pipeline_stage(id),
+    next_claim_stage_id UUID REFERENCES pipeline_stage(id),
+    UNIQUE (stage_id, operation_id)
+);
+
+CREATE TABLE rejection_reason (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    label VARCHAR(255) NOT NULL,
+    blocks_claim BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE minuta_template (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(64) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    body_html TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE request_case (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    employee_id UUID NOT NULL REFERENCES employee(id),
+    employment_id UUID NOT NULL REFERENCES employment(id),
+    opened_by UUID NOT NULL REFERENCES user_base(id),
+    opened_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    stage_entered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    stage_stack UUID[] NOT NULL DEFAULT ARRAY[]::uuid[],
+    path VARCHAR(16) NOT NULL
+        CHECK (path IN ('FIXED_TERM', 'OPEN_CONTRACT')),
+    probation_ends_on DATE,
+    benefit_starts_on DATE,
+    person_name VARCHAR(255),               -- snapshot for this filing
+    person_address TEXT,
+    person_nif_enc BYTEA,
+    person_niss_enc BYTEA,
+    company_name VARCHAR(255),
+    company_address TEXT,
+    company_signatory_name VARCHAR(255),
+    company_nif_enc BYTEA,
+    company_niss_enc BYTEA,
+    contract_started_on DATE,
+    converted_on DATE,
+    declared_on DATE,
+    signed_place VARCHAR(255),
+    applied_on DATE,
+    applied_by UUID REFERENCES user_base(id),
+    decision_on DATE,
+    rejection_reason_id UUID REFERENCES rejection_reason(id),
+    benefit_case_id UUID REFERENCES benefit_case(id),
+    ss_submission_ref VARCHAR(128),
+    ss_status_read_at TIMESTAMPTZ,
+    closed_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX uq_request_case_open_employment
+    ON request_case (employment_id)
+    WHERE closed_at IS NULL;
+
+CREATE TABLE request_case_event (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_case_id UUID NOT NULL REFERENCES request_case(id) ON DELETE CASCADE,
+    at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actor_id UUID REFERENCES user_base(id),
+    from_stage_id UUID REFERENCES pipeline_stage(id),
+    to_stage_id UUID NOT NULL REFERENCES pipeline_stage(id),
+    operation VARCHAR(64),
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE TABLE request_case_minuta (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    request_case_id UUID NOT NULL REFERENCES request_case(id),
+    template_id UUID NOT NULL REFERENCES minuta_template(id),
+    body_html TEXT NOT NULL,
+    sent_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE request_case_file (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES company(id),
+    request_case_id UUID REFERENCES request_case(id),
+    kind VARCHAR(32) NOT NULL
+        CHECK (kind IN ('SIGNED_MINUTA', 'UNFAVORABLE_NOTICE', 'CLAIM_SUPPORT')),
+    file_id UUID NOT NULL REFERENCES stored_file(id),
+    uploaded_by UUID REFERENCES user_base(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### Seeded board
+
+No minuta types are seeded. One rejection reason is seeded: `PRIOR_SEM_TERMO`, and it blocks a claim. Further blocking reasons are added as rows.
+
+| Code | Type | Entry | Operations |
+|---|---|---|---|
+| `probation` | Work | `OPEN_CONTRACT` | Record probation. Next stage is Ready |
+| `minuta` | Work | `FIXED_TERM` | Generate minuta (stays). Send minuta (next is Signature) |
+| `signature` | Waiting on the client | — | Attach signed scan. Next is Ready |
+| `ready` | Work | — | Record filing. Next is Awaiting decision |
+| `awaiting_decision` | Waiting on Segurança Social | — | Record a decision: won, lost, or claim |
+| `claim` | Work | — | Record a decision: won or lost |
+| `closed_approved` | Close approved | — | — |
+| `closed_rejected` | Close rejected | — | — |
+
+`path` is taken from the employment when the case opens. `TERMO_CERTO` and `TERMO_INCERTO` are `FIXED_TERM` and enter on the stage whose `entry_path` is `FIXED_TERM`. Anything else is `OPEN_CONTRACT` and enters on the probation entry. Recording “no probation” moves to Ready and never creates a minuta. A probation end date may set `benefit_starts_on` so the 60 months start later.
+
+A decision of won moves to the assignment’s `next_won_stage_id`. Lost moves to `next_lost_stage_id` and requires a reason and an unfavorable notice. Claim moves to `next_claim_stage_id` only when `blocks_claim` is false. The same decision operation on Claim has no claim destination, so the claim closes won or lost.
+
+`stage_entered_at` is when the case entered its current stage. It resets on every move, including a step back. Rows that existed before the column were filled from `opened_at`.
+
+`request_case_event` is the history. Each row is one move: when, who, the stage left, the stage entered, the operation code, and the payload that operation submitted (a date, a reason id, a file id). Opening a case is the first row, with no stage left behind. The table does not name favorable, claim, or won. The stage on the row is the record. One step back reads the previous row's `from_stage_id`. A case that only has its opening row steps back along its path, the same fallback as before. Existing cases were backfilled with one opening row for the stage they were already in.
+
+`stage_stack` is still the stages this case has visited, latest last. The event log is the history staff and the company read. Dates, the minuta, and uploaded files stay. Leaving a close stage clears `closed_at`.
+
+Remaining months are derived for staff when the stage type is close won, from `benefit_starts_on` when set, otherwise the employment start. Company payloads omit that number.
+
+Opening a case copies the company profile, the employee profile, and the latest reviewed contract onto the case. Staff edit that snapshot. Generate reads the snapshot. A later profile edit does not rewrite it. Refresh copies only fields that are still empty. If `declared_on` is empty at generate, it becomes today.
+
+`{{ key }}` is an allowlisted token. Unknown keys render blank. NIF and NISS on the case stay encrypted and are decrypted only while rendering a minuta for staff or for that company's download.
+
+| Token | Snapshot column | Copied from |
+|---|---|---|
+| `company_name` | `company_name` | `company.legal_name` |
+| `company_address` | `company_address` | `company.registered_address` |
+| `company_nif` | `company_nif_enc` | `company.nif_enc` |
+| `company_niss` | `company_niss_enc` | `company.employer_niss_enc` |
+| `company_signatory_name` | `company_signatory_name` | `company.signatory_name` |
+| `person_name` | `person_name` | employee `name_enc` |
+| `person_address` | `person_address` | employee `address_enc` |
+| `person_nif` | `person_nif_enc` | employee `nif_enc` |
+| `person_niss` | `person_niss_enc` | employee `niss_enc` |
+| `contract_started_on` | `contract_started_on` | document `term_started_on`, else a `TERMO` `signed_on`, else `employment.started_on` |
+| `converted_on` | `converted_on` | document `converted_on`, else a conversion/`SEM_TERMO` `signed_on`, else `benefit_starts_on` |
+| `declared_on` | `declared_on` | document `declared_on`, else today at generate |
+| `signed_place` | `signed_place` | document `signing_place` |
+
+Each date also has `*_pt` (`10 de maio de 2021`) and `*_en` (`May 10, 2021`). The bare key stays ISO. Staff author templates in TipTap at `/admins/templates`. `GET /v1/ops/minuta-tokens` is the insert list. No minuta type names are seeded.
+
+Signed scans may be uploaded in bulk with `request_case_id` empty until staff attach one to a case that is on a stage with the attach operation.

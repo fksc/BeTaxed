@@ -6,12 +6,14 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShellPage } from "@/components/shell/shell-app-bar";
+import { RequestPipeline } from "@/components/admins/request-pipeline";
 import { listBenefitCases, submitCompanyApplication } from "@/lib/api/workspace-client";
 import type { BenefitCaseOut } from "@/lib/api/workspace";
 import { currentIdToken } from "@/lib/firebase";
 
 export function BenefitCasesPage() {
   const t = useTranslations("admins");
+  const [view, setView] = useState<"pipeline" | "ledger">("pipeline");
   const [rows, setRows] = useState<BenefitCaseOut[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -51,8 +53,33 @@ export function BenefitCasesPage() {
     <ShellPage crumb={t("cases.crumb")}>
       <div className="border-b border-border bg-card px-4 py-3 sm:px-6">
         <div className="text-base font-semibold">{t("cases.title")}</div>
-        <p className="text-sm text-muted-foreground">{t("cases.lead")}</p>
+        <p className="text-sm text-muted-foreground">
+          {view === "pipeline" ? t("cases.pipelineLead") : t("cases.lead")}
+        </p>
+        <div className="mt-3 flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={view === "pipeline" ? "default" : "outline"}
+            onClick={() => setView("pipeline")}
+          >
+            {t("cases.pipeline")}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={view === "ledger" ? "default" : "outline"}
+            onClick={() => setView("ledger")}
+          >
+            {t("cases.ledger")}
+          </Button>
+        </div>
       </div>
+      {view === "pipeline" ? (
+        <div className="p-4 sm:p-6">
+          <RequestPipeline />
+        </div>
+      ) : (
       <div className="space-y-4 p-4 sm:p-6">
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Card>
@@ -98,6 +125,7 @@ export function BenefitCasesPage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </ShellPage>
   );
 }

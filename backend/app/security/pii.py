@@ -63,3 +63,9 @@ class PiiCrypto:
 
     def decrypt_nif(self, nif_enc: bytes) -> str:
         return decrypt_bytes(nif_enc, self.dek).decode("utf-8")
+
+    def encrypt_address(self, address: str) -> bytes:
+        return encrypt_bytes(address.strip().encode("utf-8"), self.dek)
+
+    def decrypt_address(self, address_enc: bytes) -> str:
+        return decrypt_bytes(address_enc, self.dek).decode("utf-8")

@@ -172,6 +172,11 @@ async def process_contract_inbox(
         niss_hash=niss_hash,
     )
     if result.employee_id is None or result.via is None:
+        from app.services.contract_review import remember_minuta_profile
+
+        inbox.legal_name_mismatch = remember_minuta_profile(
+            company, None, crypto, extract, inbox
+        )
         inbox.status = "UNMATCHED"
         inbox.processed_at = datetime.now(UTC)
         logger.info("contract inbox unmatched inbox=%s", inbox_id)
@@ -184,6 +189,11 @@ async def process_contract_inbox(
         return inbox
 
     inbox.nif_conflict = await _remember_employee_nif(session, employee, crypto, extract.nif)
+    from app.services.contract_review import remember_minuta_profile
+
+    inbox.legal_name_mismatch = remember_minuta_profile(
+        company, employee, crypto, extract, inbox
+    )
     existing = await _document_for_hash(session, employee.id, stored.sha256)
     if existing is not None:
         inbox.status = "MATCHED"
@@ -229,6 +239,7 @@ async def process_contract_inbox(
         },
     )
     event_type = apply_contract_extract(doc, extract, current)
+    remember_minuta_profile(company, employee, crypto, extract, doc)
     leftover = dict(doc.review_leftover or {})
     leftover["match_via"] = result.via
     if inbox.nif_conflict:
@@ -267,6 +278,17 @@ def _store_extract(inbox: ContractInbox, crypto, extract) -> None:
         inbox.name_enc = crypto.encrypt_name(extract.full_name)
     if _digits(extract.niss):
         inbox.niss_enc = crypto.encrypt_niss(extract.niss)
+    if extract.employee_address:
+        inbox.employee_address_enc = crypto.encrypt_address(extract.employee_address)
+    if _digits(extract.employer_niss):
+        inbox.employer_niss_enc = crypto.encrypt_niss(extract.employer_niss)
+    inbox.employer_legal_name = extract.employer_legal_name
+    inbox.employer_address = extract.employer_address
+    inbox.signatory_name = extract.signatory_name
+    inbox.term_started_on = extract.term_started_on
+    inbox.converted_on = extract.converted_on
+    inbox.declared_on = extract.declared_on
+    inbox.signing_place = extract.signing_place
 
 
 def _remember_extract(inbox: ContractInbox, crypto, extract) -> None:
@@ -343,6 +365,15 @@ async def _cached_extract(
             full_name=name,
             nif=nif,
             niss=niss,
+            employer_legal_name=prior.employer_legal_name,
+            employer_address=prior.employer_address,
+            employer_niss=_decrypt(crypto.decrypt_niss, prior.employer_niss_enc),
+            signatory_name=prior.signatory_name,
+            employee_address=_decrypt(crypto.decrypt_address, prior.employee_address_enc),
+            term_started_on=prior.term_started_on,
+            converted_on=prior.converted_on,
+            declared_on=prior.declared_on,
+            signing_place=prior.signing_place,
         ),
         prior.employer_nif_mismatch,
     )

@@ -82,6 +82,98 @@ export type PersonOut = {
   benefit_outlook?: "already" | "might" | "never" | null;
   benefit_block?: BenefitBlockOut | null;
   term_benefit?: TermBenefitOut | null;
+  request_case_stage?: string | null;
+  residence?: string | null;
+};
+
+export type PipelineStageOut = {
+  id: string;
+  code: string;
+  name: string;
+  stage_type: string;
+  position: number;
+  entry_path: string | null;
+  operations: string[];
+};
+
+export type RequestMove = {
+  operation: string;
+  stage_id: string;
+  outcome: "favorable" | "unfavorable" | "claim" | null;
+};
+
+export type RequestCaseOut = {
+  id: string;
+  company_id: string;
+  company_name: string;
+  employee_id: string;
+  display_name: string | null;
+  stage_id: string;
+  stage_code: string;
+  stage_name: string;
+  stage_type: string;
+  opened_at: string;
+  stage_entered_at: string;
+  path: string;
+  applied_on: string | null;
+  benefit_starts_on: string | null;
+  probation_ends_on: string | null;
+  minuta_sent: boolean;
+  minuta_id: string | null;
+  notice_file_id: string | null;
+  operations?: string[];
+  moves?: RequestMove[];
+  can_claim?: boolean;
+  can_attach_scan?: boolean;
+  remaining_months?: number | null;
+  person_name?: string | null;
+  person_address?: string | null;
+  person_nif?: string | null;
+  person_niss?: string | null;
+  company_address?: string | null;
+  company_signatory_name?: string | null;
+  company_nif?: string | null;
+  company_niss?: string | null;
+  contract_started_on?: string | null;
+  converted_on?: string | null;
+  declared_on?: string | null;
+  signed_place?: string | null;
+  draft_html?: string | null;
+  events?: RequestCaseEvent[];
+};
+
+export type RequestCaseEvent = {
+  id: string;
+  at: string;
+  actor_id?: string | null;
+  from_stage_id?: string | null;
+  to_stage_id: string;
+  from_stage_name?: string | null;
+  to_stage_name: string;
+  from_stage_code?: string | null;
+  to_stage_code: string;
+  operation?: string | null;
+  payload?: Record<string, unknown>;
+};
+
+export type MinutaTemplateOut = {
+  id: string;
+  code: string;
+  title: string;
+  body_html: string;
+  is_active: boolean;
+};
+
+export type MinutaTokenOut = {
+  key: string;
+  group: string;
+};
+
+export type RejectionReasonOut = {
+  id: string;
+  code: string;
+  label: string;
+  blocks_claim: boolean;
 };
 
 export type NotificationItem = {
@@ -274,6 +366,8 @@ export type OpsCompanyDetailOut = OpsCompanyListOut & {
   members: MemberOut[];
   invites: InviteOut[];
   invite_url?: string | null;
+  registered_address?: string | null;
+  signatory_name?: string | null;
 };
 
 export type PublicInviteOut = {

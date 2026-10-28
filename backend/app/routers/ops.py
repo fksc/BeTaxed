@@ -20,7 +20,7 @@ from app.schemas.billing import (
     ResolveInvoiceIn,
     StaffInvoiceOut,
 )
-from app.schemas.contracts import MismatchFlagOut
+from app.schemas.contracts import MismatchFlagOut, PersonResidenceIn, PersonResidenceOut
 from app.services.benefit_engine import rebuild_company_ledger, submit_company_application
 from app.services.benefit_ops import list_ops_benefit_cases
 from app.services.billing import (
@@ -325,8 +325,32 @@ async def patch_ops_company_route(
         trading_name=body.trading_name,
         locale=body.locale,
         max_members=body.max_members,
+        registered_address=body.registered_address,
+        signatory_name=body.signatory_name,
+        address_set="registered_address" in body.model_fields_set,
+        signatory_set="signatory_name" in body.model_fields_set,
     )
     await db.commit()
     await db.refresh(company)
     detail = await ops_company_detail(db, company)
     return OpsCompanyDetailOut.model_validate(detail)
+
+
+@router.patch("/people/{employee_id}", response_model=PersonResidenceOut)
+async def patch_ops_person_residence(
+    employee_id: uuid.UUID,
+    body: PersonResidenceIn,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> PersonResidenceOut:
+    from app.models import Employee
+    from app.security.dek_store import get_or_create_pii_crypto
+
+    employee = await db.get(Employee, employee_id)
+    if employee is None or employee.deleted_at is not None or employee.company_id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found.")
+    crypto = await get_or_create_pii_crypto(db, company_id=employee.company_id)
+    cleaned = (body.residence or "").strip()
+    employee.address_enc = crypto.encrypt_address(cleaned) if cleaned else None
+    await db.commit()
+    return PersonResidenceOut(id=employee.id, residence=cleaned or None)
