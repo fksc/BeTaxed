@@ -28,6 +28,7 @@ Legend: **Y** = allowed, **—** = no, **ops** = BeTaxed staff only.
 | Create company (sales-led) + first admin invite | — | — | — | — | ops |
 | Invite / resend / cancel company members | — | Y | — | — | ops |
 | Override `max_members` | — | — | — | — | ops |
+| Record or read the SS sub-conta (username, password, available date) | — | — | — | — | ops |
 | See member list | — | Y | Y | Y | ops |
 | See establishments | — | Y | Y | Y | ops |
 | Create or close an establishment | — | Y | — | — | ops |

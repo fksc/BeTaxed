@@ -69,3 +69,10 @@ class PiiCrypto:
 
     def decrypt_address(self, address_enc: bytes) -> str:
         return decrypt_bytes(address_enc, self.dek).decode("utf-8")
+
+    def encrypt_secret(self, value: str) -> bytes:
+        """Encrypt a portal secret exactly as given. Do not strip or normalize."""
+        return encrypt_bytes(value.encode("utf-8"), self.dek)
+
+    def decrypt_secret(self, secret_enc: bytes) -> str:
+        return decrypt_bytes(secret_enc, self.dek).decode("utf-8")

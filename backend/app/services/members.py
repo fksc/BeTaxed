@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -190,6 +190,93 @@ async def list_ops_companies(session: AsyncSession) -> list[dict]:
     return [await ops_company_list_item(session, row) for row in rows]
 
 
+async def ss_subconta_detail(session: AsyncSession, company: Company) -> dict:
+    """Staff company detail. Username only — the password stays on the reveal route."""
+    username = None
+    if company.ss_subconta_username_enc is not None:
+        crypto = await get_or_create_pii_crypto(session, company_id=company.id)
+        username = crypto.decrypt_secret(company.ss_subconta_username_enc)
+    return {
+        "ss_subconta_username": username,
+        "has_ss_subconta_password": company.ss_subconta_password_enc is not None,
+        "ss_subconta_available_on": company.ss_subconta_available_on,
+    }
+
+
+async def reveal_ss_subconta(session: AsyncSession, company: Company) -> dict:
+    """Decrypt the sub-conta for a staff reveal. Callers must not log the result."""
+    username = None
+    password = None
+    if (
+        company.ss_subconta_username_enc is not None
+        or company.ss_subconta_password_enc is not None
+    ):
+        crypto = await get_or_create_pii_crypto(session, company_id=company.id)
+        if company.ss_subconta_username_enc is not None:
+            username = crypto.decrypt_secret(company.ss_subconta_username_enc)
+        if company.ss_subconta_password_enc is not None:
+            password = crypto.decrypt_secret(company.ss_subconta_password_enc)
+    return {"username": username, "password": password}
+
+
+def _require_subconta_pair(message: str) -> None:
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=message,
+    )
+
+
+async def apply_ss_subconta(
+    session: AsyncSession,
+    company: Company,
+    *,
+    username: str | None,
+    password: str | None,
+    available_on: date | None,
+    username_set: bool,
+    password_set: bool,
+    available_set: bool,
+    clear: bool,
+) -> None:
+    """Store an encrypted sub-conta. A blank password keeps the stored one."""
+    if clear:
+        company.ss_subconta_username_enc = None
+        company.ss_subconta_password_enc = None
+        company.ss_subconta_available_on = None
+        return
+    if not (username_set or password_set or available_set):
+        return
+
+    new_password = password if password_set and password else None
+    needs_crypto = username_set or new_password is not None
+    crypto = (
+        await get_or_create_pii_crypto(session, company_id=company.id)
+        if needs_crypto
+        else None
+    )
+
+    if username_set:
+        cleaned = (username or "").strip()
+        if not cleaned:
+            _require_subconta_pair(
+                "Sub-conta username is required. Clear the sub-conta to remove it."
+            )
+        has_password = company.ss_subconta_password_enc is not None or new_password is not None
+        if not has_password:
+            _require_subconta_pair("Sub-conta username and password are both required.")
+        assert crypto is not None
+        company.ss_subconta_username_enc = crypto.encrypt_secret(cleaned)
+
+    if new_password is not None:
+        if company.ss_subconta_username_enc is None:
+            _require_subconta_pair("Sub-conta username and password are both required.")
+        assert crypto is not None
+        company.ss_subconta_password_enc = crypto.encrypt_secret(new_password)
+
+    if available_set:
+        company.ss_subconta_available_on = available_on
+
+
 async def ops_company_detail(session: AsyncSession, company: Company) -> dict:
     base = await ops_company_list_item(session, company)
     bundle = await members_bundle(session, company)
@@ -197,6 +284,7 @@ async def ops_company_detail(session: AsyncSession, company: Company) -> dict:
     base["invites"] = bundle["invites"]
     base["registered_address"] = company.registered_address
     base["signatory_name"] = company.signatory_name
+    base.update(await ss_subconta_detail(session, company))
     return base
 
 
@@ -629,6 +717,13 @@ async def patch_ops_company(
     signatory_name: str | None = None,
     address_set: bool = False,
     signatory_set: bool = False,
+    ss_subconta_username: str | None = None,
+    ss_subconta_password: str | None = None,
+    ss_subconta_available_on: date | None = None,
+    ss_subconta_username_set: bool = False,
+    ss_subconta_password_set: bool = False,
+    ss_subconta_available_set: bool = False,
+    clear_ss_subconta: bool = False,
 ) -> Company:
     if legal_name is not None:
         name = legal_name.strip()
@@ -654,6 +749,17 @@ async def patch_ops_company(
         company.registered_address = (registered_address or "").strip() or None
     if signatory_set:
         company.signatory_name = (signatory_name or "").strip() or None
+    await apply_ss_subconta(
+        session,
+        company,
+        username=ss_subconta_username,
+        password=ss_subconta_password,
+        available_on=ss_subconta_available_on,
+        username_set=ss_subconta_username_set,
+        password_set=ss_subconta_password_set,
+        available_set=ss_subconta_available_set,
+        clear=clear_ss_subconta,
+    )
     return company
 
 

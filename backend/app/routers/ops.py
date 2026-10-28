@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -41,6 +41,7 @@ from app.schemas.members import (
     OpsCompanyListOut,
     SalesCompanyIn,
     SalesCompanyOut,
+    SsSubcontaRevealOut,
 )
 from app.services.contracts import apply_contract_to_employment, list_mismatch_flags
 from app.services.members import (
@@ -49,6 +50,7 @@ from app.services.members import (
     list_ops_companies,
     ops_company_detail,
     patch_ops_company,
+    reveal_ss_subconta,
 )
 
 router = APIRouter(prefix="/v1/ops", tags=["ops"])
@@ -329,11 +331,34 @@ async def patch_ops_company_route(
         signatory_name=body.signatory_name,
         address_set="registered_address" in body.model_fields_set,
         signatory_set="signatory_name" in body.model_fields_set,
+        ss_subconta_username=body.ss_subconta_username,
+        ss_subconta_password=body.ss_subconta_password,
+        ss_subconta_available_on=body.ss_subconta_available_on,
+        ss_subconta_username_set="ss_subconta_username" in body.model_fields_set,
+        ss_subconta_password_set="ss_subconta_password" in body.model_fields_set,
+        ss_subconta_available_set="ss_subconta_available_on" in body.model_fields_set,
+        clear_ss_subconta=body.clear_ss_subconta,
     )
     await db.commit()
     await db.refresh(company)
     detail = await ops_company_detail(db, company)
     return OpsCompanyDetailOut.model_validate(detail)
+
+
+@router.get(
+    "/companies/{company_id}/ss-subconta",
+    response_model=SsSubcontaRevealOut,
+)
+async def get_ops_ss_subconta(
+    company_id: uuid.UUID,
+    response: Response,
+    _: UserBase = Depends(require_staff),
+    db: AsyncSession = Depends(get_db),
+) -> SsSubcontaRevealOut:
+    response.headers["Cache-Control"] = "no-store"
+    company = await get_company_or_404(db, company_id)
+    revealed = await reveal_ss_subconta(db, company)
+    return SsSubcontaRevealOut.model_validate(revealed)
 
 
 @router.patch("/people/{employee_id}", response_model=PersonResidenceOut)

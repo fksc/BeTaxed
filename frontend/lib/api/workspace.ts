@@ -368,6 +368,14 @@ export type OpsCompanyDetailOut = OpsCompanyListOut & {
   invite_url?: string | null;
   registered_address?: string | null;
   signatory_name?: string | null;
+  ss_subconta_username?: string | null;
+  has_ss_subconta_password?: boolean;
+  ss_subconta_available_on?: string | null;
+};
+
+export type SsSubcontaRevealOut = {
+  username: string | null;
+  password: string | null;
 };
 
 export type PublicInviteOut = {

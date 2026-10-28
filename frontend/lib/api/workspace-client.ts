@@ -15,6 +15,7 @@ import type {
   MismatchFlag,
   NotificationList,
   OpsCompanyDetailOut,
+  SsSubcontaRevealOut,
   OpsCompanyListOut,
   EstablishmentOut,
   PersonOut,
@@ -746,6 +747,10 @@ export async function patchOpsCompany(
     max_members?: number;
     registered_address?: string;
     signatory_name?: string;
+    ss_subconta_username?: string | null;
+    ss_subconta_password?: string;
+    ss_subconta_available_on?: string | null;
+    clear_ss_subconta?: boolean;
   },
   opts: AuthOpts,
 ): Promise<OpsCompanyDetailOut> {
@@ -756,6 +761,17 @@ export async function patchOpsCompany(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     },
+    opts,
+  );
+}
+
+export async function revealOpsSubconta(
+  companyId: string,
+  opts: AuthOpts,
+): Promise<SsSubcontaRevealOut> {
+  return apiJson<SsSubcontaRevealOut>(
+    `/v1/ops/companies/${companyId}/ss-subconta`,
+    { method: "GET", cache: "no-store" },
     opts,
   );
 }

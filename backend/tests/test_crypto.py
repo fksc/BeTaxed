@@ -61,6 +61,8 @@ def test_pii_crypto_roundtrip() -> None:
     dob = date(1998, 3, 15)
     assert crypto.decrypt_dob(crypto.encrypt_dob(dob)) == dob
     assert crypto.niss_hash(niss) == hmac_niss(niss, scope, secret)
+    secret_value = "sub.conta@firma.pt / p@ss w0rd!"
+    assert crypto.decrypt_secret(crypto.encrypt_secret(secret_value)) == secret_value
 
 
 def test_decrypt_wrong_dek_raises() -> None:
