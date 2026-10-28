@@ -68,6 +68,9 @@ CREATE TABLE company (
     certified_vendor_name VARCHAR(128),     -- nullable until finance picks a tool
     max_members INTEGER NOT NULL DEFAULT 3
         CHECK (max_members >= 1),           -- seat cap; ops may raise (DEV-852)
+    ss_subconta_username_enc BYTEA,         -- SS portal sub-conta; company DEK (DEV-858)
+    ss_subconta_password_enc BYTEA,         -- same envelope; never on company APIs
+    ss_subconta_available_on DATE,          -- optional; plaintext date, not a secret
     created_from_intake_id UUID,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -84,6 +87,7 @@ CREATE UNIQUE INDEX idx_company_employer_niss_hash
 - `invoicing_method` may be null until finance sets it. `certified_vendor_name` stays null until they pick the certified tool (DEV-841).
 - Soft-delete with `deleted_at`.
 - `max_members` default **3**. BeTaxed staff may raise it on the ops company view. Seat use = active memberships + open invites (`PENDING` / `FAILED` / `EXPIRED`). `CANCELLED` / `ACCEPTED` do not occupy an extra seat.
+- `ss_subconta_username_enc` and `ss_subconta_password_enc` are the Segurança Social portal sub-conta for that company (DEV-858). Both use the company DEK (`KB/07`). There is no lookup hash. `ss_subconta_available_on` is optional and stays a plain date. Staff read the username on the ops company detail; the password is a separate staff read. Company-facing APIs omit all three. A blank password on save keeps the stored one. Clearing removes both secrets and the date.
 
 ---
 

@@ -21,6 +21,7 @@
 | Leftover extra NISS in SS JSONB | `niss_enc` (envelope) + tenant-scoped `niss_hash`; convert re-keys (DEV-848) |
 | Employer NISS, company NIF | `*_enc` + employer `*_hash` for matching uploads |
 | Name, date of birth | `*_enc` |
+| SS portal sub-conta username and password | `ss_subconta_username_enc` / `ss_subconta_password_enc` with the company DEK. No HMAC. Staff company detail returns the username only; the password is a separate staff read (DEV-858). |
 | SS export bytes, contract PDFs | GCS CMEK + optional app encrypt before put |
 | Session token for anonymous intake (upload-first) | store hash only |
 

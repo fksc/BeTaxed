@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CHAR,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -121,6 +122,9 @@ class Company(Base):
     max_members: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("3"), default=3
     )
+    ss_subconta_username_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    ss_subconta_password_enc: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
+    ss_subconta_available_on: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_from_intake_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("intake.id"),

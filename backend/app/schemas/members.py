@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
@@ -24,6 +24,10 @@ class CompanyPatchIn(BaseModel):
     max_members: int | None = Field(default=None, ge=1, le=500)
     registered_address: str | None = None
     signatory_name: str | None = Field(default=None, max_length=255)
+    ss_subconta_username: str | None = Field(default=None, max_length=255)
+    ss_subconta_password: str | None = Field(default=None, max_length=255)
+    ss_subconta_available_on: date | None = None
+    clear_ss_subconta: bool = False
 
 
 class MemberInviteIn(BaseModel):
@@ -86,6 +90,14 @@ class OpsCompanyDetailOut(OpsCompanyListOut):
     invites: list[InviteOut]
     registered_address: str | None = None
     signatory_name: str | None = None
+    ss_subconta_username: str | None = None
+    has_ss_subconta_password: bool = False
+    ss_subconta_available_on: date | None = None
+
+
+class SsSubcontaRevealOut(BaseModel):
+    username: str | None = None
+    password: str | None = None
 
 
 class PublicInviteOut(BaseModel):

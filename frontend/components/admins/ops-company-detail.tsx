@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
-import { Columns3, Eye, FileText, ListPlus, RefreshCw, Upload, UserCheck, Users, CalendarDays } from "lucide-react";
+import { Columns3, Eye, EyeOff, FileText, ListPlus, RefreshCw, Upload, UserCheck, Users, CalendarDays } from "lucide-react";
 
 import { Field } from "@/components/intake/field";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ import {
   openRequestCase,
   patchOpsCompany,
   patchPersonStatus,
+  revealOpsSubconta,
 } from "@/lib/api/workspace-client";
 import type {
   EstablishmentOut,
@@ -136,6 +137,10 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
   const [maxMembers, setMaxMembers] = useState("3");
   const [address, setAddress] = useState("");
   const [signatory, setSignatory] = useState("");
+  const [subcontaUsername, setSubcontaUsername] = useState("");
+  const [subcontaPassword, setSubcontaPassword] = useState("");
+  const [subcontaAvailable, setSubcontaAvailable] = useState("");
+  const [showSubcontaPassword, setShowSubcontaPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [idToken, setIdToken] = useState<string | null>(null);
   const nowYm = currentYearMonth();
@@ -195,6 +200,10 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
     setMaxMembers(String(detail.max_members));
     setAddress(detail.registered_address ?? "");
     setSignatory(detail.signatory_name ?? "");
+    setSubcontaUsername(detail.ss_subconta_username ?? "");
+    setSubcontaAvailable(detail.ss_subconta_available_on ?? "");
+    setSubcontaPassword("");
+    setShowSubcontaPassword(false);
     setError(null);
   }
 
@@ -243,6 +252,94 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("saveFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function applySubcontaDetail(detail: OpsCompanyDetailOut) {
+    setRow(detail);
+    setSubcontaUsername(detail.ss_subconta_username ?? "");
+    setSubcontaAvailable(detail.ss_subconta_available_on ?? "");
+    setSubcontaPassword("");
+    setShowSubcontaPassword(false);
+  }
+
+  async function onSaveSubconta() {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      return;
+    }
+    const username = subcontaUsername.trim();
+    if (!username || (!row?.has_ss_subconta_password && !subcontaPassword)) {
+      setError(t("subcontaRequired"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const detail = await patchOpsCompany(
+        companyId,
+        {
+          ss_subconta_username: username,
+          ss_subconta_available_on: subcontaAvailable || null,
+          ...(subcontaPassword ? { ss_subconta_password: subcontaPassword } : {}),
+        },
+        { idToken: token },
+      );
+      applySubcontaDetail(detail);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("subcontaFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRevealSubconta() {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      return;
+    }
+    if (showSubcontaPassword) {
+      setShowSubcontaPassword(false);
+      return;
+    }
+    if (subcontaPassword || !row?.has_ss_subconta_password) {
+      setShowSubcontaPassword(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      const revealed = await revealOpsSubconta(companyId, { idToken: token });
+      setSubcontaPassword(revealed.password ?? "");
+      setShowSubcontaPassword(true);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("subcontaFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onClearSubconta() {
+    const token = idToken ?? (await currentIdToken());
+    if (!token) {
+      return;
+    }
+    if (!window.confirm(t("clearSubcontaConfirm"))) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const detail = await patchOpsCompany(
+        companyId,
+        { clear_ss_subconta: true },
+        { idToken: token },
+      );
+      applySubcontaDetail(detail);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("subcontaFailed"));
     } finally {
       setBusy(false);
     }
@@ -446,6 +543,66 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
                 <Button type="button" size="sm" disabled={busy} onClick={() => void onSaveProfile()}>
                   {t("saveProfile")}
                 </Button>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("subcontaTitle")}</CardTitle>
+                <CardDescription>{t("subcontaHint")}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap items-end gap-3">
+                <Field label={t("subcontaUsername")} className="min-w-48 flex-1">
+                  <Input
+                    value={subcontaUsername}
+                    autoComplete="off"
+                    onChange={(event) => setSubcontaUsername(event.target.value)}
+                  />
+                </Field>
+                <Field
+                  label={t("subcontaPassword")}
+                  className="min-w-48 flex-1"
+                  hint={row.has_ss_subconta_password ? t("subcontaPasswordKeep") : undefined}
+                >
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type={showSubcontaPassword ? "text" : "password"}
+                      value={subcontaPassword}
+                      autoComplete="new-password"
+                      onChange={(event) => setSubcontaPassword(event.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      disabled={busy}
+                      aria-label={showSubcontaPassword ? t("hidePassword") : t("showPassword")}
+                      onClick={() => void onRevealSubconta()}
+                    >
+                      {showSubcontaPassword ? <EyeOff /> : <Eye />}
+                    </Button>
+                  </div>
+                </Field>
+                <Field label={t("subcontaAvailableOn")} className="w-44">
+                  <Input
+                    type="date"
+                    value={subcontaAvailable}
+                    onChange={(event) => setSubcontaAvailable(event.target.value)}
+                  />
+                </Field>
+                <Button type="button" size="sm" disabled={busy} onClick={() => void onSaveSubconta()}>
+                  {t("saveSubconta")}
+                </Button>
+                {row.ss_subconta_username || row.has_ss_subconta_password || row.ss_subconta_available_on ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={busy}
+                    onClick={() => void onClearSubconta()}
+                  >
+                    {t("clearSubconta")}
+                  </Button>
+                ) : null}
               </CardContent>
             </Card>
             <Card>
