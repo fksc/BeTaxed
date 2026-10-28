@@ -76,14 +76,19 @@ def test_preview_pdf_uses_more_than_one_a4_page() -> None:
 
 def test_render_minuta_fills_tokens() -> None:
     body = render_minuta(
-        "<p>{{ person_name }} at {{company_name}} from {{ contract_started_on }}</p>",
+        "<p>{{ person_name }} at {{company_name}} from {{ contract_started_on }}</p>"
+        "<p>pessoa coletiva n.º {{ company_nif }}, contribuinte fiscal n.º {{ person_nif }}</p>",
         {
             "person_name": "Rita",
             "company_name": "Oficina Norte",
             "contract_started_on": "2024-01-01",
+            "company_nif": "518273644",
+            "person_nif": "263748510",
         },
     )
-    assert body == "<p>Rita at Oficina Norte from 2024-01-01</p>"
+    assert "Rita at Oficina Norte from 2024-01-01" in body
+    assert "pessoa coletiva n.º 518273644" in body
+    assert "contribuinte fiscal n.º 263748510" in body
 
 
 def test_claim_is_blocked_when_the_reason_says_so() -> None:

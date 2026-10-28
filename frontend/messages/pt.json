@@ -464,6 +464,8 @@
       "insertColumnsHeader": "Inserir com linha de cabeçalho",
       "addRow": "Adicionar linha abaixo",
       "deleteRow": "Apagar esta linha",
+      "hideTableBorders": "Tirar o contorno da tabela",
+      "showTableBorders": "Mostrar o contorno da tabela",
       "deleteTable": "Apagar a tabela",
       "link": "Ligação",
       "linkPrompt": "URL (vazio para remover a ligação)",
