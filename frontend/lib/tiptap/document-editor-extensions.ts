@@ -4,7 +4,7 @@ import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
-import { TableKit } from "@tiptap/extension-table";
+import { Table, TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle } from "@tiptap/extension-text-style";
 import Typography from "@tiptap/extension-typography";
@@ -13,6 +13,20 @@ import StarterKit from "@tiptap/starter-kit";
 
 import { FontSize } from "@/lib/tiptap/font-size-extension";
 import { cn } from "@/lib/utils";
+
+const MinutaTable = Table.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      borderless: {
+        default: false,
+        parseHTML: (element: HTMLElement) => element.classList.contains("borderless"),
+        renderHTML: (attributes: { borderless?: boolean }) =>
+          attributes.borderless ? { class: "borderless" } : {},
+      },
+    };
+  },
+});
 
 export function createDocumentEditorExtensions(): Extensions {
   return [
@@ -44,13 +58,14 @@ export function createDocumentEditorExtensions(): Extensions {
         class: "max-w-full h-auto rounded-md",
       },
     }),
-    TableKit.configure({
-      table: {
-        resizable: false,
-        HTMLAttributes: {
-          class: "w-full table-fixed border-collapse text-sm",
-        },
+    MinutaTable.configure({
+      resizable: false,
+      HTMLAttributes: {
+        class: "w-full table-fixed border-collapse text-sm",
       },
+    }),
+    TableKit.configure({
+      table: false,
       tableCell: {
         HTMLAttributes: {
           class:
@@ -84,6 +99,7 @@ export const DOCUMENT_EDITOR_PROSE_CLASS = cn(
   "[&_sub]:align-sub [&_sub]:text-[0.75em]",
   "[&_sup]:align-super [&_sup]:text-[0.75em]",
   "[&_td]:align-top [&_th]:align-middle",
+  "[&_table.borderless_td]:border-0 [&_table.borderless_th]:border-0",
   "[&_.tableWrapper]:my-4 [&_.tableWrapper]:max-w-full [&_.tableWrapper]:overflow-x-auto",
   "[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2",
 );

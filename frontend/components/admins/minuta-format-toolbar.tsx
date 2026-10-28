@@ -384,6 +384,17 @@ export function MinutaFormatToolbar({
             {t("deleteRow")}
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={!editor.isActive("table")}
+            onClick={() => {
+              const borderless = editor.isActive("table", { borderless: true });
+              editor.chain().focus().updateAttributes("table", { borderless: !borderless }).run();
+            }}
+          >
+            {editor.isActive("table", { borderless: true })
+              ? t("showTableBorders")
+              : t("hideTableBorders")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
             disabled={!editor.can().deleteTable()}
             onClick={() => editor.chain().focus().deleteTable().run()}
           >

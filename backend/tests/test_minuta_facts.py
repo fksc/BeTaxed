@@ -157,14 +157,33 @@ def test_extract_fills_empty_profile_and_does_not_replace_the_legal_name() -> No
                     employer_address="Rua de Fornelos, 77",
                     signatory_name="Richard Lee Chambers III",
                     employee_address="Alameda Maria da Fonte",
+                    nif="245819363",
+                    employer_nif="518273644",
                 )
-                mismatch = remember_minuta_profile(company, employee, crypto, extract, doc)
+                mismatch = await remember_minuta_profile(
+                    session, company, employee, crypto, extract, doc
+                )
                 assert mismatch is True
                 assert company.legal_name == "Xblend Software, Lda."
                 assert company.registered_address == "Rua de Fornelos, 77"
                 assert company.signatory_name == "Richard Lee Chambers III"
                 assert employee.address_enc is not None
                 assert crypto.decrypt_address(employee.address_enc) == "Alameda Maria da Fonte"
+                assert crypto.decrypt_nif(employee.nif_enc) == "245819363"
+                assert crypto.decrypt_nif(company.nif_enc) == "518273644"
+                replacement = ContractExtract(
+                    doc_kind="CONVERSION",
+                    signed_on=date(2022, 5, 11),
+                    term_end_on=None,
+                    leftover={},
+                    nif="263748510",
+                    employer_nif="509111217",
+                )
+                await remember_minuta_profile(
+                    session, company, employee, crypto, replacement, doc
+                )
+                assert crypto.decrypt_nif(employee.nif_enc) == "245819363"
+                assert crypto.decrypt_nif(company.nif_enc) == "518273644"
                 company_id = company.id
                 await session.rollback()
         finally:

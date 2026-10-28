@@ -464,6 +464,8 @@
       "insertColumnsHeader": "Insert with a header row",
       "addRow": "Add row below",
       "deleteRow": "Delete this row",
+      "hideTableBorders": "Remove table borders",
+      "showTableBorders": "Show table borders",
       "deleteTable": "Delete the table",
       "link": "Link",
       "linkPrompt": "Link URL (leave empty to remove the link)",

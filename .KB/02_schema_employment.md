@@ -101,7 +101,7 @@ CREATE UNIQUE INDEX idx_employee_company_nif
 
 **Rules:**
 - Never use NISS as PK. Join uploads with `niss_hash` (`KB/07_security_encryption.md`).
-- `nif_hash` / `nif_enc` are the employee tax id. SS ingest does not fill them. A contract worker stores the PDF NIF after a link when the employee has none, and does not overwrite a different stored NIF.
+- `nif_hash` / `nif_enc` are the employee tax id. SS ingest does not fill them. A contract read, from the person page or the batch inbox, stores the PDF NIF when the employee has none, and does not overwrite a different stored NIF. The employer NIF is stored on `company.nif_enc` the same way, only when that column is empty.
 - `address_enc` is the residence printed on a minuta. A contract extract fills it only when empty. Name is filled the same way when `name_enc` is empty.
 - Rehire: **same** employee, new `employment`.
 - `first_permanent_elsewhere`: **company-reported** (onboarding forms we receive) or ops. `YES` = they told us this person already had a sem termo (this employer or elsewhere). SS extract of **this** employer cannot prove other employers.

@@ -9,7 +9,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Employee, Employment, EmploymentDocument, StoredFile
+from app.models import Company, Employee, Employment, EmploymentDocument, StoredFile
 from app.services.contract_llm import ContractExtract, get_contract_extractor
 from app.services.domain_events import emit_domain_event
 from app.storage import get_object_storage
@@ -178,12 +178,21 @@ async def review_employment_document(
         doc.review_error = "missing_file_or_employee"
         return doc
 
-    extract = await _reviewed_same_hash(
-        session,
-        company_id=employee.company_id,
-        sha256=stored.sha256,
-        file_id=stored.id,
+    company = (
+        await session.get(Company, employee.company_id)
+        if employee.company_id is not None
+        else None
     )
+    # A reused extract does not carry the NIFs. Read the PDF again while either
+    # profile NIF is still empty, so the first real read can fill them.
+    extract = None
+    if employee.nif_enc is not None and company is not None and company.nif_enc is not None:
+        extract = await _reviewed_same_hash(
+            session,
+            company_id=employee.company_id,
+            sha256=stored.sha256,
+            file_id=stored.id,
+        )
     if extract is not None:
         logger.info("contract review reused extract document=%s", document_id)
     else:
@@ -214,14 +223,11 @@ async def review_employment_document(
             return doc
 
     event_type = apply_contract_extract(doc, extract, employment)
-    if employee.company_id is not None:
-        from app.models import Company
+    if company is not None and employee.company_id is not None:
         from app.security.dek_store import get_or_create_pii_crypto
 
-        company = await session.get(Company, employee.company_id)
         crypto = await get_or_create_pii_crypto(session, company_id=employee.company_id)
-        if company is not None:
-            await remember_minuta_profile(company, employee, crypto, extract, doc)
+        await remember_minuta_profile(session, company, employee, crypto, extract, doc)
     payload = review_event_payload(doc, employee, employment)
     await emit_domain_event(
         session,
@@ -250,9 +256,13 @@ def _same_name(left: str, right: str) -> bool:
     return " ".join(left.lower().split()) == " ".join(right.lower().split())
 
 
-def remember_minuta_profile(company, employee, crypto, extract: ContractExtract, doc) -> bool:
+async def remember_minuta_profile(session, company, employee, crypto, extract: ContractExtract, doc) -> bool:
     """Fill empty profile fields from a contract extract. True when the legal name differs."""
-    from app.services.contract_inbox import _digits
+    from sqlalchemy import select
+
+    from app.models import RequestCase
+    from app.services.contract_inbox import _digits, _remember_employee_nif
+    from app.services.minuta_facts import copy_case_facts
 
     if employee is not None and extract.employee_address and employee.address_enc is None:
         employee.address_enc = crypto.encrypt_address(extract.employee_address)
@@ -275,5 +285,23 @@ def remember_minuta_profile(company, employee, crypto, extract: ContractExtract,
             company.employer_niss_hash = crypto.niss_hash(extract.employer_niss)
     if _digits(extract.employer_niss) and doc is not None:
         doc.employer_niss_enc = crypto.encrypt_niss(extract.employer_niss)
+    if _digits(extract.employer_nif) and company.nif_enc is None:
+        company.nif_enc = crypto.encrypt_nif(extract.employer_nif)
+    if employee is not None:
+        conflict = await _remember_employee_nif(session, employee, crypto, extract.nif)
+        if conflict and doc is not None and hasattr(doc, "review_leftover"):
+            leftover = dict(doc.review_leftover or {})
+            leftover["nif_conflict"] = True
+            doc.review_leftover = leftover
+        open_cases = (
+            await session.execute(
+                select(RequestCase).where(
+                    RequestCase.employee_id == employee.id,
+                    RequestCase.closed_at.is_(None),
+                )
+            )
+        ).scalars().all()
+        for case in open_cases:
+            await copy_case_facts(session, case, only_empty=True)
     printed = (extract.employer_legal_name or "").strip()
     return bool(printed and company.legal_name and not _same_name(printed, company.legal_name))

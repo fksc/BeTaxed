@@ -402,6 +402,8 @@ async def run_operation(
             raise HTTPException(status_code=404, detail="Minuta not found.")
         if case.declared_on is None:
             case.declared_on = date.today()
+        if not payload.get("body_html"):
+            await copy_case_facts(session, case, only_empty=True)
         body = payload.get("body_html") or await _filled_body(session, case, template)
         session.add(
             RequestCaseMinuta(

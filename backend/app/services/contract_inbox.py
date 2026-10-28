@@ -117,13 +117,15 @@ async def process_contract_inbox(
         return inbox
 
     crypto = await get_or_create_pii_crypto(session, company_id=company.id)
-    reused = await _cached_extract(
-        session,
-        crypto,
-        company_id=company.id,
-        sha256=stored.sha256,
-        file_id=stored.id,
-    )
+    reused = None
+    if company.nif_enc is not None:
+        reused = await _cached_extract(
+            session,
+            crypto,
+            company_id=company.id,
+            sha256=stored.sha256,
+            file_id=stored.id,
+        )
     if reused is not None:
         extract = reused.extract
         logger.info("contract inbox reused extract inbox=%s", inbox_id)
@@ -174,8 +176,8 @@ async def process_contract_inbox(
     if result.employee_id is None or result.via is None:
         from app.services.contract_review import remember_minuta_profile
 
-        inbox.legal_name_mismatch = remember_minuta_profile(
-            company, None, crypto, extract, inbox
+        inbox.legal_name_mismatch = await remember_minuta_profile(
+            session, company, None, crypto, extract, inbox
         )
         inbox.status = "UNMATCHED"
         inbox.processed_at = datetime.now(UTC)
@@ -191,8 +193,8 @@ async def process_contract_inbox(
     inbox.nif_conflict = await _remember_employee_nif(session, employee, crypto, extract.nif)
     from app.services.contract_review import remember_minuta_profile
 
-    inbox.legal_name_mismatch = remember_minuta_profile(
-        company, employee, crypto, extract, inbox
+    inbox.legal_name_mismatch = await remember_minuta_profile(
+        session, company, employee, crypto, extract, inbox
     )
     existing = await _document_for_hash(session, employee.id, stored.sha256)
     if existing is not None:
@@ -239,7 +241,7 @@ async def process_contract_inbox(
         },
     )
     event_type = apply_contract_extract(doc, extract, current)
-    remember_minuta_profile(company, employee, crypto, extract, doc)
+    await remember_minuta_profile(session, company, employee, crypto, extract, doc)
     leftover = dict(doc.review_leftover or {})
     leftover["match_via"] = result.via
     if inbox.nif_conflict:

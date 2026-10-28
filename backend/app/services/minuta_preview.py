@@ -37,6 +37,7 @@ code { font-family: ui-monospace, monospace; font-size: 0.9em; background: #f1f5
 pre { font-family: ui-monospace, monospace; font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 0.75em; border-radius: 6px; }
 table { border-collapse: collapse; width: 100%; font-size: 15px; }
 td, th { border: 1px solid #cbd5e1; padding: 0.75em; vertical-align: top; text-align: left; }
+table.borderless td, table.borderless th { border: none; }
 th { background: #f1f5f9; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
 img { max-width: 100%; height: auto; margin: 1em 0; }
 a { color: #6d28d9; text-decoration: underline; }
