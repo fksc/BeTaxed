@@ -21,6 +21,7 @@ def test_unknown_token_stays_blank() -> None:
     assert body == "<p>Rita </p>"
 
 
+@pytest.mark.needs_app_db
 def test_refresh_keeps_a_staff_edit() -> None:
     import asyncio
 
@@ -115,6 +116,7 @@ def test_refresh_keeps_a_staff_edit() -> None:
     asyncio.run(body())
 
 
+@pytest.mark.needs_app_db
 def test_extract_fills_empty_profile_and_does_not_replace_the_legal_name() -> None:
     import asyncio
 

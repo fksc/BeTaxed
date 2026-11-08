@@ -11,21 +11,17 @@ import { useAuthUser } from "@/hooks/use-auth-user";
 export function RedirectIfSignedIn({ children }: { children: ReactNode }) {
   const { user, ready } = useAuthUser();
   const router = useRouter();
-  const [show, setShow] = useState(false);
+  const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    if (!ready) {
-      return;
-    }
-    if (!user) {
-      setShow(true);
+    if (!ready || !user) {
       return;
     }
     let cancelled = false;
     void (async () => {
       const idToken = await currentIdToken();
       if (!idToken) {
-        if (!cancelled) setShow(true);
+        if (!cancelled) setAllowed(true);
         return;
       }
       try {
@@ -38,12 +34,14 @@ export function RedirectIfSignedIn({ children }: { children: ReactNode }) {
       } catch {
         /* a session with no company is not signed in */
       }
-      if (!cancelled) setShow(true);
+      if (!cancelled) setAllowed(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [ready, user, router]);
+
+  const show = (ready && !user) || allowed;
 
   if (!show) {
     return (
