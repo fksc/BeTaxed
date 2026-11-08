@@ -1,0 +1,259 @@
+# Production deploy. Push-to-main is off until the production Cloud Run
+# services are finished. Run this by hand only after that.
+# Builds and pushes images, runs Alembic through the Cloud SQL proxy, then
+# swaps the Cloud Run image. Linear Anteater-Production is scheduled: sync, then complete.
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version (for example 2026.11.08). Overrides the date-sha version."
+        required: false
+        type: string
+      force_backend:
+        description: "Deploy backend and run Alembic even when no backend files changed."
+        required: false
+        type: boolean
+        default: false
+      force_frontend:
+        description: "Deploy frontend even when no frontend files changed."
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  GCP_REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
+  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY || 'europe-west1-docker.pkg.dev/project-76d4a590-35c3-4fa2-936/anteater' }}
+  ARTIFACT_REGISTRY_HOST: europe-west1-docker.pkg.dev
+  BACKEND_SERVICE: ${{ vars.BACKEND_SERVICE_PRODUCTION || 'anteater-backend-prod' }}
+  FRONTEND_SERVICE: ${{ vars.FRONTEND_SERVICE_PRODUCTION || 'anteater-frontend-prod' }}
+  CLOUD_SQL_CONNECTION_NAME: ${{ vars.CLOUD_SQL_CONNECTION_NAME || 'project-76d4a590-35c3-4fa2-936:europe-west1:anteater-prod' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.event_name == 'push' && github.event.before || github.sha }}
+          ref: ${{ github.sha }}
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.release_version }}
+        run: |
+          if [[ -n "$INPUT_VERSION" ]]; then
+            version="${INPUT_VERSION#v}"
+          else
+            version="$(date -u +%Y.%m.%d)-${GITHUB_SHA:0:7}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Release version: $version"
+
+  deploy-backend:
+    needs: [changes, resolve-version]
+    if: needs.changes.outputs.backend == 'true' || inputs.force_backend == true
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ARTIFACT_REGISTRY_HOST }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.BACKEND_SERVICE }}:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.BACKEND_SERVICE }}:prod
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.BACKEND_SERVICE }}:v${{ needs.resolve-version.outputs.version }}
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUD_SQL_CONNECTION_NAME: ${{ env.CLOUD_SQL_CONNECTION_NAME }}
+        run: |
+          curl -fsSL -o cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.21.3/cloud-sql-proxy.linux.amd64
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy --port 5432 "$CLOUD_SQL_CONNECTION_NAME" &
+          PROXY_PID=$!
+          for _ in $(seq 1 30); do
+            (echo >/dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && break
+            sleep 1
+          done
+          cd backend
+          pip install -r requirements.txt
+          export DATABASE_URL="$(python - <<'PY'
+          import os
+          from urllib.parse import quote, unquote, urlparse
+          raw = os.environ["DATABASE_URL"]
+          parsed = urlparse(raw.replace("postgresql+asyncpg://", "postgresql://", 1))
+          user = quote(unquote(parsed.username or ""), safe="")
+          password = quote(unquote(parsed.password or ""), safe="")
+          database = parsed.path.lstrip("/")
+          if not database:
+              raise SystemExit("DATABASE_URL is missing a database name")
+          print(f"postgresql+asyncpg://{user}:{password}@127.0.0.1:5432/{database}")
+          PY
+          )"
+          alembic upgrade head
+          kill "$PROXY_PID" || true
+
+      - name: Deploy backend to Cloud Run
+        run: |
+          gcloud run deploy "${{ env.BACKEND_SERVICE }}" \
+            --image "${{ env.ARTIFACT_REGISTRY }}/${{ env.BACKEND_SERVICE }}:${{ github.sha }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform managed \
+            --quiet
+
+  deploy-frontend:
+    needs: [changes, resolve-version]
+    if: needs.changes.outputs.frontend == 'true' || inputs.force_frontend == true
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ARTIFACT_REGISTRY_HOST }}
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.FRONTEND_SERVICE }}:${{ github.sha }}
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.FRONTEND_SERVICE }}:prod
+            ${{ env.ARTIFACT_REGISTRY }}/${{ env.FRONTEND_SERVICE }}:v${{ needs.resolve-version.outputs.version }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'anteater-9d782.firebaseapp.com' }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'anteater-9d782' }}
+
+      - name: Deploy frontend to Cloud Run
+        run: |
+          gcloud run deploy "${{ env.FRONTEND_SERVICE }}" \
+            --image "${{ env.ARTIFACT_REGISTRY }}/${{ env.FRONTEND_SERVICE }}:${{ github.sha }}" \
+            --region "${{ env.GCP_REGION }}" \
+            --platform managed \
+            --quiet
+
+  linear-release:
+    needs: [changes, resolve-version, deploy-backend, deploy-frontend]
+    if: |
+      always() &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true' || inputs.force_backend == true || inputs.force_frontend == true) &&
+      (needs.deploy-backend.result == 'success' || needs.deploy-backend.result == 'skipped') &&
+      (needs.deploy-frontend.result == 'success' || needs.deploy-frontend.result == 'skipped') &&
+      (needs.deploy-backend.result == 'success' || needs.deploy-frontend.result == 'success')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync Linear production release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY_PRODUCTION }}
+          command: sync
+          version: ${{ needs.resolve-version.outputs.version }}
+          links: |
+            GitHub Actions=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Commit=${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
+      - name: Complete Linear production release
+        uses: linear/linear-release-action@v0
+        with:
+          access_key: ${{ secrets.LINEAR_ACCESS_KEY_PRODUCTION }}
+          command: complete
+          version: ${{ needs.resolve-version.outputs.version }}
+          links: |
+            GitHub Actions=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Commit=${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+
+  tag-release:
+    needs: [resolve-version, linear-release]
+    if: |
+      needs.linear-release.result == 'success' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ needs.resolve-version.outputs.version }}" -m "Production release v${{ needs.resolve-version.outputs.version }}"
+          git push origin "v${{ needs.resolve-version.outputs.version }}"
