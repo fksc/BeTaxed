@@ -10,6 +10,7 @@ Feature/DEV-xxx → PR → dev → (staging) → Release PR → main → (produc
 
 | File | Trigger | What it does |
 | --- | --- | --- |
+| `workflows/ci.yml` | PR → `dev` or `main` | Backend tests, frontend lint/build (path-filtered) |
 | `workflows/deploy-staging.yml` | Push to `dev` | Build images, Alembic through the Cloud SQL proxy, swap the Cloud Run image, sync Linear Anteater-Staging |
 | `workflows/deploy-production.yml` | Manual only, for now | Same path for production. It does not run on a push to `main` until production Cloud Run is finished |
 
