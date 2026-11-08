@@ -1,11 +1,18 @@
-"use client";
+import { hasLocale } from "next-intl";
+import { notFound } from "next/navigation";
 
-import { LoginForm } from "@/components/auth/login-form";
+import { redirect } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
+import { paths } from "@/lib/app-paths";
 
-export default function LoginPage() {
-  return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-12 lg:py-16">
-      <LoginForm />
-    </main>
-  );
+export default async function LoginAliasPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+  redirect({ href: paths.home, locale });
 }

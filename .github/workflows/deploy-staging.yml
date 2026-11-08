@@ -162,6 +162,7 @@ jobs:
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'anteater-9d782.firebaseapp.com' }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'anteater-9d782' }}
+            NEXT_PUBLIC_MARKETING_URL=${{ vars.NEXT_PUBLIC_MARKETING_URL || 'https://anteater.pt' }}
 
       - name: Deploy frontend to Cloud Run
         run: |

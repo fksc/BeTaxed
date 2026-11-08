@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "BeTaxed — Social Security savings",
+    "title": "Anteater — Social Security savings",
     "description": "Find unrealized Social Security savings for your company. No recipe."
   },
   "brand": {
-    "name": "BeTaxed",
+    "name": "Anteater",
     "market": "Portugal"
   },
   "userMenu": {
@@ -43,7 +43,7 @@
     "kicker": "Opportunity",
     "headline": "There is value left on the table. Not a map of how to take it.",
     "lead": "If you continue, we run the process with you. If you decline, we delete the extract and these figures.",
-    "continueTitle": "Continue with BeTaxed",
+    "continueTitle": "Continue with Anteater",
     "legalName": "Legal name",
     "tradingName": "Trading name",
     "optional": "Optional",
@@ -67,9 +67,10 @@
     "password": "Password",
     "kicker": "Account",
     "signIn": "Sign in",
-    "signInTitle": "Sign in to BeTaxed",
+    "signInTitle": "Sign in to Anteater",
     "signInLead": "Use the account you created the workspace with, or one you already have.",
     "signingIn": "Signing in…",
+    "backHome": "Back",
     "noAccount": "No account yet?",
     "goToStart": "Start with a reading of the extract"
   },
@@ -117,7 +118,7 @@
     }
   },
   "workspace": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Portugal",
     "navGroup": "Workspace",
     "soon": "Soon",
@@ -221,7 +222,7 @@
       "establishmentReopen": "Reopen",
       "establishmentInvalid": "Enter a name and a 4-digit code.",
       "establishmentDuplicate": "That Segurança Social code is already on this company.",
-      "establishmentForbidden": "Only a company admin or BeTaxed staff can change establishments.",
+      "establishmentForbidden": "Only a company admin or Anteater staff can change establishments.",
       "establishmentFailed": "Could not save the establishment."
     },
     "invoices": {
@@ -369,7 +370,7 @@
     }
   },
   "admins": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Operations",
     "navGroup": "Ops",
     "soon": "Soon",
@@ -753,53 +754,6 @@
       "capInvalid": "Enter a whole number of 1 or more.",
       "saveFailed": "Could not save the limit.",
       "needAuth": "Could not load this company."
-    }
-  },
-  "marketing": {
-    "nav": {
-      "brand": "beTaxed",
-      "about": "About us",
-      "contact": "Contact",
-      "start": "Read the extract",
-      "signIn": "Sign in",
-      "workspace": "Workspace",
-      "openMenu": "Open menu"
-    },
-    "footer": {
-      "brand": "beTaxed",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal",
-      "about": "About us",
-      "contact": "Contact",
-      "start": "Read the extract",
-      "privacy": "Privacy policy"
-    },
-    "landing": {
-      "headline": "Tax optimisation",
-      "heroCaption": "Anticipate. Execute. Within the law.",
-      "subhead": "Unveiling and enhancing opportunities — for greater tax efficiency",
-      "lead": "Tax planning and optimisation for companies — a legal way to reduce the tax burden.",
-      "cta": "Read your extract",
-      "p1": "People often look at tax optimisation with suspicion. Tax itself became a stigma: any cut in the bill is assumed to come from something murky and outside the law.",
-      "p2": "Tax work has long since moved from a purely reactive stance with the authorities to a proactive one: taking initiative and anticipating, then executing.",
-      "p3": "A professional approach, proper planning, and execution help your company use, legally, the benefits that apply to its situation. The public screen does not teach the method."
-    },
-    "about": {
-      "kicker": "About us",
-      "headline": "Business tax, with execution.",
-      "p1": "BeTaxed works with companies in Portugal. We find unrealized Social Security savings and, if you stay, we run the process with you.",
-      "p2": "This is not a do-it-yourself calculator. The public screen shows totals; the map for how to get them stays with us.",
-      "p3": "Based in Porto. Contact: geral@betaxed.eu."
-    },
-    "contact": {
-      "kicker": "Contact",
-      "headline": "Get in touch",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal"
-    },
-    "privacy": {
-      "headline": "Privacy policy",
-      "lead": "Full legal copy comes later. For now: if you decline after a reading, we delete the extract."
     }
   },
   "notifications": {

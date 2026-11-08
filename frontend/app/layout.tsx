@@ -1,20 +1,10 @@
-import { Geist, Geist_Mono, Montserrat, Newsreader } from "next/font/google";
+import { Geist_Mono, Newsreader } from "next/font/google";
 
 import { routing } from "@/i18n/routing";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "latin-ext"],
-});
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin", "latin-ext"],
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
   subsets: ["latin", "latin-ext"],
 });
 
@@ -33,7 +23,7 @@ export default function RootLayout({
     <html
       lang={routing.defaultLocale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${montserrat.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning

@@ -304,7 +304,7 @@ def _mail_copy(
     greeting_en = f"Hi {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
     greeting_pt = f"Olá {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
     if locale.lower().startswith("en"):
-        subject = f"Join {company.legal_name} on BeTaxed"
+        subject = f"Join {company.legal_name} on Anteater"
         body = (
             f"{greeting_en}"
             f"You were invited to {company.legal_name} as {role}.\n\n"
@@ -312,7 +312,7 @@ def _mail_copy(
             "If you did not expect this, ignore the message.\n"
         )
         return subject, body
-    subject = f"Convite BeTaxed — {company.legal_name}"
+    subject = f"Convite Anteater — {company.legal_name}"
     body = (
         f"{greeting_pt}"
         f"Foi convidado para {company.legal_name} como {role}.\n\n"
@@ -439,7 +439,7 @@ async def create_invite(
     if user.user_type == "BETAXED_STAFF":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="BeTaxed staff are not company members.",
+            detail="Anteater staff are not company members.",
         )
 
     membership = (
