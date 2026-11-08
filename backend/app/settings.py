@@ -57,7 +57,7 @@ def get_email_from() -> str:
         os.environ.get("EMAIL_FROM", "").strip()
         or os.environ.get("SMTP_FROM", "").strip()
     )
-    return raw or "BeTaxed <noreply@localhost>"
+    return raw or "Anteater <noreply@localhost>"
 
 
 @lru_cache

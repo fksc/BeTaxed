@@ -23,7 +23,7 @@ export function StatCard({
           </span>
           <div className="flex items-center gap-2">
             {badge ? (
-              <span className="text-[10px] font-medium tracking-wide text-accent uppercase">
+              <span className="text-[10px] font-medium tracking-wide text-accent-ink uppercase">
                 {badge}
               </span>
             ) : null}

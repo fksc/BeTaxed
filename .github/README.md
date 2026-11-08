@@ -30,6 +30,7 @@ Each environment also needs:
 | `DATABASE_URL` | secret | Async SQLAlchemy URL. The workflow rewrites the Cloud SQL socket host to `127.0.0.1:5432` for Alembic |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | secret | Firebase web API key, inlined into the frontend image |
 | `NEXT_PUBLIC_API_URL` | variable | Backend origin baked into the frontend image |
+| `NEXT_PUBLIC_MARKETING_URL` | variable | Marketing site origin baked into the frontend image. Defaults to `https://anteater.pt` |
 | `CLOUD_SQL_CONNECTION_NAME` | variable | Optional. Defaults are `anteater-staging` and `anteater-prod` |
 
 See `.KB/GIT_STRATEGY.md`.

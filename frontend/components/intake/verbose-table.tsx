@@ -12,7 +12,7 @@ export function VerboseTable({ people }: { people: VerbosePerson[] }) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
+        <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
           {t("kicker")}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">{t("lead")}</p>

@@ -43,7 +43,7 @@ export function NavUser({ settingsHref }: { settingsHref: string }) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton tooltip={t("signIn")} render={<Link href={paths.login} />}>
+          <SidebarMenuButton tooltip={t("signIn")} render={<Link href={paths.home} />}>
             <LogOut className="rotate-180" />
             <span>{t("signIn")}</span>
           </SidebarMenuButton>

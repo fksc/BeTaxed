@@ -22,6 +22,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
+    icons: {
+      icon: [{ url: "/Anteater%20no%20text%20icon%20only.svg", type: "image/svg+xml" }],
+    },
   };
 }
 

@@ -253,7 +253,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         {phase === "start" || phase === "working" ? (
           <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-5">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
+              <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
                 {t("start.kicker")}
               </p>
               <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
@@ -344,7 +344,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         {phase === "converted" && intake ? (
           <section className="space-y-8">
             <div className="max-w-2xl space-y-3">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
+              <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
                 {t("converted.kicker")}
               </p>
               <h1 className="font-editorial text-4xl tracking-tight">
@@ -415,7 +415,7 @@ function ResultView({
   return (
     <section className="space-y-10">
       <div className="max-w-2xl space-y-3">
-        <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
+        <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
           {t("result.kicker")}
         </p>
         <h1 className="font-editorial text-4xl tracking-tight text-balance">
