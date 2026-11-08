@@ -1,0 +1,22 @@
+# Build and push the staging API image.
+# The Artifact Registry repo must exist first:
+#   gcloud artifacts repositories create anteater \
+#     --repository-format=docker --location=europe-west1
+#
+#   gcloud builds submit --config infra/cloudbuild/backend.yaml .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - backend/Dockerfile
+      - -t
+      - ${_IMAGE}
+      - backend
+images:
+  - ${_IMAGE}
+substitutions:
+  _TAG: staging
+  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/anteater/backend:${_TAG}
+options:
+  logging: CLOUD_LOGGING_ONLY
