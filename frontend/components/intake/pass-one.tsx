@@ -10,6 +10,7 @@ import { Field, TextInput } from "@/components/intake/field";
 import { SavingsCard } from "@/components/intake/savings-card";
 import { SsGuide } from "@/components/intake/ss-guide";
 import { VerboseTable } from "@/components/intake/verbose-table";
+import { PublicChrome } from "@/components/public/public-chrome";
 import { Button } from "@/components/ui/button";
 import { MonthPicker } from "@/components/ui/month-picker";
 import {
@@ -292,7 +293,8 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-12 lg:py-16">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8 lg:py-12">
+        <PublicChrome />
         {phase === "declined" ? (
           <section className="max-w-lg space-y-5">
             <h1 className="font-editorial text-4xl tracking-tight">

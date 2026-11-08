@@ -35,3 +35,7 @@ export function AnteaterLogo({
     </span>
   );
 }
+
+export function AnteaterMark({ className }: { className?: string }) {
+  return <img src={MARK} alt="" className={cn("object-contain", className)} />;
+}
