@@ -165,6 +165,10 @@ CREATE TABLE intake (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES user_base(id),          -- null until account exists (upload-first)
     email VARCHAR(255),                             -- optional contact
+    sales_call_name VARCHAR(255),                   -- pass-1 call request; cleared on purge
+    sales_call_email VARCHAR(255),
+    sales_call_phone VARCHAR(40),
+    sales_call_at TIMESTAMPTZ,
     session_token_hash BYTEA,                       -- anonymous/browser bind (upload-first)
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN'
         CHECK (status IN ('OPEN', 'CONVERTED', 'DECLINED', 'PURGED')),
@@ -188,7 +192,8 @@ CREATE INDEX idx_intake_status ON intake(status);
 - `user_id` nullable **on purpose** (OD-1 locked: both account-first and upload-first).
 - The four `teaser_*` amounts are what we **showed** (OD-2), not a live ledger. Do not use JSONB.
 - Convert: create `company`, set `converted_company_id`, `status = CONVERTED`, attach batches/employees (`KB/10_product_flow.md#pass-2--stay`).
-- Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed.
+- Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed. Clear `sales_call_*` with `email`.
+- A sales-call request on an open intake stores name, email, and phone here and may mail `SALES_NOTIFY_EMAIL`. It does not create a company.
 - Add FK `intake.teaser_regime_id → incentive_regime(id)` in the benefit migration.
 
 **Circular FK:** `company.created_from_intake_id` → `intake(id)` added after both tables exist (nullable, set on convert).

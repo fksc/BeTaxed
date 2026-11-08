@@ -18,19 +18,101 @@
     "switchTo": "Idioma"
   },
   "start": {
-    "kicker": "Leitura do extrato",
-    "headline": "Há poupança por realizar na Segurança Social da sua empresa.",
-    "lead": "Carregue o extrato que gera na Segurança Social. Mostramos dois totais — o que já está ao alcance, e o que pode vir a ser. Não ensinamos o método.",
-    "needAccount": "Não precisa de conta para ver os totais.",
-    "haveAccount": "Já tenho conta",
-    "preferUpload": "Prefiro carregar o ficheiro primeiro",
+    "kicker": "Antes do extrato",
+    "headline": "Lemos um ficheiro. Depois decide.",
+    "lead": "Três passos. Se não continuar, o ficheiro e os números são eliminados.",
+    "continue": "Continuar",
+    "stepBrief": "O que fazemos",
+    "stepUpload": "Carregar",
+    "stepResult": "A poupança",
+    "points": [
+      {
+        "title": "O que vamos fazer",
+        "body": "Entrega o extrato da Segurança Social. Lemos do nosso lado e mostramos a poupança potencial. Não ensinamos o método."
+      },
+      {
+        "title": "O ficheiro fica protegido",
+        "body": "O extrato fica cifrado e serve só para esta leitura. Não é uma calculadora pública e não nomeia pessoas."
+      },
+      {
+        "title": "Se parar, eliminamos",
+        "body": "Se recusar, apagamos o ficheiro, as linhas lidas e os números. Nada desta leitura fica connosco."
+      }
+    ],
+    "uploadKicker": "O extrato",
+    "uploadTitle": "Largue o ficheiro de vínculos",
     "period": "Mês da declaração",
-    "submit": "Ver os totais",
+    "submit": "Ler o extrato",
     "working": "A trabalhar…"
   },
   "dropzone": {
     "title": "Largue o extrato da Segurança Social",
     "hint": "CSV ou Excel. Um livro, ou os dois ficheiros (vínculos e contratos)."
+  },
+  "guide": {
+    "kicker": "Exportar",
+    "title": "Obter os vínculos na Segurança Social Direta",
+    "open": "Como exportar o ficheiro",
+    "peek": "Veja o guia passo a passo!",
+    "close": "Fechar",
+    "portal": "Abrir a Segurança Social Direta",
+    "progress": "Passo {current} de {total}",
+    "scenarioProgress": "{scenario} · passo {current} de {total}",
+    "scenarioAName": "Cenário A",
+    "scenarioBName": "Cenário B",
+    "back": "Voltar",
+    "next": "Seguinte",
+    "done": "Concluído",
+    "forkProgress": "Depois da pesquisa",
+    "forkLead": "Menos de 50 pessoas segue o cenário A. Mais de 50 segue o cenário B.",
+    "under50": "Menos de 50 pessoas",
+    "over50": "Mais de 50 pessoas",
+    "shared": [
+      {
+        "title": "Entrar",
+        "body": "Abra a Segurança Social Direta e entre com o número de identificação da Segurança Social da empresa (NISS) e a palavra-passe."
+      },
+      {
+        "title": "Procurar vínculos",
+        "body": "No campo de pesquisa, procure “vínculos” e escolha “Consultar e alterar vínculos dos trabalhadores”."
+      },
+      {
+        "title": "Pesquisar por local e taxa",
+        "body": "Em “Pesquisar por”, escolha “Local de Trabalho e taxa”."
+      },
+      {
+        "title": "Período de hoje",
+        "body": "Em “Período a pesquisar”, ponha a data de hoje nos dois campos do intervalo."
+      },
+      {
+        "title": "Escolher o vínculo",
+        "body": "Em “Vínculo”, escolha “Trabalhadores por conta de outrem”."
+      },
+      {
+        "title": "Todos os locais de trabalho",
+        "body": "Em “Local de trabalho”, deixe “Selecione uma opção” para incluir todos os locais e clique em “Pesquisar”."
+      }
+    ],
+    "scenarioA": [
+      {
+        "title": "Descarregar o zip",
+        "body": "Clique em “Obter vínculos”. Descarrega um ficheiro zip. Abra-o e largue aqui os CSV “vínculos” e “contratos”. Pode deixar de fora “suspensões”."
+      }
+    ],
+    "scenarioB": [
+      {
+        "title": "Enviar para Mensagens",
+        "body": "Clique em “Obter vínculos”. Pelo volume, a Segurança Social Direta envia os ficheiros para Mensagens em vez de os descarregar já."
+      },
+      {
+        "title": "Abrir a mensagem",
+        "body": "Clique no ícone de carta (Mensagens) no canto superior direito e abra a mensagem deste pedido."
+      },
+      {
+        "title": "Descarregar os CSV",
+        "body": "Em Anexos, descarregue os CSV com os nomes “vínculos” e “contratos” e largue-os aqui. Pode deixar de fora “suspensões”."
+      }
+    ]
   },
   "working": {
     "lines": [
@@ -43,12 +125,33 @@
     "kicker": "Oportunidade",
     "headline": "Há valor por realizar. Sem o mapa de como o obter.",
     "lead": "Se continuar, tratamos do processo consigo. Se recusar, apagamos o extrato e estes números.",
+    "waiting": "Carregue o extrato para ver a poupança.",
+    "potentialLabel": "Poupança potencial",
+    "estimate": "Estimativa",
+    "perMonth": "{amount} por mês",
+    "modelTitle": "Como trabalhamos",
+    "model": [
+      "Tratamos do processo consigo. Este ecrã não ensina a tratar sozinho.",
+      "O honorário é uma parte da poupança que se realiza de facto. Um mês sem poupança não é faturado.",
+      "Este número é uma leitura do extrato. Pode mudar quando entrarem os contratos de trabalho."
+    ],
+    "workspaceTab": "Criar espaço",
+    "callTab": "Pedir uma chamada",
     "continueTitle": "Continuar com a Anteater",
+    "accountHint": "É a primeira vez? Escolha um email e uma palavra-passe. Já tem conta? Use-os para entrar.",
     "legalName": "Denominação legal",
     "tradingName": "Nome comercial",
     "optional": "Opcional",
     "createWorkspace": "Criar espaço de trabalho",
     "opening": "A abrir o espaço…",
+    "callTitle": "Fale connosco primeiro",
+    "callLead": "Deixe um nome e um número. Ligamos sobre esta leitura.",
+    "callName": "Nome",
+    "callPhone": "Telefone",
+    "callSubmit": "Pedir uma chamada",
+    "callSending": "A enviar…",
+    "callDone": "Ficou o pedido.",
+    "callDoneLead": "Fica guardado com esta leitura. Ainda pode criar o espaço de trabalho.",
     "decline": "Não, eliminar tudo",
     "declineConfirm": "Isto apaga o ficheiro e os totais de forma permanente.",
     "declineYes": "Sim, eliminar",
@@ -91,6 +194,7 @@
     "needAuthStart": "Para entrar primeiro, indique email e palavra-passe.",
     "needAuthContinue": "Crie uma conta (ou entre) para continuar.",
     "needLegalName": "Indique a denominação legal da empresa.",
+    "needCall": "Indique nome, email e telefone para podermos ligar.",
     "parseFailed": "Não foi possível ler este ficheiro. Use o extrato oficial de vínculos e contratos.",
     "authInvalid": "Email ou palavra-passe incorrectos.",
     "authWeak": "A palavra-passe deve ter pelo menos 6 caracteres.",

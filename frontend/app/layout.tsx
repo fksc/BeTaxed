@@ -1,4 +1,4 @@
-import { Geist_Mono, Newsreader } from "next/font/google";
+import { Geist_Mono, Inter, Newsreader } from "next/font/google";
 
 import { routing } from "@/i18n/routing";
 import "./globals.css";
@@ -14,6 +14,11 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "latin-ext"],
+});
+
 export default function RootLayout({
   children,
 }: {
@@ -23,7 +28,7 @@ export default function RootLayout({
     <html
       lang={routing.defaultLocale}
       suppressHydrationWarning
-      className={`${geistMono.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${geistMono.variable} ${newsreader.variable} ${inter.variable} h-full antialiased`}
     >
       <body
         suppressHydrationWarning

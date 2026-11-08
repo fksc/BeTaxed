@@ -274,6 +274,12 @@ class Intake(Base):
         UUID(as_uuid=True), ForeignKey("user_base.id"), nullable=True
     )
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sales_call_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sales_call_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    sales_call_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    sales_call_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     session_token_hash: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'OPEN'")

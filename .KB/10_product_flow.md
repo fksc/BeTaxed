@@ -24,7 +24,7 @@ A company can also join **without** pass 1: sales-led create + admin invite (`KB
 
 1. Company (or a prospect) provides the Segurança Social extract (vínculos + contratos; one workbook or two files).
 2. We store the file encrypted, parse it, match people on `niss_hash`, run the engine **only on our side**.
-3. We show a **teaser**: enough to believe there is a real opportunity. No recipe.
+3. We show a **teaser**: enough to believe there is a real opportunity. No recipe. The public result (DEV-896) leads with **potential over the window** and puts **potential per month** under it when that window is greater than zero. When the potential window is zero, the card shows the **now** pair instead. The other pair stays stored and off that screen.
 
 **Teaser must not include:** 50% of 23.75%, named employees, remaining months, “convert this contract to sem termo”, year-by-year tables. That material belongs in a controlled sales PDF, not the result screen.
 
