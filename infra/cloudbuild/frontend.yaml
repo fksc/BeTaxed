@@ -33,8 +33,7 @@ steps:
 images:
   - ${_IMAGE}
 substitutions:
-  _TAG: staging
-  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/anteater/frontend:${_TAG}
+  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/anteater/frontend:staging
   _API_URL: ""
   _FIREBASE_API_KEY: ""
   _FIREBASE_AUTH_DOMAIN: anteater-9d782.firebaseapp.com

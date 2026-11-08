@@ -21,14 +21,14 @@ spec:
         run.googleapis.com/startup-cpu-boost: "true"
         run.googleapis.com/execution-environment: gen2
         run.googleapis.com/cpu-throttling: "true"
-        # Uncomment when Cloud SQL anteater-staging exists.
-        # run.googleapis.com/cloudsql-instances: project-76d4a590-35c3-4fa2-936:europe-west1:anteater-staging
+        run.googleapis.com/cloudsql-instances: project-76d4a590-35c3-4fa2-936:europe-west1:anteater-staging
+        run.googleapis.com/secrets: DATABASE_URL:projects/project-76d4a590-35c3-4fa2-936/secrets/anteater-staging-database-url,ENCRYPTION_MASTER_KEY:projects/project-76d4a590-35c3-4fa2-936/secrets/anteater-staging-encryption-master-key,NISS_HMAC_SECRET:projects/project-76d4a590-35c3-4fa2-936/secrets/anteater-staging-niss-hmac-secret,INTERNAL_JOB_TOKEN:projects/project-76d4a590-35c3-4fa2-936/secrets/anteater-staging-internal-job-token,RESEND_API_KEY:projects/project-76d4a590-35c3-4fa2-936/secrets/anteater-staging-resend-api-key
     spec:
-      serviceAccountName: anteater-run-staging@project-76d4a590-35c3-4fa2-936.iam.gserviceaccount.com
+      serviceAccountName: anteater-staging@project-76d4a590-35c3-4fa2-936.iam.gserviceaccount.com
       containerConcurrency: 40
       timeoutSeconds: 300
       containers:
-        - image: europe-west1-docker.pkg.dev/project-76d4a590-35c3-4fa2-936/anteater/backend:staging
+        - image: europe-west1-docker.pkg.dev/project-76d4a590-35c3-4fa2-936/anteater/anteater-backend-staging:0.0.1
           ports:
             - name: http1
               containerPort: 8080
@@ -53,3 +53,44 @@ spec:
               value: anteater-staging
             - name: CLOUD_TASKS_LOCATION
               value: europe-west1
+            - name: CLOUD_TASKS_TARGET_URL
+              value: https://anteater-backend-staging-2w44u4afna-ew.a.run.app/internal/workers/review-contract
+            - name: CLOUD_TASKS_INVOKER_SA
+              value: anteater-staging@project-76d4a590-35c3-4fa2-936.iam.gserviceaccount.com
+            - name: GCS_BUCKET
+              value: anteater-docs
+            - name: GCS_KMS_KEY_NAME
+              value: projects/project-76d4a590-35c3-4fa2-936/locations/europe-west1/keyRings/anteater-staging/cryptoKeys/gcs
+            - name: EMAIL_PROVIDER
+              value: resend
+            - name: EMAIL_FROM
+              value: "Anthony <noreply@mail.anteater.pt>"
+            - name: PUBLIC_APP_URL
+              value: https://anteater-frontend-staging-2w44u4afna-ew.a.run.app
+            - name: CORS_ORIGINS
+              value: https://anteater-frontend-staging-2w44u4afna-ew.a.run.app,https://anteater-frontend-staging-846409615349.europe-west1.run.app
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: DATABASE_URL
+                  key: latest
+            - name: ENCRYPTION_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ENCRYPTION_MASTER_KEY
+                  key: latest
+            - name: NISS_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: NISS_HMAC_SECRET
+                  key: latest
+            - name: INTERNAL_JOB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: INTERNAL_JOB_TOKEN
+                  key: latest
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: RESEND_API_KEY
+                  key: latest

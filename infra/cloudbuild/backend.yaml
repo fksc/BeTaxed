@@ -16,7 +16,6 @@ steps:
 images:
   - ${_IMAGE}
 substitutions:
-  _TAG: staging
-  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/anteater/backend:${_TAG}
+  _IMAGE: europe-west1-docker.pkg.dev/${PROJECT_ID}/anteater/backend:staging
 options:
   logging: CLOUD_LOGGING_ONLY
