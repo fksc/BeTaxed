@@ -102,6 +102,22 @@ export async function convertIntake(
   );
 }
 
+export async function requestSalesCall(
+  intakeId: string,
+  body: { name: string; email: string; phone: string },
+  opts: AuthOpts,
+): Promise<{ ok: boolean }> {
+  return requestJson<{ ok: boolean }>(
+    `/v1/intakes/${intakeId}/sales-call`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    opts,
+  );
+}
+
 export async function declineIntake(
   intakeId: string,
   opts: AuthOpts,

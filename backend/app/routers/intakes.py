@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date
 
@@ -27,6 +28,8 @@ from app.schemas.intake import (
     IntakeBatchSummary,
     IntakeCreatedOut,
     IntakeOut,
+    SalesCallIn,
+    SalesCallOut,
     VerbosePersonOut,
 )
 from app.services.intake import (
@@ -34,7 +37,9 @@ from app.services.intake import (
     create_intake,
     latest_batch_summary,
     load_intake_or_404,
+    notify_sales_call,
     purge_intake,
+    record_sales_call,
     require_intake_access,
     require_open,
 )
@@ -45,6 +50,8 @@ from app.services.teaser import compute_verbose_people, persist_intake_teaser
 from app.settings import HEADER_INTAKE_SESSION, verbose_people_enabled
 
 router = APIRouter(prefix="/v1", tags=["intake"])
+
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _session_header(
@@ -111,6 +118,34 @@ async def post_intake_upload(
     await db.refresh(intake)
     latest = await latest_batch_summary(db, intake.id)
     return await _intake_out(db, intake, latest)
+
+
+@router.post("/intakes/{intake_id}/sales-call", response_model=SalesCallOut)
+async def post_intake_sales_call(
+    intake_id: uuid.UUID,
+    body: SalesCallIn,
+    user: UserBase | None = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+    session_token: str | None = Depends(_session_header),
+) -> SalesCallOut:
+    email = body.email.strip()
+    if _EMAIL.fullmatch(email) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Enter a valid email address.",
+        )
+    intake = await load_intake_or_404(db, intake_id)
+    require_intake_access(intake, user, session_token)
+    await record_sales_call(
+        db,
+        intake,
+        name=body.name.strip(),
+        email=email,
+        phone=body.phone.strip(),
+    )
+    await db.commit()
+    notify_sales_call(intake)
+    return SalesCallOut()
 
 
 @router.post("/intakes/{intake_id}/convert", response_model=ConvertIntakeOut)

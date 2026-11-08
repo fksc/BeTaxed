@@ -55,6 +55,16 @@ class IntakeCreatedOut(IntakeOut):
     session_token: str | None = None
 
 
+class SalesCallIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    phone: str = Field(min_length=6, max_length=40)
+
+
+class SalesCallOut(BaseModel):
+    ok: bool = True
+
+
 class ConvertIntakeIn(BaseModel):
     legal_name: str = Field(min_length=1, max_length=255)
     trading_name: str | None = Field(default=None, max_length=255)

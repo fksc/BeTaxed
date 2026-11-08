@@ -479,6 +479,80 @@ def test_upload_first_decline_keeps_no_account(db_session) -> None:
     asyncio.run(body())
 
 
+def test_sales_call_persists_and_purge_clears_it(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def body() -> None:
+        intake_id = None
+        sent: dict[str, str] = {}
+
+        def fake_send(*, to_email: str, subject: str, body: str) -> str:
+            sent["to"] = to_email
+            sent["subject"] = subject
+            sent["body"] = body
+            return "link_only"
+
+        monkeypatch.setenv("SALES_NOTIFY_EMAIL", "sales@example.test")
+        monkeypatch.setattr("app.services.intake.send_invite_email", fake_send)
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                intake_id = uuid.UUID(created.json()["id"])
+                session_token = created.json()["session_token"]
+                headers = {HEADER_INTAKE_SESSION: session_token}
+                rejected = await client.post(
+                    f"/v1/intakes/{intake_id}/sales-call",
+                    headers=headers,
+                    json={"name": "Ada", "email": "not-an-email", "phone": "910000000"},
+                )
+                assert rejected.status_code == 422, rejected.text
+                accepted = await client.post(
+                    f"/v1/intakes/{intake_id}/sales-call",
+                    headers=headers,
+                    json={
+                        "name": "Ada Lopes",
+                        "email": "ada@example.test",
+                        "phone": "910000000",
+                    },
+                )
+                assert accepted.status_code == 200, accepted.text
+                assert sent["to"] == "sales@example.test"
+                assert "ada@example.test" in sent["body"]
+                async with AsyncSessionLocal() as session:
+                    row = await session.get(Intake, intake_id)
+                    assert row is not None
+                    assert row.sales_call_name == "Ada Lopes"
+                    assert row.sales_call_email == "ada@example.test"
+                    assert row.sales_call_phone == "910000000"
+                    assert row.email == "ada@example.test"
+                    assert row.sales_call_at is not None
+                declined = await client.post(
+                    f"/v1/intakes/{intake_id}/decline",
+                    headers=headers,
+                )
+                assert declined.status_code == 200, declined.text
+                async with AsyncSessionLocal() as session:
+                    row = await session.get(Intake, intake_id)
+                    assert row is not None
+                    assert row.status == "PURGED"
+                    assert row.sales_call_name is None
+                    assert row.sales_call_email is None
+                    assert row.sales_call_phone is None
+                    assert row.sales_call_at is None
+                    assert row.email is None
+        finally:
+            async with AsyncSessionLocal() as session:
+                if intake_id is not None:
+                    await session.execute(delete(Intake).where(Intake.id == intake_id))
+                    await session.commit()
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
 async def _cleanup_converted(
     session,
     *,

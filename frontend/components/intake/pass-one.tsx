@@ -1,13 +1,16 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import LetterGlitch from "@/components/LetterGlitch";
+import Stepper, { Step } from "@/components/Stepper";
 import { Dropzone } from "@/components/intake/dropzone";
 import { Field, TextInput } from "@/components/intake/field";
-import { TeaserCards } from "@/components/intake/teaser-cards";
+import { SavingsCard } from "@/components/intake/savings-card";
+import { SsGuide } from "@/components/intake/ss-guide";
 import { VerboseTable } from "@/components/intake/verbose-table";
+import { PublicChrome } from "@/components/public/public-chrome";
 import { Button } from "@/components/ui/button";
 import { MonthPicker } from "@/components/ui/month-picker";
 import {
@@ -15,6 +18,7 @@ import {
   createIntake,
   declineIntake,
   getIntake,
+  requestSalesCall,
   uploadSsFiles,
 } from "@/lib/api/intakes";
 import { ApiError, type IntakeOut } from "@/lib/api/types";
@@ -29,8 +33,8 @@ import {
   saveWorkspaceName,
 } from "@/lib/intake-session";
 
-type Path = "upload" | "account";
-type Phase = "start" | "working" | "result" | "converted" | "declined";
+type Phase = "flow" | "working" | "declined";
+type CloseMode = "workspace" | "call";
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -42,8 +46,9 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
   const router = useRouter();
   const showVerboseTable = verboseUi || isVerboseUi();
   const workingLines = t.raw("working.lines") as string[];
-  const [path, setPath] = useState<Path>("upload");
-  const [phase, setPhase] = useState<Phase>("start");
+  const [phase, setPhase] = useState<Phase>("flow");
+  const [step, setStep] = useState(1);
+  const [booting, setBooting] = useState(() => loadIntakeSession() !== null);
   const [busy, setBusy] = useState(false);
   const [workingLine, setWorkingLine] = useState(workingLines[0]);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +62,11 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
   const [legalName, setLegalName] = useState("");
   const [tradingName, setTradingName] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [closeMode, setCloseMode] = useState<CloseMode>("workspace");
+  const [callName, setCallName] = useState("");
+  const [callEmail, setCallEmail] = useState("");
+  const [callPhone, setCallPhone] = useState("");
+  const [callSent, setCallSent] = useState(false);
 
   function fail(error: unknown): string {
     if (error instanceof ApiError) {
@@ -95,11 +105,13 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         setSessionToken(stored.sessionToken);
         if (loaded.status === "CONVERTED") {
           router.replace("/companies/dashboard");
-        } else if (loaded.teaser_now_monthly != null) {
-          setPhase("result");
+        } else if (loaded.teaser_now_monthly != null || loaded.teaser_potential_window != null) {
+          setStep(3);
         }
       } catch {
         clearIntakeSession();
+      } finally {
+        setBooting(false);
       }
     })();
   }, [router]);
@@ -129,23 +141,14 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       setError(t("errors.needFile"));
       return;
     }
+    const started = performance.now();
+    let nextStep = 2;
     setBusy(true);
     setPhase("working");
     setError(null);
     setWorkingLine(workingLines[0]);
     try {
-      let idToken = await currentIdToken();
-      if (path === "account") {
-        if (!email || !password) {
-          setError(t("errors.needAuthStart"));
-          setPhase("start");
-          setBusy(false);
-          return;
-        }
-        await ensureEmailUser(email, password);
-        idToken = await currentIdToken();
-        setSignedIn(true);
-      }
+      const idToken = await currentIdToken();
       let current = intake;
       let token = sessionToken;
       if (!current) {
@@ -161,14 +164,18 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       setIntake(uploaded);
       if (uploaded.latest_batch?.parse_status !== "APPLIED") {
         setError(uploaded.latest_batch?.parse_error || t("errors.parseFailed"));
-        setPhase("start");
-        return;
+      } else {
+        nextStep = 3;
       }
-      setPhase("result");
     } catch (err) {
       setError(fail(err));
-      setPhase("start");
     } finally {
+      const remain = 4000 - (performance.now() - started);
+      if (remain > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remain));
+      }
+      setStep(nextStep);
+      setPhase("flow");
       setBusy(false);
     }
   }
@@ -217,6 +224,35 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     }
   }
 
+  async function onSalesCall(event: React.FormEvent) {
+    event.preventDefault();
+    if (!intake) {
+      return;
+    }
+    if (!callName.trim() || !callEmail.trim() || !callPhone.trim()) {
+      setError(t("errors.needCall"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await requestSalesCall(
+        intake.id,
+        {
+          name: callName.trim(),
+          email: callEmail.trim(),
+          phone: callPhone.trim(),
+        },
+        await authOpts(),
+      );
+      setCallSent(true);
+    } catch (err) {
+      setError(fail(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onDecline() {
     if (!intake) {
       return;
@@ -229,6 +265,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       setIntake(null);
       setSessionToken(null);
       setConfirmDecline(false);
+      setCallSent(false);
       setPhase("declined");
     } catch (err) {
       setError(fail(err));
@@ -243,133 +280,149 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     setSessionToken(null);
     setFiles([]);
     setConfirmDecline(false);
-    setPhase("start");
+    setCallSent(false);
+    setCloseMode("workspace");
+    setPhase("flow");
+    setStep(1);
     setError(null);
+  }
+
+  if (booting) {
+    return <div className="min-h-svh" />;
   }
 
   return (
     <div className="flex min-h-full flex-col">
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-12 lg:py-16">
-        {phase === "start" || phase === "working" ? (
-          <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-5">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
-                {t("start.kicker")}
-              </p>
-              <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
-                {t("start.headline")}
-              </h1>
-              <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
-                {t("start.lead")}
-              </p>
-            </div>
-
-            <form
-              className="rounded-3xl border border-border bg-card p-6 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)]"
-              onSubmit={onUpload}
-            >
-              {error ? <ErrorBanner message={error} /> : null}
-
-              {path === "account" ? (
-                <div className="mb-6 space-y-3">
-                  <AuthFields
-                    email={email}
-                    password={password}
-                    setEmail={setEmail}
-                    setPassword={setPassword}
-                  />
-                  <button
-                    type="button"
-                    className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-                    onClick={() => setPath("upload")}
-                  >
-                    {t("start.preferUpload")}
-                  </button>
-                </div>
-              ) : (
-                <p className="mb-6 text-sm text-muted-foreground">
-                  {t("start.needAccount")}{" "}
-                  <button
-                    type="button"
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                    onClick={() => setPath("account")}
-                  >
-                    {t("start.haveAccount")}
-                  </button>
-                </p>
-              )}
-
-              <div className="space-y-5">
-                <Field label={t("start.period")}>
-                  <MonthPicker value={period} onChange={setPeriod} disabled={busy} />
-                </Field>
-                <Dropzone files={files} disabled={busy} onFiles={setFiles} />
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-11 w-full"
-                  disabled={busy}
-                >
-                  {busy ? t("start.working") : t("start.submit")}
-                </Button>
-              </div>
-            </form>
-          </div>
-        ) : null}
-
-        {phase === "working" ? <WorkingOverlay line={workingLine} /> : null}
-
-        {phase === "result" && intake ? (
-          <ResultView
-            intake={intake}
-            error={error}
-            busy={busy}
-            signedIn={signedIn}
-            email={email}
-            password={password}
-            legalName={legalName}
-            tradingName={tradingName}
-            confirmDecline={confirmDecline}
-            setEmail={setEmail}
-            setPassword={setPassword}
-            setLegalName={setLegalName}
-            setTradingName={setTradingName}
-            setConfirmDecline={setConfirmDecline}
-            onContinue={onContinue}
-            onDecline={() => void onDecline()}
-            showVerboseTable={showVerboseTable}
-          />
-        ) : null}
-
-        {phase === "converted" && intake ? (
-          <section className="space-y-8">
-            <div className="max-w-2xl space-y-3">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
-                {t("converted.kicker")}
-              </p>
-              <h1 className="font-editorial text-4xl tracking-tight">
-                {t("converted.headline", {
-                  name: legalName.trim() || t("converted.fallbackName"),
-                })}
-              </h1>
-              <p className="text-muted-foreground">{t("converted.lead")}</p>
-            </div>
-            <TeaserCards intake={intake} />
-          </section>
-        ) : null}
-
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8 lg:py-12">
+        <PublicChrome />
         {phase === "declined" ? (
           <section className="max-w-lg space-y-5">
             <h1 className="font-editorial text-4xl tracking-tight">
               {t("declined.headline")}
             </h1>
-            <p className="text-muted-foreground">{t("declined.lead")}</p>
+            <p className="text-lg text-muted-foreground">{t("declined.lead")}</p>
             <Button type="button" variant="outline" size="lg" onClick={reset}>
               {t("declined.again")}
             </Button>
           </section>
-        ) : null}
+        ) : (
+          <Stepper
+            step={step}
+            onStepChange={setStep}
+            linear
+            showFooter={false}
+            theme="dark"
+            accentColor="#88375c"
+            width="100%"
+            radius={28}
+            indicator="numbers"
+          >
+            <Step title={t("start.stepBrief")}>
+              <BriefStep onContinue={() => setStep(2)} />
+            </Step>
+            <Step title={t("start.stepUpload")}>
+              <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={onUpload}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
+                      {t("start.uploadKicker")}
+                    </p>
+                    <h2 className="font-editorial text-3xl tracking-tight">{t("start.uploadTitle")}</h2>
+                  </div>
+                  <SsGuide />
+                </div>
+                <div className="space-y-5">
+                  {error && step === 2 ? <ErrorBanner message={error} /> : null}
+                  <Field label={t("start.period")}>
+                    <MonthPicker value={period} onChange={setPeriod} disabled={busy} />
+                  </Field>
+                  <Dropzone files={files} disabled={busy} onFiles={setFiles} />
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="h-11 sm:w-32"
+                      disabled={busy}
+                      onClick={() => setStep(1)}
+                    >
+                      {t("guide.back")}
+                    </Button>
+                    <Button type="submit" size="lg" className="h-11 flex-1" disabled={busy}>
+                      {t("start.submit")}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Step>
+            <Step title={t("start.stepResult")}>
+              {intake ? (
+                <ResultView
+                  intake={intake}
+                  error={error}
+                  busy={busy}
+                  signedIn={signedIn}
+                  email={email}
+                  password={password}
+                  legalName={legalName}
+                  tradingName={tradingName}
+                  confirmDecline={confirmDecline}
+                  closeMode={closeMode}
+                  callName={callName}
+                  callEmail={callEmail}
+                  callPhone={callPhone}
+                  callSent={callSent}
+                  setEmail={setEmail}
+                  setPassword={setPassword}
+                  setLegalName={setLegalName}
+                  setTradingName={setTradingName}
+                  setConfirmDecline={setConfirmDecline}
+                  setCloseMode={setCloseMode}
+                  setCallName={setCallName}
+                  setCallEmail={setCallEmail}
+                  setCallPhone={setCallPhone}
+                  onContinue={onContinue}
+                  onSalesCall={onSalesCall}
+                  onDecline={() => void onDecline()}
+                  showVerboseTable={showVerboseTable}
+                />
+              ) : (
+                <p className="text-muted-foreground">{t("result.waiting")}</p>
+              )}
+            </Step>
+          </Stepper>
+        )}
       </main>
+      {phase === "working" ? <WorkingOverlay line={workingLine} /> : null}
+    </div>
+  );
+}
+
+function BriefStep({ onContinue }: { onContinue: () => void }) {
+  const t = useTranslations("start");
+  const points = t.raw("points") as { title: string; body: string }[];
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-8">
+      <div className="space-y-4">
+        <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
+          {t("kicker")}
+        </p>
+        <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
+          {t("headline")}
+        </h1>
+        <p className="text-lg leading-relaxed text-muted-foreground">{t("lead")}</p>
+      </div>
+      <ol className="flex flex-col gap-4">
+        {points.map((point) => (
+          <li key={point.title} className="rounded-2xl border border-white/10 bg-background/30 p-4">
+            <p className="font-medium">{point.title}</p>
+            <p className="mt-1 leading-relaxed text-muted-foreground">{point.body}</p>
+          </li>
+        ))}
+      </ol>
+      <Button type="button" size="lg" className="h-11 w-full sm:w-fit sm:px-8" onClick={onContinue}>
+        {t("continue")}
+      </Button>
     </div>
   );
 }
@@ -384,12 +437,22 @@ function ResultView({
   legalName,
   tradingName,
   confirmDecline,
+  closeMode,
+  callName,
+  callEmail,
+  callPhone,
+  callSent,
   setEmail,
   setPassword,
   setLegalName,
   setTradingName,
   setConfirmDecline,
+  setCloseMode,
+  setCallName,
+  setCallEmail,
+  setCallPhone,
   onContinue,
+  onSalesCall,
   onDecline,
   showVerboseTable,
 }: {
@@ -402,98 +465,206 @@ function ResultView({
   legalName: string;
   tradingName: string;
   confirmDecline: boolean;
+  closeMode: CloseMode;
+  callName: string;
+  callEmail: string;
+  callPhone: string;
+  callSent: boolean;
   setEmail: (value: string) => void;
   setPassword: (value: string) => void;
   setLegalName: (value: string) => void;
   setTradingName: (value: string) => void;
   setConfirmDecline: (value: boolean) => void;
+  setCloseMode: (value: CloseMode) => void;
+  setCallName: (value: string) => void;
+  setCallEmail: (value: string) => void;
+  setCallPhone: (value: string) => void;
   onContinue: (event: React.FormEvent) => void;
+  onSalesCall: (event: React.FormEvent) => void;
   onDecline: () => void;
   showVerboseTable: boolean;
 }) {
   const t = useTranslations();
+  const model = t.raw("result.model") as string[];
   return (
-    <section className="space-y-10">
-      <div className="max-w-2xl space-y-3">
-        <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
-          {t("result.kicker")}
-        </p>
-        <h1 className="font-editorial text-4xl tracking-tight text-balance">
-          {t("result.headline")}
-        </h1>
-        <p className="text-muted-foreground">{t("result.lead")}</p>
+    <div className="space-y-8">
+      <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="space-y-6">
+          <SavingsCard intake={intake} />
+          <div className="space-y-3">
+            <h2 className="font-editorial text-2xl tracking-tight">{t("result.modelTitle")}</h2>
+            <ul className="flex flex-col gap-3">
+              {model.map((line) => (
+                <li key={line} className="leading-relaxed text-muted-foreground">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <DeclineControl
+            busy={busy}
+            confirm={confirmDecline}
+            onAsk={() => setConfirmDecline(true)}
+            onCancel={() => setConfirmDecline(false)}
+            onDecline={onDecline}
+          />
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)]">
+          <div className="mb-6 grid grid-cols-2 gap-2 rounded-2xl bg-muted p-1">
+            <button
+              type="button"
+              className={tabClass(closeMode === "workspace")}
+              onClick={() => setCloseMode("workspace")}
+            >
+              {t("result.workspaceTab")}
+            </button>
+            <button
+              type="button"
+              className={tabClass(closeMode === "call")}
+              onClick={() => setCloseMode("call")}
+            >
+              {t("result.callTab")}
+            </button>
+          </div>
+
+          {error ? <ErrorBanner message={error} /> : null}
+
+          {closeMode === "workspace" ? (
+            <form className="space-y-5" onSubmit={onContinue}>
+              <div className="space-y-1">
+                <p className="text-lg font-medium">{t("result.continueTitle")}</p>
+                <p className="text-muted-foreground">{t("result.accountHint")}</p>
+              </div>
+              {!signedIn ? (
+                <AuthFields
+                  email={email}
+                  password={password}
+                  setEmail={setEmail}
+                  setPassword={setPassword}
+                />
+              ) : null}
+              <Field label={t("result.legalName")}>
+                <TextInput
+                  value={legalName}
+                  onChange={(event) => setLegalName(event.target.value)}
+                  required
+                  disabled={busy}
+                  autoComplete="organization"
+                />
+              </Field>
+              <Field label={t("result.tradingName")} hint={t("result.optional")}>
+                <TextInput
+                  value={tradingName}
+                  onChange={(event) => setTradingName(event.target.value)}
+                  disabled={busy}
+                />
+              </Field>
+              <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
+                {busy ? t("result.opening") : t("result.createWorkspace")}
+              </Button>
+            </form>
+          ) : callSent ? (
+            <div className="space-y-3">
+              <p className="text-lg font-medium">{t("result.callDone")}</p>
+              <p className="leading-relaxed text-muted-foreground">{t("result.callDoneLead")}</p>
+              <Button type="button" variant="outline" onClick={() => setCloseMode("workspace")}>
+                {t("result.workspaceTab")}
+              </Button>
+            </div>
+          ) : (
+            <form className="space-y-5" onSubmit={onSalesCall}>
+              <div className="space-y-1">
+                <p className="text-lg font-medium">{t("result.callTitle")}</p>
+                <p className="text-muted-foreground">{t("result.callLead")}</p>
+              </div>
+              <Field label={t("result.callName")}>
+                <TextInput
+                  value={callName}
+                  onChange={(event) => setCallName(event.target.value)}
+                  required
+                  disabled={busy}
+                  autoComplete="name"
+                />
+              </Field>
+              <Field label={t("auth.email")}>
+                <TextInput
+                  type="email"
+                  value={callEmail}
+                  onChange={(event) => setCallEmail(event.target.value)}
+                  required
+                  disabled={busy}
+                  autoComplete="email"
+                />
+              </Field>
+              <Field label={t("result.callPhone")}>
+                <TextInput
+                  type="tel"
+                  value={callPhone}
+                  onChange={(event) => setCallPhone(event.target.value)}
+                  required
+                  disabled={busy}
+                  autoComplete="tel"
+                />
+              </Field>
+              <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
+                {busy ? t("result.callSending") : t("result.callSubmit")}
+              </Button>
+            </form>
+          )}
+        </div>
       </div>
 
-      <TeaserCards intake={intake} />
       {showVerboseTable && intake.verbose_people?.length ? (
         <VerboseTable people={intake.verbose_people} />
       ) : null}
+    </div>
+  );
+}
 
-      <form
-        className="max-w-lg space-y-5 rounded-3xl border border-border bg-card p-6"
-        onSubmit={onContinue}
+function tabClass(active: boolean): string {
+  return active
+    ? "rounded-xl bg-card px-3 py-2 text-sm font-medium"
+    : "rounded-xl px-3 py-2 text-sm text-muted-foreground";
+}
+
+function DeclineControl({
+  busy,
+  confirm,
+  onAsk,
+  onCancel,
+  onDecline,
+}: {
+  busy: boolean;
+  confirm: boolean;
+  onAsk: () => void;
+  onCancel: () => void;
+  onDecline: () => void;
+}) {
+  const t = useTranslations("result");
+  if (!confirm) {
+    return (
+      <button
+        type="button"
+        className="text-left text-muted-foreground underline-offset-4 hover:underline"
+        onClick={onAsk}
       >
-        {error ? <ErrorBanner message={error} /> : null}
-        <p className="font-medium">{t("result.continueTitle")}</p>
-        {!signedIn ? (
-          <AuthFields
-            email={email}
-            password={password}
-            setEmail={setEmail}
-            setPassword={setPassword}
-          />
-        ) : null}
-        <Field label={t("result.legalName")}>
-          <TextInput
-            value={legalName}
-            onChange={(event) => setLegalName(event.target.value)}
-            required
-            disabled={busy}
-            autoComplete="organization"
-          />
-        </Field>
-        <Field label={t("result.tradingName")} hint={t("result.optional")}>
-          <TextInput
-            value={tradingName}
-            onChange={(event) => setTradingName(event.target.value)}
-            disabled={busy}
-          />
-        </Field>
-        <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
-          {busy ? t("result.opening") : t("result.createWorkspace")}
+        {t("decline")}
+      </button>
+    );
+  }
+  return (
+    <div className="space-y-3 rounded-xl bg-muted p-4">
+      <p>{t("declineConfirm")}</p>
+      <div className="flex gap-2">
+        <Button type="button" variant="destructive" disabled={busy} onClick={onDecline}>
+          {t("declineYes")}
         </Button>
-        {confirmDecline ? (
-          <div className="space-y-3 rounded-xl bg-muted p-4 text-sm">
-            <p>{t("result.declineConfirm")}</p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={busy}
-                onClick={onDecline}
-              >
-                {t("result.declineYes")}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setConfirmDecline(false)}
-              >
-                {t("result.cancel")}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-            onClick={() => setConfirmDecline(true)}
-          >
-            {t("result.decline")}
-          </button>
-        )}
-      </form>
-    </section>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          {t("cancel")}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -533,7 +704,7 @@ function AuthFields({
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-destructive">
       {message}
     </p>
   );
@@ -541,10 +712,22 @@ function ErrorBanner({ message }: { message: string }) {
 
 function WorkingOverlay({ line }: { line: string }) {
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-lg">
-        <Loader2 className="size-5 animate-spin text-primary" />
-        <p className="text-sm font-medium">{line}</p>
+    <div className="fixed inset-0 z-50" style={{ backgroundColor: "#070608" }}>
+      <LetterGlitch
+        glitchColors={["#ffffff", "#88375c"]}
+        baseColor="#ffffff"
+        backgroundColor="#070608"
+        glitchAmount={0.4}
+        className="absolute inset-0 h-full w-full"
+        style={{ backgroundColor: "#070608" }}
+      />
+      <div className="relative z-10 flex h-full items-end justify-center p-10 sm:items-center">
+        <p
+          className="max-w-xl rounded-3xl px-8 py-5 text-center font-editorial text-4xl tracking-tight text-balance sm:text-5xl"
+          style={{ backgroundColor: "rgba(7, 6, 8, 0.72)", color: "#f4f1ec" }}
+        >
+          {line}
+        </p>
       </div>
     </div>
   );

@@ -52,6 +52,12 @@ def get_brevo_api_key() -> str | None:
     return raw or None
 
 
+def get_sales_notify_email() -> str | None:
+    """Inbox for pass-1 sales-call requests. Unset → store on the intake only."""
+    raw = os.environ.get("SALES_NOTIFY_EMAIL", "").strip()
+    return raw or None
+
+
 def get_email_from() -> str:
     raw = (
         os.environ.get("EMAIL_FROM", "").strip()
