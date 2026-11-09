@@ -73,6 +73,9 @@ export function SsGuide() {
   }
 
   function showPeek() {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      return;
+    }
     setPeekAt(peekStyle(buttonRef.current));
   }
 
@@ -127,7 +130,7 @@ export function SsGuide() {
         : "/guide/search-form.png";
 
   const dialog = open ? (
-        <div className="fixed inset-0 z-[80] grid place-items-center p-4 sm:p-8">
+        <div className="fixed inset-0 z-[80] grid place-items-center p-3 sm:p-8">
           <button
             type="button"
             aria-label={t("close")}
@@ -138,14 +141,14 @@ export function SsGuide() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="ss-guide-title"
-            className="relative flex max-h-[calc(100vh-4rem)] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-lg"
+            className="relative flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-lg sm:max-h-[calc(100vh-4rem)] sm:rounded-3xl"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
-              <div className="space-y-1">
+            <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
+              <div className="min-w-0 space-y-1">
                 <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
                   {t("kicker")}
                 </p>
-                <h2 id="ss-guide-title" className="font-editorial text-2xl tracking-tight">
+                <h2 id="ss-guide-title" className="font-editorial text-xl tracking-tight text-balance sm:text-2xl">
                   {t("title")}
                 </h2>
               </div>
@@ -158,12 +161,12 @@ export function SsGuide() {
                 <X className="size-4" />
               </button>
             </div>
-            <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-6 py-6 lg:grid-cols-[minmax(0,22rem)_1fr] lg:overflow-hidden">
+            <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-4 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,22rem)_1fr] lg:overflow-hidden">
               <div className="lg:overflow-y-auto">
               {place.kind === "fork" ? (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">{t("forkProgress")}</p>
-                  <p className="text-lg leading-relaxed">{t("forkLead")}</p>
+                  <p className="text-base leading-relaxed sm:text-lg">{t("forkLead")}</p>
                   <div className="grid gap-3">
                     <Button
                       type="button"
@@ -195,8 +198,8 @@ export function SsGuide() {
                           total: scenarioSteps.length,
                         })}
                   </p>
-                  <p className="font-editorial text-3xl tracking-tight">{step.title}</p>
-                  <p className="text-lg leading-relaxed text-muted-foreground">{step.body}</p>
+                  <p className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">{step.title}</p>
+                  <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">{step.body}</p>
                   {place.kind === "shared" && place.index === 0 ? (
                     <a
                       href={PORTAL_URL}
@@ -210,7 +213,7 @@ export function SsGuide() {
                 </div>
               ) : null}
               </div>
-              <div className="relative min-h-80 overflow-hidden rounded-3xl border border-border bg-white lg:min-h-[32rem]">
+              <div className="relative min-h-52 overflow-hidden rounded-2xl border border-border bg-white sm:min-h-80 sm:rounded-3xl lg:min-h-[32rem]">
                 <Image
                   src={image}
                   alt={step?.title ?? t("forkProgress")}
@@ -220,16 +223,16 @@ export function SsGuide() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-6 py-4">
-              <Button type="button" variant="outline" disabled={atSharedStart} onClick={back}>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3 sm:px-6 sm:py-4">
+              <Button type="button" variant="outline" className="min-w-0 flex-1 sm:flex-none" disabled={atSharedStart} onClick={back}>
                 {t("back")}
               </Button>
               {place.kind === "fork" ? null : atScenarioEnd ? (
-                <Button type="button" onClick={() => setOpen(false)}>
+                <Button type="button" className="min-w-0 flex-1 sm:flex-none" onClick={() => setOpen(false)}>
                   {t("done")}
                 </Button>
               ) : (
-                <Button type="button" onClick={forward}>
+                <Button type="button" className="min-w-0 flex-1 sm:flex-none" onClick={forward}>
                   {t("next")}
                 </Button>
               )}
@@ -242,7 +245,7 @@ export function SsGuide() {
     peekAt && !open && typeof document !== "undefined"
       ? createPortal(
           <div
-            className="pointer-events-none fixed z-[70] w-72 rounded-3xl border border-border bg-card p-3 shadow-lg"
+            className="pointer-events-none fixed z-[70] w-72 max-w-[calc(100vw-2rem)] rounded-3xl border border-border bg-card p-3 shadow-lg"
             style={{ top: peekAt.top, left: peekAt.left }}
           >
             <p className="font-editorial text-xl tracking-tight">{t("peek")}</p>
@@ -275,8 +278,8 @@ export function SsGuide() {
         onMouseLeave={() => setPeekAt(null)}
         onFocus={showPeek}
         onBlur={() => setPeekAt(null)}
-        className="inline-flex shrink-0"
-        innerClassName="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm font-medium text-foreground shadow-[0_10px_30px_-16px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+        className="inline-flex max-w-full md:shrink-0"
+        innerClassName="inline-flex h-auto min-h-11 max-w-full items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-2 text-left text-sm leading-snug font-medium text-wrap text-foreground shadow-[0_10px_30px_-16px_rgba(0,0,0,0.7)] backdrop-blur-xl md:text-nowrap"
       >
         <CircleHelp className="size-4" />
         {t("pill")}

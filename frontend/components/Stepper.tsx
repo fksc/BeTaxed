@@ -565,6 +565,11 @@ export default function Stepper({
           .trim()}
       >
         {header()}
+        {tight && !rail ? (
+          <p className="px-1 pt-2.5 text-center text-sm font-semibold text-[color:var(--stepper-ink)]">
+            {steps[Math.min(current, total) - 1]?.props.title}
+          </p>
+        ) : null}
       </div>
       <div
         className={`flex min-w-0 flex-col ${rail ? 'flex-1 pt-[var(--stepper-inset)] pr-[var(--stepper-inset)] pb-[var(--stepper-inset)] pl-5' : 'px-[var(--stepper-inset)] pt-5 pb-[var(--stepper-inset)]'}`}

@@ -334,14 +334,14 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-8 lg:py-12">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-5 sm:px-6 sm:py-8 lg:py-12">
         <PublicChrome />
         {phase === "declined" ? (
           <section className="max-w-lg space-y-5">
-            <h1 className="font-editorial text-4xl tracking-tight">
+            <h1 className="font-editorial text-2xl tracking-tight text-balance sm:text-4xl">
               {t("declined.headline")}
             </h1>
-            <p className="text-lg text-muted-foreground">{t("declined.lead")}</p>
+            <p className="text-base text-muted-foreground sm:text-lg">{t("declined.lead")}</p>
             <Button type="button" variant="outline" size="lg" onClick={reset}>
               {t("declined.again")}
             </Button>
@@ -363,12 +363,14 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
             </Step>
             <Step title={t("start.stepUpload")}>
               <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={onUpload}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-2">
+                <div className="flex flex-col items-start gap-4 md:flex-row md:justify-between">
+                  <div className="min-w-0 space-y-2">
                     <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
                       {t("start.uploadKicker")}
                     </p>
-                    <h2 className="font-editorial text-3xl tracking-tight">{t("start.uploadTitle")}</h2>
+                    <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">
+                      {t("start.uploadTitle")}
+                    </h2>
                   </div>
                   <SsGuide />
                 </div>
@@ -389,7 +391,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
                     >
                       {t("guide.back")}
                     </Button>
-                    <Button type="submit" size="lg" className="h-11 flex-1" disabled={busy}>
+                    <Button type="submit" size="lg" className="h-11 w-full shrink-0 sm:flex-1" disabled={busy}>
                       {t("start.submit")}
                     </Button>
                   </div>
@@ -445,19 +447,19 @@ function BriefStep({ onContinue }: { onContinue: () => void }) {
   const t = useTranslations("start");
   const assurances = t.raw("assurances") as string[];
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-8">
-      <div className="space-y-4">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 sm:gap-8">
+      <div className="space-y-3 sm:space-y-4">
         <p className="text-xs font-medium tracking-[0.16em] text-emerald-300 uppercase">
           {t("kicker")}
         </p>
-        <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
+        <h1 className="font-editorial text-2xl leading-tight tracking-tight text-balance sm:text-4xl sm:leading-[1.15] lg:text-5xl">
           {t("headline")}
         </h1>
-        <p className="text-lg leading-relaxed text-muted-foreground">{t("lead")}</p>
+        <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">{t("lead")}</p>
       </div>
-      <ul className="flex list-disc flex-col gap-4 pl-5 marker:text-emerald-600">
+      <ul className="flex list-disc flex-col gap-3 pl-5 marker:text-emerald-600 sm:gap-4">
         {assurances.map((line) => (
-          <li key={line} className="text-lg font-semibold leading-relaxed text-emerald-600">
+          <li key={line} className="text-base font-semibold leading-relaxed text-emerald-600 sm:text-lg">
             {line}
           </li>
         ))}
@@ -485,12 +487,12 @@ function ResultView({
   const t = useTranslations();
   const model = t.raw("result.model") as string[];
   return (
-    <div className="space-y-8">
-      <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="grid items-start gap-6 sm:gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="min-w-0 space-y-6">
           <SavingsCard intake={intake} />
           <div className="space-y-3">
-            <h2 className="font-editorial text-2xl tracking-tight">{t("result.modelTitle")}</h2>
+            <h2 className="font-editorial text-xl tracking-tight sm:text-2xl">{t("result.modelTitle")}</h2>
             <ul className="flex flex-col gap-3">
               {model.map((line) => (
                 <li key={line} className="leading-relaxed text-muted-foreground">
@@ -500,9 +502,10 @@ function ResultView({
             </ul>
           </div>
           <div className="space-y-3">
-            <p className="font-editorial text-2xl tracking-tight">{t("result.continueAsk")}</p>
+            <p className="font-editorial text-xl tracking-tight sm:text-2xl">{t("result.continueAsk")}</p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <HoldButton
+                className="w-full max-w-full sm:w-auto"
                 disabled={busy}
                 holdTime={1600}
                 backgroundColor="#3f1d28"
@@ -514,6 +517,7 @@ function ResultView({
                 {t("result.holdDelete")}
               </HoldButton>
               <SpecularButton
+                className="w-full max-w-full sm:w-auto"
                 disabled={busy}
                 radius={14}
                 lineColor="#f4f1ec"
@@ -576,24 +580,24 @@ function CloseView({
   if (finale === "deleted") {
     return (
       <section className="mx-auto max-w-lg space-y-5">
-        <h2 className="font-editorial text-4xl tracking-tight">{t("declined.headline")}</h2>
-        <p className="text-lg text-muted-foreground">{t("declined.lead")}</p>
+        <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-4xl">{t("declined.headline")}</h2>
+        <p className="text-base text-muted-foreground sm:text-lg">{t("declined.lead")}</p>
       </section>
     );
   }
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {finale === "saved" ? (
         <div className="space-y-2">
-          <h2 className="font-editorial text-3xl tracking-tight">{t("result.savedTitle")}</h2>
-          <p className="text-lg text-muted-foreground">{t("result.savedLead")}</p>
+          <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">{t("result.savedTitle")}</h2>
+          <p className="text-base text-muted-foreground sm:text-lg">{t("result.savedLead")}</p>
         </div>
       ) : (
-        <p className="text-lg text-muted-foreground">{booked ? t("result.booked") : t("result.bookFirst")}</p>
+        <p className="text-base text-muted-foreground sm:text-lg">{booked ? t("result.booked") : t("result.bookFirst")}</p>
       )}
       <CalInlineEmbed onBooked={onBooked} />
       {finale === "saved" ? null : (
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)]">
+        <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)] sm:p-6">
           {error ? <ErrorBanner message={error} /> : null}
           <form className="space-y-5" onSubmit={onContinue}>
             <div className="space-y-1">
@@ -685,18 +689,18 @@ function ErrorBanner({ message }: { message: string }) {
 
 function WorkingOverlay({ line }: { line: string }) {
   return (
-    <div className="fixed inset-0 z-50" style={{ backgroundColor: "#070608" }}>
+    <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: "#070608" }}>
       <LetterGlitch
         glitchColors={["#ffffff", "#88375c"]}
         baseColor="#ffffff"
         backgroundColor="#070608"
         glitchAmount={0.4}
-        className="absolute inset-0 h-full w-full"
-        style={{ backgroundColor: "#070608" }}
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        style={{ position: "absolute", inset: 0, backgroundColor: "#070608" }}
       />
-      <div className="relative z-10 flex h-full items-end justify-center p-10 sm:items-center">
+      <div className="relative z-10 flex h-full w-full items-end justify-center px-4 py-8 sm:items-center sm:p-10">
         <p
-          className="max-w-xl rounded-3xl px-8 py-5 text-center font-editorial text-4xl tracking-tight text-balance sm:text-5xl"
+          className="w-full max-w-xl rounded-3xl px-5 py-4 text-center font-editorial text-2xl tracking-tight text-balance sm:px-8 sm:py-5 sm:text-4xl lg:text-5xl"
           style={{ backgroundColor: "rgba(7, 6, 8, 0.72)", color: "#f4f1ec" }}
         >
           {line}

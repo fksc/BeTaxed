@@ -14,15 +14,15 @@ export function PublicChrome() {
   const locale = useLocale();
 
   return (
-    <div className="mb-8 flex items-center justify-between gap-4">
+    <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
       <a
         href={marketingHomeUrl(locale)}
-        className={`inline-flex items-center gap-3 rounded-full py-1.5 pr-5 pl-1.5 text-foreground transition-colors hover:bg-white/16 ${GLASS}`}
+        className={`inline-flex min-w-0 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-foreground transition-colors hover:bg-white/16 sm:gap-3 sm:py-1.5 sm:pr-5 sm:pl-1.5 ${GLASS}`}
       >
-        <span className="grid size-10 place-items-center overflow-hidden rounded-full bg-[#f4f1ec]">
-          <AnteaterMark className="size-7" />
+        <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f4f1ec] sm:size-10">
+          <AnteaterMark className="size-6 sm:size-7" />
         </span>
-        <span className="font-editorial text-lg tracking-tight">{t("backHome")}</span>
+        <span className="truncate font-editorial text-base tracking-tight sm:text-lg">{t("backHome")}</span>
       </a>
       <LocaleSwitcher appearance="glass" />
     </div>
