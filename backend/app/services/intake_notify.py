@@ -120,6 +120,19 @@ def notify_workspace_saved(
     )
 
 
+def notify_intake_declined(*, email: str | None, saw_estimate: bool) -> None:
+    """Someone opened a reading and then deleted it. No mail; Slack only."""
+    _slack(
+        "\n".join(
+            [
+                "Someone tried a reading, then deleted it",
+                f"Email: {email or 'not given'}",
+                f"Saw an estimate: {'yes' if saw_estimate else 'no'}",
+            ]
+        )
+    )
+
+
 def notify_meeting_booked(
     *,
     to_email: str | None,

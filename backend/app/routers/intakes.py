@@ -37,6 +37,7 @@ from app.schemas.intake import (
 from app.services.intake_notify import (
     as_utc,
     issue_meeting_token,
+    notify_intake_declined,
     notify_meeting_booked,
     notify_workspace_saved,
     read_meeting_token,
@@ -240,8 +241,19 @@ async def post_intake_decline(
 ) -> IntakeOut:
     intake = await load_intake_or_404(db, intake_id)
     require_intake_access(intake, user, session_token)
+    email = intake.email or (user.email if user is not None else None)
+    saw_estimate = any(
+        value is not None
+        for value in (
+            intake.teaser_now_monthly,
+            intake.teaser_now_window,
+            intake.teaser_potential_monthly,
+            intake.teaser_potential_window,
+        )
+    )
     await purge_intake(db, intake)
     await db.commit()
+    notify_intake_declined(email=email, saw_estimate=saw_estimate)
     await db.refresh(intake)
     return await _intake_out(db, intake, None)
 

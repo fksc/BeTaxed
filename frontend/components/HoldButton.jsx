@@ -8,6 +8,7 @@ const TAP_MS = 250;
 const HIT_PAD = 10;
 const LINEAR = t => t;
 const EASE_OUT = t => 1 - Math.pow(1 - t, 3);
+const clock = () => performance.now();
 
 export default function HoldButton({
   children = 'Hold to delete',
@@ -60,7 +61,7 @@ export default function HoldButton({
     cancelAnimationFrame(m.raf);
     m.from = m.p;
     m.to = to;
-    m.start = performance.now();
+    m.start = clock();
     const step = now => {
       const t = duration > 0 ? Math.min(1, (now - m.start) / duration) : 1;
       m.p = m.from + (m.to - m.from) * ease(t);
@@ -77,7 +78,7 @@ export default function HoldButton({
 
   const complete = () => {
     if (phaseRef.current !== 'holding') return;
-    if (performance.now() - gesture.current.start < holdTime - 50) return;
+    if (clock() - gesture.current.start < holdTime - 50) return;
     clearTimers();
     go('done', inputRef.current);
     onHold?.();
@@ -93,7 +94,7 @@ export default function HoldButton({
     if (disabled || phaseRef.current !== 'idle') return false;
     const button = buttonRef.current;
     if (!button) return false;
-    gesture.current.start = performance.now();
+    gesture.current.start = clock();
     gesture.current.rect = button.getBoundingClientRect();
     go('holding', kind);
     drive(1, holdTime, LINEAR);
@@ -104,13 +105,15 @@ export default function HoldButton({
   const release = ({ drifted = false } = {}) => {
     if (phaseRef.current !== 'holding') return;
     clearTimers();
-    const held = performance.now() - gesture.current.start;
+    const held = clock() - gesture.current.start;
     go('idle');
     drive(0, releaseTime, EASE_OUT);
     if (!drifted && held < TAP_MS) onTap?.();
   };
   const releaseRef = useRef(release);
-  releaseRef.current = release;
+  useEffect(() => {
+    releaseRef.current = release;
+  });
 
   const handlePointerDown = e => {
     if (e.button !== 0 || !e.isPrimary || gesture.current.pointerId !== null) return;

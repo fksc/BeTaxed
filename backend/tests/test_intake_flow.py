@@ -426,7 +426,15 @@ def test_account_first_upload_and_purge(
     asyncio.run(body())
 
 
-def test_upload_first_decline_keeps_no_account(db_session) -> None:
+def test_upload_first_decline_keeps_no_account(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    notices: list[dict] = []
+    monkeypatch.setattr(
+        "app.routers.intakes.notify_intake_declined",
+        lambda **kwargs: notices.append(kwargs),
+    )
+
     async def body() -> None:
         storage_paths: list[str] = []
         intake_id = None
@@ -465,6 +473,7 @@ def test_upload_first_decline_keeps_no_account(db_session) -> None:
                 )
                 assert declined.status_code == 200, declined.text
                 assert declined.json()["status"] == "PURGED"
+                assert notices == [{"email": None, "saw_estimate": True}]
                 for path in storage_paths:
                     assert not Path(path).exists()
         finally:
