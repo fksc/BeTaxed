@@ -40,11 +40,11 @@ export function PasswordField({
           onChange={(event) => onChange(event.target.value)}
           required
           disabled={disabled}
-          className="pr-32"
+          className="pr-28 sm:pr-36"
         />
         <button
           type="button"
-          className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="absolute top-1/2 right-1.5 max-w-[42%] -translate-y-1/2 truncate rounded-md px-1.5 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground sm:right-2 sm:max-w-none sm:px-2 sm:text-xs"
           aria-label={t("show")}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);

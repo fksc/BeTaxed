@@ -73,7 +73,7 @@ export function Dropzone({
           take(event.dataTransfer.files);
         }}
         className={cn(
-          "flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-8 text-center transition-colors",
+          "flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-colors sm:px-6 sm:py-8",
           over
             ? "border-primary bg-primary/5"
             : "border-border bg-card hover:border-primary/40",
@@ -98,7 +98,7 @@ export function Dropzone({
       {files.length > 0 ? (
         <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
           {files.map((file) => (
-            <li key={`${file.name}-${file.size}`}>{file.name}</li>
+            <li key={`${file.name}-${file.size}`} className="break-all">{file.name}</li>
           ))}
         </ul>
       ) : null}

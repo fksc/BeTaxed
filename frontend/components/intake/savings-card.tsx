@@ -32,7 +32,7 @@ export function SavingsCard({ intake }: { intake: IntakeOut }) {
   );
 
   return (
-    <article className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#141014] p-6 sm:p-8">
+    <article className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#141014] p-5 sm:p-8">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -42,7 +42,7 @@ export function SavingsCard({ intake }: { intake: IntakeOut }) {
         }}
       />
       <div className="relative">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <p className="text-muted-foreground">{t("potentialLabel")}</p>
           <p className="flex items-center gap-2 text-muted-foreground">
             <span className="status-dot status-dot-ok" />
@@ -51,20 +51,20 @@ export function SavingsCard({ intake }: { intake: IntakeOut }) {
         </div>
         <div className="mt-6 min-h-16">
           {windowAmount === null ? (
-            <p className="font-editorial text-5xl tracking-tight">—</p>
+            <p className="font-editorial text-4xl tracking-tight sm:text-5xl">—</p>
           ) : (
             <Counter
               value={windowAmount}
               locale={NUMBER_LOCALE[locale] ?? "pt-PT"}
               format={{ style: "currency", currency: "EUR" }}
-              fontSize="clamp(2.4rem, 6vw, 3.6rem)"
+              fontSize="clamp(1.65rem, 11vw, 3.6rem)"
               fontWeight={600}
               textColor="#3ddc84"
               duration={0.9}
             />
           )}
         </div>
-        <p className="mt-4 text-lg text-muted-foreground">
+        <p className="mt-4 text-base text-muted-foreground sm:text-lg">
           {t("perMonth", { amount: monthly })}
         </p>
       </div>

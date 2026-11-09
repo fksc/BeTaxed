@@ -62,6 +62,24 @@
   font-size: 1.125rem;
 }
 
+@media (max-width: 639px) {
+  .specular-button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .specular-button--lg {
+    padding: 14px 18px;
+    font-size: 1rem;
+  }
+
+  .specular-button__label {
+    text-align: center;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+}
+
 .specular-button__light {
   position: absolute;
   inset: -24px;

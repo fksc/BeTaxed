@@ -179,7 +179,7 @@ export function CalInlineEmbed({
   return (
     <div
       id={elementId}
-      className="w-full min-h-[32rem] overflow-hidden rounded-3xl border border-white/10 bg-[#0c0b0c] [&_iframe]:bg-[#0c0b0c]"
+      className="w-full min-h-[28rem] max-w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c0b0c] sm:min-h-[32rem] sm:rounded-3xl [&_iframe]:max-w-full [&_iframe]:bg-[#0c0b0c]"
       style={{ height: height ? `${height}px` : undefined }}
     />
   );
