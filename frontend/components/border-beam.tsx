@@ -1,17 +1,23 @@
 "use client";
 
-import { createElement, forwardRef, type CSSProperties, type ElementType, type ReactNode } from "react";
+import {
+  createElement,
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 
 type BorderBeamProps = {
   children: ReactNode;
-  as?: ElementType;
+  as?: "button" | "div";
   className?: string;
   innerClassName?: string;
   borderRadius?: string | number;
   duration?: number;
   borderWidth?: number;
   style?: CSSProperties;
-} & Record<string, unknown>;
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "className" | "style">;
 
 /** Burgundy hotspot that travels the border. Same treatment as the marketing pill. */
 export const BorderBeam = forwardRef<HTMLElement, BorderBeamProps>(function BorderBeam(
