@@ -17,7 +17,9 @@ from app.models import UserBase
 _bearer = HTTPBearer(auto_error=False)
 
 
-async def _upsert_user_from_token(db: AsyncSession, token: str) -> UserBase:
+async def _upsert_user_from_token(
+    db: AsyncSession, token: str, *, reject_inactive: bool = True
+) -> UserBase | None:
     identity = verify_id_token(token)
     email = identity.email.strip().lower()
 
@@ -44,6 +46,9 @@ async def _upsert_user_from_token(db: AsyncSession, token: str) -> UserBase:
         await db.flush()
 
     if not user.is_active:
+        # A waiting public workspace must not block a new anonymous reading.
+        if not reject_inactive:
+            return None
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is disabled.",
@@ -71,7 +76,7 @@ async def get_optional_current_user(
 ) -> UserBase | None:
     if creds is None or creds.scheme.lower() != "bearer":
         return None
-    return await _upsert_user_from_token(db, creds.credentials)
+    return await _upsert_user_from_token(db, creds.credentials, reject_inactive=False)
 
 
 async def get_current_user(
@@ -83,4 +88,10 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization Bearer token required.",
         )
-    return await _upsert_user_from_token(db, creds.credentials)
+    user = await _upsert_user_from_token(db, creds.credentials)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is disabled.",
+        )
+    return user

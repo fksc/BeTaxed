@@ -463,8 +463,27 @@ export function OpsCompanyDetailPage({ companyId }: { companyId: string }) {
         >
           {t("back")}
         </Link>
-        <div className="text-base font-semibold">{row?.legal_name ?? t("title")}</div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-base font-semibold">{row?.legal_name ?? t("title")}</div>
+          {row && row.status !== "ACTIVE" ? (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() =>
+                void (async () => {
+                  const idToken = await currentIdToken();
+                  if (!idToken) return;
+                  const next = await patchOpsCompany(companyId, { status: "ACTIVE" }, { idToken });
+                  setRow(next);
+                })()
+              }
+            >
+              {t("activate")}
+            </Button>
+          ) : null}
+        </div>
         <p className="text-sm text-muted-foreground">
+          {row && row.status !== "ACTIVE" ? `${t("pending")} · ` : ""}
           {row?.trading_name ? `${row.trading_name} · ` : ""}
           {row?.locale?.toUpperCase()}
         </p>

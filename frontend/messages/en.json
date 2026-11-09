@@ -18,26 +18,18 @@
     "switchTo": "Language"
   },
   "start": {
-    "kicker": "Before the extract",
-    "headline": "We read one file. Then you decide.",
-    "lead": "Three steps. If you do not continue, the file and the figures are deleted.",
+    "kicker": "Let's start digging",
+    "headline": "Upload your files securely and see how much we can save you",
+    "lead": "We read the files in seconds and show a first estimate. Then you decide whether to continue.",
     "continue": "Continue",
     "stepBrief": "What we do",
     "stepUpload": "Upload",
     "stepResult": "Your saving",
-    "points": [
-      {
-        "title": "What we will do",
-        "body": "You give us the Segurança Social extract. We read it on our side and show the potential saving. We do not teach the method."
-      },
-      {
-        "title": "The file stays protected",
-        "body": "The extract is stored encrypted and used for this reading. It is not a public calculator and it does not name people."
-      },
-      {
-        "title": "If you stop, we delete it",
-        "body": "Decline, and we delete the file, the parsed rows, and the figures. Nothing from this reading is kept."
-      }
+    "stepClose": "Next",
+    "assurances": [
+      "All your information will be encrypted",
+      "If you decide not to go forward we will immediately delete all information you shared with us.",
+      "Our business model is success based, so you only pay us a percentage if we can save you money."
     ],
     "uploadKicker": "The extract",
     "uploadTitle": "Drop the vínculos file",
@@ -53,6 +45,7 @@
     "kicker": "Export",
     "title": "Get the vínculos from Segurança Social Direta",
     "open": "How to export the file",
+    "pill": "See how to get your vínculos",
     "peek": "See step by step guide!",
     "close": "Close",
     "portal": "Open Segurança Social Direta",
@@ -131,10 +124,17 @@
     "perMonth": "{amount} per month",
     "modelTitle": "How we work",
     "model": [
-      "We run the process with you. This screen does not teach you how to file it yourself.",
-      "The fee is a share of savings that are actually realized. A month with no saving is not billed.",
-      "This figure is a reading of the extract. It can move once the employment contracts are in."
+      "We handle the process with you. The technology we built lets us create value for your company.",
+      "A win-win model: no fee when there is no saving for the company.",
+      "This figure is a reading of the information you shared. The amounts can sit under or over the mark once we look at more detailed information."
     ],
+    "continueAsk": "Would you like to continue?",
+    "talk": "Yes, let's talk",
+    "holdDelete": "No, HOLD TO DELETE",
+    "savedTitle": "Your workspace is saved, and it stays inactive.",
+    "savedLead": "We have your time. We activate the workspace before you can sign in.",
+    "bookFirst": "Book a time, then create the workspace. Both are needed to continue.",
+    "booked": "Time booked. Create the workspace below to continue.",
     "workspaceTab": "Create workspace",
     "callTab": "Request a call",
     "continueTitle": "Continue with Anteater",
@@ -184,15 +184,30 @@
     "lead": "The same totals are stored. Next: contracts, monthly declarations, and the work — in the workspace."
   },
   "declined": {
-    "headline": "The extract and totals were deleted.",
-    "lead": "Nothing stays with us. You can start again whenever you like.",
+    "headline": "All your information was deleted from our servers.",
+    "lead": "The file, the rows we read, and the figures are gone. You can start again whenever you like.",
     "again": "New reading"
+  },
+  "password": {
+    "label": "Password",
+    "veryWeak": "Very weak",
+    "weak": "Weak",
+    "fair": "Fair",
+    "good": "Good",
+    "strong": "Strong",
+    "needStronger": "Make it stronger before continuing.",
+    "repeat": "Repeat password",
+    "show": "Hold to show",
+    "mismatch": "The passwords do not match."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "needFile": "Choose the Segurança Social extract (CSV or Excel).",
     "needAuthStart": "To sign in first, enter email and password.",
     "needAuthContinue": "Create an account (or sign in) to continue.",
+    "weakPassword": "Choose a stronger password.",
+    "passwordMismatch": "The passwords do not match.",
+    "needBooking": "Book a time before creating the workspace.",
     "needLegalName": "Enter the company’s legal name.",
     "needCall": "Enter a name, email, and phone so we can call you.",
     "parseFailed": "This file could not be read. Use the official employment and contracts extract.",
@@ -770,6 +785,8 @@
       "crumb": "Company",
       "back": "All companies",
       "title": "Company",
+      "activate": "Activate workspace",
+      "pending": "Inactive until you activate it",
       "lead": "Override the seat cap and invite company users.",
       "hubNavAria": "Company sections",
       "tabOverview": "Overview",

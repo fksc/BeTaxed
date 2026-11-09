@@ -64,6 +64,12 @@ async def get_company_context(
     if user.user_type == "BETAXED_STAFF":
         return CompanyContext(user=user, company=company, membership=None)
 
+    if company.status != "ACTIVE":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company is not active yet.",
+        )
+
     result = await db.execute(
         select(CompanyMembership).where(
             CompanyMembership.user_id == user.id,

@@ -52,6 +52,26 @@ def get_brevo_api_key() -> str | None:
     return raw or None
 
 
+def get_slack_webhook_url() -> str | None:
+    """Incoming webhook for intake alerts. Unset → skip. Must be https."""
+    raw = os.environ.get("SLACK_WEBHOOK_URL", "").strip()
+    if not raw:
+        return None
+    if not raw.startswith("https://"):
+        return None
+    return raw
+
+
+def get_intake_notify_secret() -> str | None:
+    """Signs the browser token used to report a Cal.com booking after submit."""
+    raw = os.environ.get("INTAKE_NOTIFY_SECRET", "").strip()
+    if raw:
+        return raw
+    if get_env_name().upper() == "DEV":
+        return "betaxed-dev-intake-notify"
+    return None
+
+
 def get_sales_notify_email() -> str | None:
     """Inbox for pass-1 sales-call requests. Unset → store on the intake only."""
     raw = os.environ.get("SALES_NOTIFY_EMAIL", "").strip()

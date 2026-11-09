@@ -162,6 +162,8 @@ async def convert_intake(
     session_token: str | None,
     legal_name: str,
     trading_name: str | None,
+    awaiting_activation: bool = False,
+    meeting_starts_at: datetime | None = None,
 ) -> tuple[Intake, Company, str | None]:
     require_open(intake)
     _require_convert_actor(intake, user, session_token)
@@ -185,6 +187,7 @@ async def convert_intake(
         legal_name=name,
         trading_name=trade or None,
         created_from_intake_id=intake.id,
+        status="PENDING" if awaiting_activation else "ACTIVE",
     )
     session.add(company)
     await session.flush()
@@ -193,10 +196,17 @@ async def convert_intake(
     if owner_id is not None:
         session.add(
             CompanyMembership(
-                user_id=owner_id, company_id=company.id, role="ADMIN"
+                user_id=owner_id,
+                company_id=company.id,
+                role="ADMIN",
+                is_active=not awaiting_activation,
             )
         )
         membership_role = "ADMIN"
+        if awaiting_activation:
+            owner = user if user.id == owner_id else await session.get(UserBase, owner_id)
+            if owner is not None and owner.user_type != "BETAXED_STAFF":
+                owner.is_active = False
 
     batches = (
         await session.execute(select(SsBatch).where(SsBatch.intake_id == intake.id))
@@ -238,6 +248,8 @@ async def convert_intake(
     intake.status = "CONVERTED"
     intake.converted_company_id = company.id
     intake.session_token_hash = None
+    if meeting_starts_at is not None:
+        intake.meeting_starts_at = meeting_starts_at
     intake.decided_at = datetime.now(UTC)
     try:
         await session.flush()
