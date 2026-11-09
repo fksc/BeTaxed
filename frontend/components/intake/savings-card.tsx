@@ -59,7 +59,7 @@ export function SavingsCard({ intake }: { intake: IntakeOut }) {
               format={{ style: "currency", currency: "EUR" }}
               fontSize="clamp(2.4rem, 6vw, 3.6rem)"
               fontWeight={600}
-              textColor="#f4f1ec"
+              textColor="#3ddc84"
               duration={0.9}
             />
           )}

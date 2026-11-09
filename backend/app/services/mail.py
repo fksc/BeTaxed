@@ -30,25 +30,25 @@ def _parse_from(raw: str) -> tuple[str | None, str]:
     return None, raw.strip()
 
 
-def send_invite_email(*, to_email: str, subject: str, body: str) -> str:
-    """Send invite mail. Returns ``resend``, ``brevo``, or ``link_only``.
+def send_invite_email(*, to_email: str, subject: str, body: str, html: str | None = None) -> str:
+    """Send mail. Returns ``resend``, ``brevo``, or ``link_only``.
 
     Tests patch this. Raises InviteMailError on provider failure.
     """
     provider = get_email_provider()
     if provider is None:
-        logger.info("invite mail skipped (no EMAIL_PROVIDER / API key) to=%s", to_email)
+        logger.info("mail skipped (no EMAIL_PROVIDER / API key) to=%s", to_email)
         return "link_only"
     if provider == "resend":
-        _send_resend(to_email, subject, body)
+        _send_resend(to_email, subject, body, html)
         return "resend"
     if provider == "brevo":
-        _send_brevo(to_email, subject, body)
+        _send_brevo(to_email, subject, body, html)
         return "brevo"
     raise InviteMailError(f"Unknown EMAIL_PROVIDER {provider}.")
 
 
-def _send_resend(to_email: str, subject: str, body: str) -> None:
+def _send_resend(to_email: str, subject: str, body: str, html: str | None = None) -> None:
     key = get_resend_api_key()
     if not key:
         raise InviteMailError("RESEND_API_KEY is not set.")
@@ -59,6 +59,8 @@ def _send_resend(to_email: str, subject: str, body: str) -> None:
         "subject": subject,
         "text": body,
     }
+    if html:
+        payload["html"] = html
     try:
         response = httpx.post(
             "https://api.resend.com/emails",
@@ -76,7 +78,7 @@ def _send_resend(to_email: str, subject: str, body: str) -> None:
         raise InviteMailError(f"Resend HTTP {response.status_code}: {response.text[:300]}")
 
 
-def _send_brevo(to_email: str, subject: str, body: str) -> None:
+def _send_brevo(to_email: str, subject: str, body: str, html: str | None = None) -> None:
     key = get_brevo_api_key()
     if not key:
         raise InviteMailError("BREVO_API_KEY is not set.")
@@ -90,6 +92,8 @@ def _send_brevo(to_email: str, subject: str, body: str) -> None:
         "subject": subject,
         "textContent": body,
     }
+    if html:
+        payload["htmlContent"] = html
     try:
         response = httpx.post(
             "https://api.brevo.com/v3/smtp/email",

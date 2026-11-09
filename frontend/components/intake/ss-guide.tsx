@@ -6,13 +6,14 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { BorderBeam } from "@/components/border-beam";
 import { Button } from "@/components/ui/button";
 
 const PORTAL_URL = "https://app.seg-social.pt/ptss";
 
 const SHARED_IMAGES = [
   "/guide/sign-in.png",
-  "/guide/search.png",
+  "/guide/vinculos-search.png",
   "/guide/search-form.png",
   "/guide/search-form.png",
   "/guide/search-form.png",
@@ -39,7 +40,7 @@ const STEP_TWO_IMAGE = SHARED_IMAGES[1];
 
 export function SsGuide() {
   const t = useTranslations("guide");
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const buttonRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
   const [peekAt, setPeekAt] = useState<{ top: number; left: number } | null>(null);
   const [place, setPlace] = useState<Place>({ kind: "shared", index: 0 });
@@ -261,26 +262,32 @@ export function SsGuide() {
 
   return (
     <>
-      <button
+      <BorderBeam
         ref={buttonRef}
+        as="button"
         type="button"
         aria-label={t("open")}
+        duration={2}
+        borderRadius={9999}
+        borderWidth={2}
         onClick={openGuide}
         onMouseEnter={showPeek}
         onMouseLeave={() => setPeekAt(null)}
         onFocus={showPeek}
         onBlur={() => setPeekAt(null)}
-        className={`relative grid size-11 shrink-0 place-items-center rounded-full border border-[#88375c] bg-[#88375c]/15 text-[#e4b4c4] transition-colors hover:bg-[#88375c]/30 ${open ? "" : "guide-pulse"}`}
+        className="inline-flex shrink-0"
+        innerClassName="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm font-medium text-foreground shadow-[0_10px_30px_-16px_rgba(0,0,0,0.7)] backdrop-blur-xl"
       >
-        <CircleHelp className="size-5" />
-      </button>
+        <CircleHelp className="size-4" />
+        {t("pill")}
+      </BorderBeam>
       {peekCard}
       {dialog && typeof document !== "undefined" ? createPortal(dialog, document.body) : null}
     </>
   );
 }
 
-function peekStyle(button: HTMLButtonElement | null): { top: number; left: number } {
+function peekStyle(button: HTMLElement | null): { top: number; left: number } {
   if (!button || typeof window === "undefined") {
     return { top: 0, left: 0 };
   }

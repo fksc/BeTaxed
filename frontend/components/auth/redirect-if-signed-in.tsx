@@ -3,8 +3,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useRouter } from "@/i18n/navigation";
+import { ApiError } from "@/lib/api/types";
 import { getMe } from "@/lib/api/workspace-client";
-import { currentIdToken } from "@/lib/firebase";
+import { currentIdToken, signOutUser } from "@/lib/firebase";
 import { appHomeForMe } from "@/lib/session-home";
 import { useAuthUser } from "@/hooks/use-auth-user";
 
@@ -31,8 +32,10 @@ export function RedirectIfSignedIn({ children }: { children: ReactNode }) {
           router.replace(dest);
           return;
         }
-      } catch {
-        /* a session with no company is not signed in */
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 403) {
+          await signOutUser().catch(() => undefined);
+        }
       }
       if (!cancelled) setAllowed(true);
     })();

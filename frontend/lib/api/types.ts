@@ -25,6 +25,7 @@ export type IntakeOut = {
   session_token?: string | null;
   company_id?: string;
   membership_role?: string | null;
+  meeting_token?: string | null;
 };
 
 export type VerbosePerson = {

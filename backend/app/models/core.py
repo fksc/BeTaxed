@@ -74,7 +74,7 @@ class Company(Base):
     __tablename__ = "company"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('ACTIVE', 'SUSPENDED', 'CHURNED')",
+            "status IN ('PENDING', 'ACTIVE', 'SUSPENDED', 'CHURNED')",
             name="ck_company_status",
         ),
         CheckConstraint(
@@ -278,6 +278,9 @@ class Intake(Base):
     sales_call_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sales_call_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
     sales_call_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    meeting_starts_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     session_token_hash: Mapped[bytes | None] = mapped_column(BYTEA, nullable=True)

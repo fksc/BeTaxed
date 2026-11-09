@@ -168,3 +168,64 @@
     box-shadow: 0 0 0 3px rgb(136 55 92 / 0.55);
   }
 }
+
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.border-beam {
+  position: relative;
+  isolation: isolate;
+}
+
+.border-beam::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--beam-width, 2px));
+  z-index: 0;
+  border-radius: inherit;
+  padding: var(--beam-width, 2px);
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0deg,
+    transparent 318deg,
+    rgba(88, 36, 58, 0.28) 336deg,
+    rgba(88, 36, 58, 0.9) 348deg,
+    #a85a72 351deg,
+    #f4f1ec 353deg,
+    #f4f1ec 359deg,
+    #c4899a 360deg
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: beam-spin var(--beam-duration, 2s) linear infinite;
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 2px #c4899a) drop-shadow(0 0 8px rgba(88, 36, 58, 0.95))
+    drop-shadow(0 0 18px rgba(88, 36, 58, 0.55));
+}
+
+.border-beam-inner {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .border-beam::before {
+    animation: none;
+  }
+}

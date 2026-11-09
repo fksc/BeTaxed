@@ -18,26 +18,18 @@
     "switchTo": "Idioma"
   },
   "start": {
-    "kicker": "Antes do extrato",
-    "headline": "Lemos um ficheiro. Depois decide.",
-    "lead": "Três passos. Se não continuar, o ficheiro e os números são eliminados.",
+    "kicker": "Vamos começar a escavar",
+    "headline": "Envie os ficheiros em segurança e veja quanto lhe podemos poupar",
+    "lead": "Lemos os ficheiros em segundos e mostramos uma primeira estimativa. Depois decide se quer continuar.",
     "continue": "Continuar",
     "stepBrief": "O que fazemos",
     "stepUpload": "Carregar",
     "stepResult": "A poupança",
-    "points": [
-      {
-        "title": "O que vamos fazer",
-        "body": "Entrega o extrato da Segurança Social. Lemos do nosso lado e mostramos a poupança potencial. Não ensinamos o método."
-      },
-      {
-        "title": "O ficheiro fica protegido",
-        "body": "O extrato fica cifrado e serve só para esta leitura. Não é uma calculadora pública e não nomeia pessoas."
-      },
-      {
-        "title": "Se parar, eliminamos",
-        "body": "Se recusar, apagamos o ficheiro, as linhas lidas e os números. Nada desta leitura fica connosco."
-      }
+    "stepClose": "Seguinte",
+    "assurances": [
+      "Toda a sua informação fica cifrada",
+      "Se decidir não avançar, apagamos de imediato toda a informação que partilhou connosco.",
+      "O nosso modelo é de sucesso: só paga uma percentagem se conseguirmos poupar-lhe dinheiro."
     ],
     "uploadKicker": "O extrato",
     "uploadTitle": "Largue o ficheiro de vínculos",
@@ -53,6 +45,7 @@
     "kicker": "Exportar",
     "title": "Obter os vínculos na Segurança Social Direta",
     "open": "Como exportar o ficheiro",
+    "pill": "Veja como obter os vínculos",
     "peek": "Veja o guia passo a passo!",
     "close": "Fechar",
     "portal": "Abrir a Segurança Social Direta",
@@ -131,10 +124,17 @@
     "perMonth": "{amount} por mês",
     "modelTitle": "Como trabalhamos",
     "model": [
-      "Tratamos do processo consigo. Este ecrã não ensina a tratar sozinho.",
-      "O honorário é uma parte da poupança que se realiza de facto. Um mês sem poupança não é faturado.",
-      "Este número é uma leitura do extrato. Pode mudar quando entrarem os contratos de trabalho."
+      "Tratamos do processo consigo. A tecnologia que desenvolvemos capacita-nos a criar valor para a sua empresa.",
+      "Modelo win win, sem cobrança de fees caso não haja poupanças para a empresa.",
+      "Este número é uma leitura da informação partilhada. Os valores podem ficar abaixo ou acima depois de vermos informação mais detalhada."
     ],
+    "continueAsk": "Quer continuar?",
+    "talk": "Sim, vamos falar",
+    "holdDelete": "Não, SEGURE PARA APAGAR",
+    "savedTitle": "O espaço ficou guardado e permanece inativo.",
+    "savedLead": "Ficou a hora. Ativamos o espaço antes de poder entrar.",
+    "bookFirst": "Marque uma hora e depois crie o espaço. São precisos os dois para continuar.",
+    "booked": "Hora marcada. Crie o espaço em baixo para continuar.",
     "workspaceTab": "Criar espaço",
     "callTab": "Pedir uma chamada",
     "continueTitle": "Continuar com a Anteater",
@@ -184,15 +184,30 @@
     "lead": "Os mesmos totais ficam guardados. A seguir: contratos, declarações mensais e o acompanhamento — no espaço de trabalho."
   },
   "declined": {
-    "headline": "Extrato e totais foram eliminados.",
-    "lead": "Nada fica connosco. Pode recomeçar quando quiser.",
+    "headline": "Toda a sua informação foi eliminada dos nossos servidores.",
+    "lead": "O ficheiro, as linhas lidas e os números desapareceram. Pode recomeçar quando quiser.",
     "again": "Nova leitura"
+  },
+  "password": {
+    "label": "Palavra-passe",
+    "veryWeak": "Muito fraca",
+    "weak": "Fraca",
+    "fair": "Razoável",
+    "good": "Boa",
+    "strong": "Forte",
+    "needStronger": "Torne-a mais forte antes de continuar.",
+    "repeat": "Repetir palavra-passe",
+    "show": "Segure para ver",
+    "mismatch": "As palavras-passe não coincidem."
   },
   "errors": {
     "generic": "Algo correu mal. Tente de novo.",
     "needFile": "Escolha o extrato da Segurança Social (CSV ou Excel).",
     "needAuthStart": "Para entrar primeiro, indique email e palavra-passe.",
     "needAuthContinue": "Crie uma conta (ou entre) para continuar.",
+    "weakPassword": "Escolha uma palavra-passe mais forte.",
+    "passwordMismatch": "As palavras-passe não coincidem.",
+    "needBooking": "Marque uma hora antes de criar o espaço.",
     "needLegalName": "Indique a denominação legal da empresa.",
     "needCall": "Indique nome, email e telefone para podermos ligar.",
     "parseFailed": "Não foi possível ler este ficheiro. Use o extrato oficial de vínculos e contratos.",
@@ -770,6 +785,8 @@
       "crumb": "Empresa",
       "back": "Todas as empresas",
       "title": "Empresa",
+      "activate": "Ativar espaço",
+      "pending": "Inativo até o ativar",
       "lead": "Altere o limite de lugares e convide utilizadores da empresa.",
       "hubNavAria": "Secções da empresa",
       "tabOverview": "Visão geral",

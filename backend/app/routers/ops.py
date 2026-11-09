@@ -323,6 +323,7 @@ async def patch_ops_company_route(
     await patch_ops_company(
         db,
         company,
+        company_status=body.status,
         legal_name=body.legal_name,
         trading_name=body.trading_name,
         locale=body.locale,

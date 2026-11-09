@@ -18,6 +18,7 @@ class SalesCompanyIn(BaseModel):
 
 
 class CompanyPatchIn(BaseModel):
+    status: str | None = Field(default=None, max_length=20)
     legal_name: str | None = Field(default=None, min_length=1, max_length=255)
     trading_name: str | None = Field(default=None, max_length=255)
     locale: str | None = Field(default=None, max_length=10)
