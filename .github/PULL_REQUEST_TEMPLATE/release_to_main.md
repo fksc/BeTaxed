@@ -1,6 +1,6 @@
 ## Release to production
 
-Merge **`dev` → `main`**. Production Cloud Run is not finished, so **Deploy Production** does not run on this merge. Run that workflow by hand after the production services exist. It then completes the **Anteater-Production** release in Linear.
+Merge **`dev` → `main`**. That merge runs **Deploy Production** for the backend and frontend files included in the release, then completes the **Anteater-Production** release in Linear.
 
 ### Version
 
