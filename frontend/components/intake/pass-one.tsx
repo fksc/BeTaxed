@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import HoldButton from "@/components/HoldButton";
 import LetterGlitch from "@/components/LetterGlitch";
-import SpecularButton from "@/components/SpecularButton";
+import StarBorder from "@/components/StarBorder";
 import Stepper, { Step } from "@/components/Stepper";
 import { CalInlineEmbed } from "@/components/intake/cal-inline-embed";
 import { Dropzone } from "@/components/intake/dropzone";
@@ -16,6 +16,7 @@ import { SsGuide } from "@/components/intake/ss-guide";
 import { VerboseTable } from "@/components/intake/verbose-table";
 import { PublicChrome } from "@/components/public/public-chrome";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonthPicker } from "@/components/ui/month-picker";
 import {
   bookIntakeMeeting,
@@ -516,17 +517,26 @@ function ResultView({
               >
                 {t("result.holdDelete")}
               </HoldButton>
-              <SpecularButton
+              <StarBorder
                 className="w-full max-w-full sm:w-auto"
                 disabled={busy}
-                radius={14}
-                lineColor="#f4f1ec"
-                baseColor="#88375c"
-                textColor="#f4f1ec"
+                color="#ffffff"
+                trailColor="#ffffff"
+                duration={4}
+                direction="clockwise"
+                stars={1}
+                trailLength={0.3}
+                thickness={1}
+                radius={12}
+                glow={0.6}
+                hover="lap"
+                sparkle={false}
+                clickPulse
+                theme="dark"
                 onClick={onTalk}
               >
                 {t("result.talk")}
-              </SpecularButton>
+              </StarBorder>
             </div>
           </div>
         </div>
@@ -593,7 +603,10 @@ function CloseView({
           <p className="text-base text-muted-foreground sm:text-lg">{t("result.savedLead")}</p>
         </div>
       ) : (
-        <p className="text-base text-muted-foreground sm:text-lg">{booked ? t("result.booked") : t("result.bookFirst")}</p>
+        <div className="space-y-2">
+          <p className="text-base text-muted-foreground sm:text-lg">{t("result.bookFirst")}</p>
+          {booked ? <p className="text-base font-medium sm:text-lg">{t("result.booked")}</p> : null}
+        </div>
       )}
       <CalInlineEmbed onBooked={onBooked} />
       {finale === "saved" ? null : (
@@ -630,12 +643,82 @@ function CloseView({
                 disabled={busy}
               />
             </Field>
-            <Button type="submit" size="lg" className="h-11 w-full" disabled={busy || !booked}>
-              {busy ? t("result.opening") : t("result.createWorkspace")}
-            </Button>
+            <CreateWorkspaceButton
+              busy={busy}
+              booked={booked}
+              signedIn={signedIn}
+              email={email}
+              password={password}
+              passwordRepeat={passwordRepeat}
+              legalName={legalName}
+              label={busy ? t("result.opening") : t("result.createWorkspace")}
+            />
           </form>
         </div>
       )}
+    </div>
+  );
+}
+
+function CreateWorkspaceButton({
+  busy,
+  booked,
+  signedIn,
+  email,
+  password,
+  passwordRepeat,
+  legalName,
+  label,
+}: {
+  busy: boolean;
+  booked: boolean;
+  signedIn: boolean;
+  email: string;
+  password: string;
+  passwordRepeat: string;
+  legalName: string;
+  label: string;
+}) {
+  const t = useTranslations();
+  const reasons: string[] = [];
+  if (!booked) {
+    reasons.push(t("result.needMeeting"));
+  }
+  if (!signedIn) {
+    const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    if (!emailReady || !password || !passwordRepeat) {
+      reasons.push(t("result.needAccount"));
+    } else if (password !== passwordRepeat) {
+      reasons.push(t("errors.passwordMismatch"));
+    } else if (!passwordIsStrong(password)) {
+      reasons.push(t("errors.weakPassword"));
+    }
+  }
+  if (!legalName.trim()) {
+    reasons.push(t("result.needLegalName"));
+  }
+  const reason = reasons.join(" ");
+  const disabled = busy || reasons.length > 0;
+  const button = (
+    <Button
+      type="submit"
+      size="lg"
+      className={`h-11 w-full${disabled ? " pointer-events-none" : ""}`}
+      disabled={disabled}
+    >
+      {label}
+    </Button>
+  );
+  if (!reason) {
+    return button;
+  }
+  return (
+    <div className="space-y-2">
+      <Tooltip>
+        <TooltipTrigger render={<span className="block w-full" />}>{button}</TooltipTrigger>
+        <TooltipContent className="max-w-xs whitespace-normal text-left">{reason}</TooltipContent>
+      </Tooltip>
+      <p className="text-sm text-muted-foreground">{reason}</p>
     </div>
   );
 }
