@@ -1,5 +1,7 @@
 'use client';
 
+/* eslint-disable react-hooks/refs -- React Bits keeps the latest settings on a ref during render. */
+
 import React, { useEffect, useRef } from 'react';
 
 export type StarBorderTheme = 'dark' | 'light';
