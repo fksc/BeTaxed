@@ -38,6 +38,8 @@ def test_welcome_includes_lisbon_time() -> None:
     assert "Waiting Lda" in rich
     assert "não pode entrar" not in text
     assert "Anthony-fl.png" in rich
+    assert "Anteater%20black-screen%20-%20no%20bg.svg" in rich
+    assert "for_og_white.png" not in rich
     assert "https://anteater.pt/" in rich
     assert "<script" not in rich
     en_subject, en_text, _en_rich = welcome_message(

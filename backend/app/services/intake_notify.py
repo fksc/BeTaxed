@@ -9,17 +9,18 @@ import logging
 import time
 import uuid
 from datetime import UTC, datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 import httpx
 
 from app.services.mail import InviteMailError, send_invite_email
-from app.settings import get_intake_notify_secret, get_slack_webhook_url
+from app.settings import get_intake_notify_secret, get_public_app_url, get_slack_webhook_url
 
 logger = logging.getLogger(__name__)
 
 _SITE = "https://anteater.pt"
-_LOGO = f"{_SITE}/for_og_white.png"
+_LOGO_FILE = "Anteater black-screen - no bg.svg"
 _ANTHONY = f"{_SITE}/Anthony-fl.png"
 _LISBON = ZoneInfo("Europe/Lisbon")
 _TOKEN_TTL_SECONDS = 48 * 3600
@@ -198,7 +199,7 @@ def welcome_message(*, legal_name: str, locale: str, meeting_label: str | None) 
             f"Obrigado por marcar uma hora com a Anteater. "
             f"A leitura de {legal_name} ficou guardada em segurança, e assim permanece até nos encontrarmos.\n"
             f"{when_text}\n"
-            "O que partilhou está cifrado e fica connosco apenas para prepararmos essa conversa. "
+            "A informação que partilhou estará encriptada e fica connosco apenas para prepararmos essa conversa. "
             "Na reunião percorremos a estimativa consigo e decidimos o passo seguinte. "
             "Estamos ansiosos por o conhecer.\n"
             f"{site}\n"
@@ -213,7 +214,7 @@ def welcome_message(*, legal_name: str, locale: str, meeting_label: str | None) 
             f"<p>Obrigado por marcar uma hora com a Anteater. "
             f"A leitura de <strong>{safe_name}</strong> ficou guardada em segurança, e assim permanece até nos encontrarmos.</p>"
             f"{when_html}"
-            "<p>O que partilhou está cifrado e fica connosco apenas para prepararmos essa conversa. "
+            "<p>A informação que partilhou estará encriptada e fica connosco apenas para prepararmos essa conversa. "
             "Na reunião percorremos a estimativa consigo e decidimos o passo seguinte. "
             "Estamos ansiosos por o conhecer.</p>"
         )
@@ -256,14 +257,19 @@ def meeting_message(*, legal_name: str, locale: str, meeting_label: str) -> tupl
     return subject, text, _wrap(body, site=site, link_label=link)
 
 
+def _logo_url() -> str:
+    return f"{get_public_app_url()}/{quote(_LOGO_FILE)}"
+
+
 def _wrap(body: str, *, site: str, link_label: str) -> str:
     safe_site = html.escape(site, quote=True)
     safe_link = html.escape(link_label)
+    safe_logo = html.escape(_logo_url(), quote=True)
     return (
         "<div style=\"font-family:Georgia,serif;background:#0c0b0c;padding:32px;color:#f4f1ec\">"
         "<div style=\"max-width:520px;margin:0 auto;background:#171417;border-radius:16px;padding:32px\">"
         f"<p style=\"margin:0 0 20px\"><a href=\"{safe_site}\">"
-        f"<img src=\"{_LOGO}\" alt=\"Anteater\" width=\"200\" style=\"display:block;border:0;max-width:200px;height:auto\"/>"
+        f"<img src=\"{safe_logo}\" alt=\"Anteater\" width=\"200\" style=\"display:block;border:0;max-width:200px;height:auto\"/>"
         "</a></p>"
         f"<p style=\"margin:0 0 20px\"><img src=\"{_ANTHONY}\" alt=\"Anthony\" width=\"220\" "
         "style=\"display:block;border:0;border-radius:16px;max-width:220px;height:auto\"/></p>"
