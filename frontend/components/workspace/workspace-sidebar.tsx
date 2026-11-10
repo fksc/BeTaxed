@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { AnteaterLogo } from "@/components/brand/anteater-logo";
 import { NavUser } from "@/components/shell/nav-user";
 import { CompanySidebarBrand } from "@/components/workspace/company-sidebar-brand";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -73,7 +74,8 @@ export function WorkspaceSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-2 py-3">
+      <SidebarHeader className="gap-3 px-2 py-3">
+        <AnteaterLogo collapsedAware />
         <CompanySidebarBrand />
       </SidebarHeader>
       <SidebarContent>

@@ -39,6 +39,8 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 | SL-008 | 2026-08-21 | resolved | 2026-08-25 | Contract PDF vs SS row (override after teaser) |
 | SL-009 | 2026-08-21 | resolved | 2026-08-25 | Gate (companies)/(admins) with Firebase + staff check |
 | SL-010 | 2026-08-25 | open | — | Cloud Tasks for fanout + contract LLM review |
+| SL-011 | 2026-11-08 | resolved | 2026-11-08 | SS vínculos guide still waits on the export PDF |
+| SL-012 | 2026-11-08 | open | — | Ops list of pass-1 sales-call requests |
 
 ---
 
@@ -158,3 +160,26 @@ When done: set **Status** to `resolved`, set **Resolved-date** (ISO date), add *
 - **Why later:** No Cloud Tasks queues wired on BeTaxed Cloud Run yet. Inline is correct for tests and local DEV.
 - **Pickup:** `FANOUT_DOMAIN_EVENT` queue still open. Contract review uses the existing queue `betaxed-staging` (`POST /internal/workers/review-contract`, OIDC / `INTERNAL_JOB_TOKEN`). Keep inline fallback when `CLOUD_TASKS_TARGET_URL` is unset.
 - **Partial (2026-10-09):** DEV-850 batch upload links PDFs by NIF, then name, then NISS, and enqueues one task per file. Fan-out stays inline. Leave this entry open until fan-out is queued.
+
+---
+
+### SL-011 — SS vínculos guide still waits on the export PDF
+- **Opened:** 2026-11-08
+- **Status:** resolved
+- **Resolved-date:** 2026-11-08
+- **Related:** DEV-896, `frontend/components/intake/ss-guide.tsx`, `frontend/messages/en.json` (`guide.shared`)
+- **Context:** The upload step has an interactive four-step guide (open Direta, export vínculos, match the month, drop the file). The steps are prose. They are not the click-path from the Segurança Social PDF the product owner will supply, and there are no screenshots.
+- **Why later:** The PDF was not in the repo when DEV-896 started. Inventing menu names would teach the wrong export.
+- **Pickup:** Replace `guide.steps` in `en.json` and `pt.json` from the PDF. Add the screenshots beside the active step. Do not add rates, named people, or a filing recipe.
+- **Resolution:** The upload step keeps a help icon. It opens a modal with the PDF click-path: six shared steps, then scenario A (under 50, unzip and drop the vínculos and contratos CSV) or scenario B (over 50, Mensagens, then those same CSV files). Portal link is `https://app.seg-social.pt/ptss`. Each step shows the matching screenshot from the guide PDF in `frontend/public/guide/`.
+
+---
+
+### SL-012 — Ops list of pass-1 sales-call requests
+- **Opened:** 2026-11-08
+- **Status:** open
+- **Resolved-date:** —
+- **Related:** DEV-896, `POST /v1/intakes/{id}/sales-call`, `intake.sales_call_*`, `SALES_NOTIFY_EMAIL`
+- **Context:** The result page can store a name, email, and phone on the open intake and, when `SALES_NOTIFY_EMAIL` is set, mail that inbox. The ops nav item “Intakes” is still a soon-link to the dashboard. There is no screen that lists these requests. Purge clears the columns.
+- **Why later:** DEV-896 is the public intake. An ops queue is a separate surface.
+- **Pickup:** When the intakes ops view exists, list open intakes with `sales_call_at` set. Keep showing name, email, and phone only to staff. Do not leave them on the public teaser payload.

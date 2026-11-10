@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "BeTaxed — poupança de Segurança Social",
+    "title": "Anteater — poupança de Segurança Social",
     "description": "Descubra poupança por realizar na Segurança Social da sua empresa. Sem receita."
   },
   "brand": {
-    "name": "BeTaxed",
+    "name": "Anteater",
     "market": "Portugal"
   },
   "userMenu": {
@@ -18,19 +18,94 @@
     "switchTo": "Idioma"
   },
   "start": {
-    "kicker": "Leitura do extrato",
-    "headline": "Há poupança por realizar na Segurança Social da sua empresa.",
-    "lead": "Carregue o extrato que gera na Segurança Social. Mostramos dois totais — o que já está ao alcance, e o que pode vir a ser. Não ensinamos o método.",
-    "needAccount": "Não precisa de conta para ver os totais.",
-    "haveAccount": "Já tenho conta",
-    "preferUpload": "Prefiro carregar o ficheiro primeiro",
+    "kicker": "Vamos começar a escavar",
+    "headline": "Envie os ficheiros em segurança e veja quanto lhe podemos poupar",
+    "lead": "Lemos os ficheiros em segundos e mostramos uma primeira estimativa. Depois decide se quer continuar.",
+    "continue": "Continuar",
+    "stepBrief": "O que fazemos",
+    "stepUpload": "Carregar",
+    "stepResult": "A poupança",
+    "stepClose": "Seguinte",
+    "assurances": [
+      "Toda a sua informação estará encriptada.",
+      "Se decidir não avançar, apagamos de imediato toda a informação que partilhou connosco.",
+      "O nosso modelo é de sucesso: só paga uma percentagem se conseguirmos poupar-lhe dinheiro."
+    ],
+    "uploadKicker": "O extrato",
+    "uploadTitle": "Largue o ficheiro de vínculos",
     "period": "Mês da declaração",
-    "submit": "Ver os totais",
+    "submit": "Ler o extrato",
     "working": "A trabalhar…"
   },
   "dropzone": {
     "title": "Largue o extrato da Segurança Social",
     "hint": "CSV ou Excel. Um livro, ou os dois ficheiros (vínculos e contratos)."
+  },
+  "guide": {
+    "kicker": "Exportar",
+    "title": "Obter os vínculos na Segurança Social Direta",
+    "open": "Como exportar o ficheiro",
+    "pill": "Veja como obter os vínculos",
+    "peek": "Veja o guia passo a passo!",
+    "close": "Fechar",
+    "portal": "Abrir a Segurança Social Direta",
+    "progress": "Passo {current} de {total}",
+    "scenarioProgress": "{scenario} · passo {current} de {total}",
+    "scenarioAName": "Cenário A",
+    "scenarioBName": "Cenário B",
+    "back": "Voltar",
+    "next": "Seguinte",
+    "done": "Concluído",
+    "forkProgress": "Depois da pesquisa",
+    "forkLead": "Menos de 50 pessoas segue o cenário A. Mais de 50 segue o cenário B.",
+    "under50": "Menos de 50 pessoas",
+    "over50": "Mais de 50 pessoas",
+    "shared": [
+      {
+        "title": "Entrar",
+        "body": "Abra a Segurança Social Direta e entre com o número de identificação da Segurança Social da empresa (NISS) e a palavra-passe."
+      },
+      {
+        "title": "Procurar vínculos",
+        "body": "No campo de pesquisa, procure “vínculos” e escolha “Consultar e alterar vínculos dos trabalhadores”."
+      },
+      {
+        "title": "Pesquisar por local e taxa",
+        "body": "Em “Pesquisar por”, escolha “Local de Trabalho e taxa”."
+      },
+      {
+        "title": "Período de hoje",
+        "body": "Em “Período a pesquisar”, ponha a data de hoje nos dois campos do intervalo."
+      },
+      {
+        "title": "Escolher o vínculo",
+        "body": "Em “Vínculo”, escolha “Trabalhadores por conta de outrem”."
+      },
+      {
+        "title": "Todos os locais de trabalho",
+        "body": "Em “Local de trabalho”, deixe “Selecione uma opção” para incluir todos os locais e clique em “Pesquisar”."
+      }
+    ],
+    "scenarioA": [
+      {
+        "title": "Descarregar o zip",
+        "body": "Clique em “Obter vínculos”. Descarrega um ficheiro zip. Abra-o e largue aqui os CSV “vínculos” e “contratos”. Pode deixar de fora “suspensões”."
+      }
+    ],
+    "scenarioB": [
+      {
+        "title": "Enviar para Mensagens",
+        "body": "Clique em “Obter vínculos”. Pelo volume, a Segurança Social Direta envia os ficheiros para Mensagens em vez de os descarregar já."
+      },
+      {
+        "title": "Abrir a mensagem",
+        "body": "Clique no ícone de carta (Mensagens) no canto superior direito e abra a mensagem deste pedido."
+      },
+      {
+        "title": "Descarregar os CSV",
+        "body": "Em Anexos, descarregue os CSV com os nomes “vínculos” e “contratos” e largue-os aqui. Pode deixar de fora “suspensões”."
+      }
+    ]
   },
   "working": {
     "lines": [
@@ -43,12 +118,43 @@
     "kicker": "Oportunidade",
     "headline": "Há valor por realizar. Sem o mapa de como o obter.",
     "lead": "Se continuar, tratamos do processo consigo. Se recusar, apagamos o extrato e estes números.",
-    "continueTitle": "Continuar com a BeTaxed",
+    "waiting": "Carregue o extrato para ver a poupança.",
+    "potentialLabel": "Poupança potencial",
+    "estimate": "Estimativa",
+    "perMonth": "{amount} por mês",
+    "modelTitle": "Como trabalhamos",
+    "model": [
+      "Tratamos do processo consigo. A tecnologia que desenvolvemos capacita-nos a criar valor para a sua empresa.",
+      "Modelo win win, sem cobrança de fees caso não haja poupanças para a empresa.",
+      "Este número é uma leitura da informação partilhada. Os valores podem ficar abaixo ou acima depois de vermos informação mais detalhada."
+    ],
+    "continueAsk": "Quer continuar?",
+    "talk": "Sim, vamos falar",
+    "holdDelete": "Não, SEGURE PARA APAGAR",
+    "savedTitle": "O espaço ficou guardado e permanece inativo.",
+    "savedLead": "Ficou a hora. Ativamos o espaço antes de poder entrar.",
+    "bookFirst": "Marque uma reunião e depois crie uma conta. Se não fizer as duas coisas, não guardamos nenhum dos seus dados e apagamo-los.",
+    "booked": "Reunião marcada. O espaço fica fechado até a conta e o nome da empresa estarem preenchidos.",
+    "needMeeting": "Marque primeiro uma reunião.",
+    "needAccount": "Indique o email, uma palavra-passe forte e repita-a.",
+    "needLegalName": "Indique a denominação legal da empresa.",
+    "workspaceTab": "Criar espaço",
+    "callTab": "Pedir uma chamada",
+    "continueTitle": "Continuar com a Anteater",
+    "accountHint": "É a primeira vez? Escolha um email e uma palavra-passe. Já tem conta? Use-os para entrar.",
     "legalName": "Denominação legal",
     "tradingName": "Nome comercial",
     "optional": "Opcional",
     "createWorkspace": "Criar espaço de trabalho",
     "opening": "A abrir o espaço…",
+    "callTitle": "Fale connosco primeiro",
+    "callLead": "Deixe um nome e um número. Ligamos sobre esta leitura.",
+    "callName": "Nome",
+    "callPhone": "Telefone",
+    "callSubmit": "Pedir uma chamada",
+    "callSending": "A enviar…",
+    "callDone": "Ficou o pedido.",
+    "callDoneLead": "Fica guardado com esta leitura. Ainda pode criar o espaço de trabalho.",
     "decline": "Não, eliminar tudo",
     "declineConfirm": "Isto apaga o ficheiro e os totais de forma permanente.",
     "declineYes": "Sim, eliminar",
@@ -67,9 +173,10 @@
     "password": "Palavra-passe",
     "kicker": "Conta",
     "signIn": "Entrar",
-    "signInTitle": "Entrar na BeTaxed",
+    "signInTitle": "Entrar na Anteater",
     "signInLead": "Use a conta com que criou o espaço, ou a que já tinha.",
     "signingIn": "A entrar…",
+    "backHome": "Voltar ao site",
     "noAccount": "Ainda sem conta?",
     "goToStart": "Comece pela leitura do extrato"
   },
@@ -80,16 +187,32 @@
     "lead": "Os mesmos totais ficam guardados. A seguir: contratos, declarações mensais e o acompanhamento — no espaço de trabalho."
   },
   "declined": {
-    "headline": "Extrato e totais foram eliminados.",
-    "lead": "Nada fica connosco. Pode recomeçar quando quiser.",
+    "headline": "Toda a sua informação foi eliminada dos nossos servidores.",
+    "lead": "O ficheiro, as linhas lidas e os números desapareceram. Pode recomeçar quando quiser.",
     "again": "Nova leitura"
+  },
+  "password": {
+    "label": "Palavra-passe",
+    "veryWeak": "Muito fraca",
+    "weak": "Fraca",
+    "fair": "Razoável",
+    "good": "Boa",
+    "strong": "Forte",
+    "needStronger": "Torne-a mais forte antes de continuar.",
+    "repeat": "Repetir palavra-passe",
+    "show": "Segure para ver",
+    "mismatch": "As palavras-passe não coincidem."
   },
   "errors": {
     "generic": "Algo correu mal. Tente de novo.",
     "needFile": "Escolha o extrato da Segurança Social (CSV ou Excel).",
     "needAuthStart": "Para entrar primeiro, indique email e palavra-passe.",
     "needAuthContinue": "Crie uma conta (ou entre) para continuar.",
+    "weakPassword": "Escolha uma palavra-passe mais forte.",
+    "passwordMismatch": "As palavras-passe não coincidem.",
+    "needBooking": "Marque uma hora antes de criar o espaço.",
     "needLegalName": "Indique a denominação legal da empresa.",
+    "needCall": "Indique nome, email e telefone para podermos ligar.",
     "parseFailed": "Não foi possível ler este ficheiro. Use o extrato oficial de vínculos e contratos.",
     "authInvalid": "Email ou palavra-passe incorrectos.",
     "authWeak": "A palavra-passe deve ter pelo menos 6 caracteres.",
@@ -117,7 +240,7 @@
     }
   },
   "workspace": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Portugal",
     "navGroup": "Espaço",
     "soon": "Em breve",
@@ -221,7 +344,7 @@
       "establishmentReopen": "Reabrir",
       "establishmentInvalid": "Indique um nome e um código de 4 dígitos.",
       "establishmentDuplicate": "Esse código da Segurança Social já existe nesta empresa.",
-      "establishmentForbidden": "Só um admin da empresa ou a equipa BeTaxed pode alterar estabelecimentos.",
+      "establishmentForbidden": "Só um admin da empresa ou a equipa Anteater pode alterar estabelecimentos.",
       "establishmentFailed": "Não foi possível guardar o estabelecimento."
     },
     "invoices": {
@@ -369,7 +492,7 @@
     }
   },
   "admins": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Operações",
     "navGroup": "Ops",
     "soon": "Em breve",
@@ -665,6 +788,8 @@
       "crumb": "Empresa",
       "back": "Todas as empresas",
       "title": "Empresa",
+      "activate": "Ativar espaço",
+      "pending": "Inativo até o ativar",
       "lead": "Altere o limite de lugares e convide utilizadores da empresa.",
       "hubNavAria": "Secções da empresa",
       "tabOverview": "Visão geral",
@@ -753,53 +878,6 @@
       "capInvalid": "Indique um número inteiro de 1 ou mais.",
       "saveFailed": "Não foi possível guardar o limite.",
       "needAuth": "Não foi possível carregar esta empresa."
-    }
-  },
-  "marketing": {
-    "nav": {
-      "brand": "beTaxed",
-      "about": "Sobre nós",
-      "contact": "Contactos",
-      "start": "Ver a leitura",
-      "signIn": "Entrar",
-      "workspace": "Espaço",
-      "openMenu": "Abrir menu"
-    },
-    "footer": {
-      "brand": "beTaxed",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal",
-      "about": "Sobre nós",
-      "contact": "Contactos",
-      "start": "Ver a leitura",
-      "privacy": "Política de privacidade"
-    },
-    "landing": {
-      "headline": "Otimização fiscal",
-      "heroCaption": "Antecipar. Executar. Legalmente.",
-      "subhead": "Revelar e potenciar oportunidades — para maior eficiência fiscal",
-      "lead": "Planeamento e otimização fiscal para empresas — uma forma legal de reduzir a carga tributária.",
-      "cta": "Ver a leitura do extrato",
-      "p1": "Muita gente olha para a otimização fiscal com desconfiança. A fiscalidade ficou marcada como um estigma: qualquer redução da fatura parece, à partida, um atalho à margem da lei.",
-      "p2": "Há muito que a ação fiscal deixou de ser só reativa junto das autoridades. Passou a um plano proativo: iniciativa e antecipação, com execução.",
-      "p3": "Uma abordagem profissional, planeamento adequado e a devida execução ajudam a sua empresa a aproveitar, legalmente, os benefícios que se aplicam à sua realidade. Sem ensinar o método no ecrã público."
-    },
-    "about": {
-      "kicker": "Sobre nós",
-      "headline": "Fiscalidade empresarial, com execução.",
-      "p1": "A BeTaxed trabalha com empresas em Portugal. Identificamos poupança por realizar na Segurança Social e, se ficar connosco, acompanhamos o processo.",
-      "p2": "Não somos uma calculadora de auto-serviço. O ecrã público mostra totais; o mapa de como os obter fica connosco.",
-      "p3": "Sede em Porto. Contacto: geral@betaxed.eu."
-    },
-    "contact": {
-      "kicker": "Contactos",
-      "headline": "Fale connosco",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal"
-    },
-    "privacy": {
-      "headline": "Política de privacidade",
-      "lead": "Texto legal completo virá depois. Para já: o extrato que carregar na leitura é apagado se recusar continuar."
     }
   },
   "notifications": {

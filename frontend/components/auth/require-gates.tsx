@@ -2,6 +2,7 @@
 
 import { useRouter } from "@/i18n/navigation";
 import { paths } from "@/lib/app-paths";
+import { appHomeForMe } from "@/lib/session-home";
 import { getMe, getMeCompany } from "@/lib/api/workspace-client";
 import { loadCompanyId, saveCompanyId, saveWorkspaceName } from "@/lib/company-session";
 import { currentIdToken } from "@/lib/firebase";
@@ -14,7 +15,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (ready && !user) {
-      router.replace(paths.login);
+      router.replace(paths.home);
     }
   }, [ready, user, router]);
 
@@ -36,7 +37,7 @@ export function RequireCompany({ children }: { children: ReactNode }) {
     void (async () => {
       const idToken = await currentIdToken();
       if (!idToken) {
-        router.replace(paths.login);
+        router.replace(paths.home);
         return;
       }
       try {
@@ -47,7 +48,7 @@ export function RequireCompany({ children }: { children: ReactNode }) {
         }
         const active = me.memberships.filter((m) => m.is_active);
         if (active.length === 0) {
-          router.replace(paths.start);
+          router.replace(paths.home);
           return;
         }
         const stored = loadCompanyId();
@@ -62,7 +63,7 @@ export function RequireCompany({ children }: { children: ReactNode }) {
         }
         setOk(true);
       } catch {
-        router.replace(paths.login);
+        router.replace(paths.home);
       }
     })();
   }, [router]);
@@ -85,18 +86,19 @@ export function RequireStaff({ children }: { children: ReactNode }) {
     void (async () => {
       const idToken = await currentIdToken();
       if (!idToken) {
-        router.replace(paths.login);
+        router.replace(paths.home);
         return;
       }
       try {
         const me = await getMe({ idToken });
-        if (me.user_type !== "BETAXED_STAFF") {
-          router.replace(paths.home);
+        const dest = appHomeForMe(me);
+        if (dest !== paths.adminsDashboard) {
+          router.replace(dest ?? paths.home);
           return;
         }
         setOk(true);
       } catch {
-        router.replace(paths.login);
+        router.replace(paths.home);
       }
     })();
   }, [router]);

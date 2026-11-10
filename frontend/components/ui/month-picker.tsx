@@ -83,7 +83,7 @@ export function MonthPicker({
           }
         }}
       >
-        <SelectTrigger className="min-w-36 flex-1" aria-label={locale === "pt" ? "Mês" : "Month"}>
+        <SelectTrigger className="min-w-0 flex-1" aria-label={locale === "pt" ? "Mês" : "Month"}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -104,7 +104,7 @@ export function MonthPicker({
           }
         }}
       >
-        <SelectTrigger className="w-[5.75rem]" aria-label={locale === "pt" ? "Ano" : "Year"}>
+        <SelectTrigger className="w-[5.25rem] shrink-0 sm:w-[5.75rem]" aria-label={locale === "pt" ? "Ano" : "Year"}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

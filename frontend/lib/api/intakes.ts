@@ -87,6 +87,7 @@ export async function convertIntake(
   legalName: string,
   tradingName: string | null,
   opts: AuthOpts,
+  extra?: { locale?: string; meetingStartsAt?: string | null },
 ): Promise<IntakeOut> {
   return requestJson<IntakeOut>(
     `/v1/intakes/${intakeId}/convert`,
@@ -96,7 +97,41 @@ export async function convertIntake(
       body: JSON.stringify({
         legal_name: legalName,
         trading_name: tradingName || null,
+        awaiting_activation: true,
+        locale: extra?.locale === "en" ? "en" : "pt",
+        meeting_starts_at: extra?.meetingStartsAt || null,
       }),
+    },
+    opts,
+  );
+}
+
+export async function bookIntakeMeeting(
+  intakeId: string,
+  body: { token: string; meeting_starts_at: string; locale?: string },
+): Promise<{ ok: boolean }> {
+  return requestJson<{ ok: boolean }>(`/v1/intakes/${intakeId}/meeting`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: body.token,
+      meeting_starts_at: body.meeting_starts_at,
+      locale: body.locale === "en" ? "en" : "pt",
+    }),
+  }, {});
+}
+
+export async function requestSalesCall(
+  intakeId: string,
+  body: { name: string; email: string; phone: string },
+  opts: AuthOpts,
+): Promise<{ ok: boolean }> {
+  return requestJson<{ ok: boolean }>(
+    `/v1/intakes/${intakeId}/sales-call`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     },
     opts,
   );

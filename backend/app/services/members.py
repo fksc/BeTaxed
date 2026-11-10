@@ -25,6 +25,7 @@ from app.services.mail import InviteMailError, send_invite_email
 from app.settings import get_invite_ttl_hours, get_public_app_url
 
 ROLES = frozenset({"ADMIN", "HR", "FINANCE"})
+COMPANY_STATUSES = frozenset({"PENDING", "ACTIVE", "SUSPENDED", "CHURNED"})
 OPEN_INVITE_STATUSES = frozenset({"PENDING", "FAILED", "EXPIRED"})
 
 
@@ -304,7 +305,7 @@ def _mail_copy(
     greeting_en = f"Hi {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
     greeting_pt = f"Olá {given_name.strip()},\n\n" if given_name and given_name.strip() else ""
     if locale.lower().startswith("en"):
-        subject = f"Join {company.legal_name} on BeTaxed"
+        subject = f"Join {company.legal_name} on Anteater"
         body = (
             f"{greeting_en}"
             f"You were invited to {company.legal_name} as {role}.\n\n"
@@ -312,7 +313,7 @@ def _mail_copy(
             "If you did not expect this, ignore the message.\n"
         )
         return subject, body
-    subject = f"Convite BeTaxed — {company.legal_name}"
+    subject = f"Convite Anteater — {company.legal_name}"
     body = (
         f"{greeting_pt}"
         f"Foi convidado para {company.legal_name} como {role}.\n\n"
@@ -439,7 +440,7 @@ async def create_invite(
     if user.user_type == "BETAXED_STAFF":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="BeTaxed staff are not company members.",
+            detail="Anteater staff are not company members.",
         )
 
     membership = (
@@ -705,14 +706,30 @@ async def create_sales_company(
     return company, invite, url
 
 
+async def activate_company(session: AsyncSession, company: Company) -> None:
+    """Staff turns a pending workspace on and enables its company users."""
+    company.status = "ACTIVE"
+    memberships = (
+        await session.execute(
+            select(CompanyMembership).where(CompanyMembership.company_id == company.id)
+        )
+    ).scalars().all()
+    for membership in memberships:
+        membership.is_active = True
+        owner = await session.get(UserBase, membership.user_id)
+        if owner is not None and owner.user_type == "COMPANY_STAFF":
+            owner.is_active = True
+
+
 async def patch_ops_company(
     session: AsyncSession,
     company: Company,
     *,
-    legal_name: str | None,
-    trading_name: str | None,
-    locale: str | None,
-    max_members: int | None,
+    company_status: str | None = None,
+    legal_name: str | None = None,
+    trading_name: str | None = None,
+    locale: str | None = None,
+    max_members: int | None = None,
     registered_address: str | None = None,
     signatory_name: str | None = None,
     address_set: bool = False,
@@ -725,6 +742,17 @@ async def patch_ops_company(
     ss_subconta_available_set: bool = False,
     clear_ss_subconta: bool = False,
 ) -> Company:
+    if company_status is not None:
+        next_status = company_status.strip().upper()
+        if next_status not in COMPANY_STATUSES:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Unknown company status.",
+            )
+        if next_status == "ACTIVE":
+            await activate_company(session, company)
+        else:
+            company.status = next_status
     if legal_name is not None:
         name = legal_name.strip()
         if not name:

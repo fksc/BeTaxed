@@ -741,6 +741,7 @@ export async function createOpsCompany(
 export async function patchOpsCompany(
   companyId: string,
   body: {
+    status?: string;
     legal_name?: string;
     trading_name?: string;
     locale?: string;

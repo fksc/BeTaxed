@@ -79,7 +79,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
   return (
     <form className="mx-auto flex w-full max-w-md flex-col gap-5" onSubmit={(event) => void onSubmit(event)}>
       <div className="space-y-2">
-        <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">{t("kicker")}</p>
+        <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">{t("kicker")}</p>
         <h1 className="font-editorial text-3xl tracking-tight">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">
           {invite

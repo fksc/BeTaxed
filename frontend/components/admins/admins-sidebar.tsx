@@ -3,6 +3,7 @@
 import { Building2, CreditCard, FileInput, FileText, Flag, LayoutDashboard } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { AnteaterLogo } from "@/components/brand/anteater-logo";
 import { NavUser } from "@/components/shell/nav-user";
 import {
   Sidebar,
@@ -71,9 +72,11 @@ export function AdminsSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="px-3 py-4">
-        <p className="font-heading truncate text-lg tracking-tight">{t("brand")}</p>
-        <p className="truncate text-xs text-sidebar-foreground/70">{t("brandHint")}</p>
+      <SidebarHeader className="gap-2 px-3 py-4">
+        <AnteaterLogo collapsedAware />
+        <p className="truncate text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
+          {t("brandHint")}
+        </p>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

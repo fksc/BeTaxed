@@ -51,7 +51,7 @@ function TeaserCard({
 }) {
   return (
     <article className="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_0_oklch(0.22_0.02_250_/_0.04)]">
-      <p className="text-xs font-medium tracking-[0.14em] text-accent uppercase">
+      <p className="text-xs font-medium tracking-[0.14em] text-accent-ink uppercase">
         {kicker}
       </p>
       <p className="mt-4 font-heading text-3xl tracking-tight tabular-nums">

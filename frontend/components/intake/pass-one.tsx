@@ -1,16 +1,25 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useRef, useState } from "react";
 
+import HoldButton from "@/components/HoldButton";
+import LetterGlitch from "@/components/LetterGlitch";
+import StarBorder from "@/components/StarBorder";
+import Stepper, { Step } from "@/components/Stepper";
+import { CalInlineEmbed } from "@/components/intake/cal-inline-embed";
 import { Dropzone } from "@/components/intake/dropzone";
 import { Field, TextInput } from "@/components/intake/field";
-import { TeaserCards } from "@/components/intake/teaser-cards";
+import { PasswordField, passwordIsStrong } from "@/components/intake/password-field";
+import { SavingsCard } from "@/components/intake/savings-card";
+import { SsGuide } from "@/components/intake/ss-guide";
 import { VerboseTable } from "@/components/intake/verbose-table";
+import { PublicChrome } from "@/components/public/public-chrome";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonthPicker } from "@/components/ui/month-picker";
 import {
+  bookIntakeMeeting,
   convertIntake,
   createIntake,
   declineIntake,
@@ -18,19 +27,17 @@ import {
   uploadSsFiles,
 } from "@/lib/api/intakes";
 import { ApiError, type IntakeOut } from "@/lib/api/types";
-import { useRouter } from "@/i18n/navigation";
+import { getMe } from "@/lib/api/workspace-client";
 import { isVerboseUi } from "@/lib/dev-verbose";
-import { currentIdToken, ensureEmailUser } from "@/lib/firebase";
-import { saveCompanyId } from "@/lib/company-session";
+import { currentIdToken, ensureEmailUser, signInEmail, signOutUser } from "@/lib/firebase";
 import {
   clearIntakeSession,
   loadIntakeSession,
   saveIntakeSession,
-  saveWorkspaceName,
 } from "@/lib/intake-session";
 
-type Path = "upload" | "account";
-type Phase = "start" | "working" | "result" | "converted" | "declined";
+type Phase = "flow" | "working" | "declined";
+type Finale = "talk" | "deleted" | "saved" | null;
 
 function currentYearMonth(): string {
   const now = new Date();
@@ -39,24 +46,29 @@ function currentYearMonth(): string {
 
 export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
   const t = useTranslations();
-  const router = useRouter();
+  const locale = useLocale();
+  const meetingTokenRef = useRef<string | null>(null);
+  const sentMeetingRef = useRef<string | null>(null);
   const showVerboseTable = verboseUi || isVerboseUi();
   const workingLines = t.raw("working.lines") as string[];
-  const [path, setPath] = useState<Path>("upload");
-  const [phase, setPhase] = useState<Phase>("start");
+  const [phase, setPhase] = useState<Phase>("flow");
+  const [finale, setFinale] = useState<Finale>(null);
+  const [step, setStep] = useState(1);
+  const [booting, setBooting] = useState(() => loadIntakeSession() !== null);
   const [busy, setBusy] = useState(false);
   const [workingLine, setWorkingLine] = useState(workingLines[0]);
   const [error, setError] = useState<string | null>(null);
-  const [confirmDecline, setConfirmDecline] = useState(false);
   const [intake, setIntake] = useState<IntakeOut | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [period, setPeriod] = useState(currentYearMonth);
   const [files, setFiles] = useState<File[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordRepeat, setPasswordRepeat] = useState("");
   const [legalName, setLegalName] = useState("");
   const [tradingName, setTradingName] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [meetingStartsAt, setMeetingStartsAt] = useState<string | null>(null);
 
   function fail(error: unknown): string {
     if (error instanceof ApiError) {
@@ -85,7 +97,7 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     }
     void (async () => {
       try {
-        const idToken = await currentIdToken();
+        const idToken = await usableIdToken();
         setSignedIn(Boolean(idToken));
         const loaded = await getIntake(stored.intakeId, {
           sessionToken: stored.sessionToken,
@@ -94,15 +106,18 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         setIntake(loaded);
         setSessionToken(stored.sessionToken);
         if (loaded.status === "CONVERTED") {
-          router.replace("/companies/dashboard");
-        } else if (loaded.teaser_now_monthly != null) {
-          setPhase("result");
+          await endBrowserSession();
+          setIntake(null);
+        } else if (loaded.teaser_now_monthly != null || loaded.teaser_potential_window != null) {
+          setStep(3);
         }
       } catch {
         clearIntakeSession();
+      } finally {
+        setBooting(false);
       }
     })();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!busy || phase !== "working") {
@@ -116,10 +131,35 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     return () => window.clearInterval(timer);
   }, [busy, phase, workingLines]);
 
+  async function endBrowserSession() {
+    clearIntakeSession();
+    setSessionToken(null);
+    setSignedIn(false);
+    await signOutUser().catch(() => undefined);
+  }
+
+  async function usableIdToken(): Promise<string | null> {
+    const idToken = await currentIdToken();
+    if (!idToken) {
+      return null;
+    }
+    try {
+      await getMe({ idToken });
+      return idToken;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 403) {
+        await signOutUser().catch(() => undefined);
+        setSignedIn(false);
+        return null;
+      }
+      throw error;
+    }
+  }
+
   async function authOpts() {
     return {
       sessionToken,
-      idToken: await currentIdToken(),
+      idToken: await usableIdToken(),
     };
   }
 
@@ -129,23 +169,14 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       setError(t("errors.needFile"));
       return;
     }
+    const started = performance.now();
+    let nextStep = 2;
     setBusy(true);
     setPhase("working");
     setError(null);
     setWorkingLine(workingLines[0]);
     try {
-      let idToken = await currentIdToken();
-      if (path === "account") {
-        if (!email || !password) {
-          setError(t("errors.needAuthStart"));
-          setPhase("start");
-          setBusy(false);
-          return;
-        }
-        await ensureEmailUser(email, password);
-        idToken = await currentIdToken();
-        setSignedIn(true);
-      }
+      const idToken = await usableIdToken();
       let current = intake;
       let token = sessionToken;
       if (!current) {
@@ -161,14 +192,18 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
       setIntake(uploaded);
       if (uploaded.latest_batch?.parse_status !== "APPLIED") {
         setError(uploaded.latest_batch?.parse_error || t("errors.parseFailed"));
-        setPhase("start");
-        return;
+      } else {
+        nextStep = 3;
       }
-      setPhase("result");
     } catch (err) {
       setError(fail(err));
-      setPhase("start");
     } finally {
+      const remain = 4000 - (performance.now() - started);
+      if (remain > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remain));
+      }
+      setStep(nextStep);
+      setPhase("flow");
       setBusy(false);
     }
   }
@@ -178,6 +213,10 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     if (!intake) {
       return;
     }
+    if (!meetingStartsAt) {
+      setError(t("errors.needBooking"));
+      return;
+    }
     if (!legalName.trim()) {
       setError(t("errors.needLegalName"));
       return;
@@ -185,14 +224,29 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     setBusy(true);
     setError(null);
     try {
-      let idToken = await currentIdToken();
+      let idToken = await usableIdToken();
       if (!idToken) {
         if (!email || !password) {
           setError(t("errors.needAuthContinue"));
           setBusy(false);
           return;
         }
-        await ensureEmailUser(email, password);
+        if (password !== passwordRepeat) {
+          setError(t("errors.passwordMismatch"));
+          setBusy(false);
+          return;
+        }
+        if (!passwordIsStrong(password)) {
+          try {
+            await signInEmail(email.trim(), password);
+          } catch {
+            setError(t("errors.weakPassword"));
+            setBusy(false);
+            return;
+          }
+        } else {
+          await ensureEmailUser(email, password);
+        }
         idToken = await currentIdToken();
         setSignedIn(true);
       }
@@ -201,20 +255,43 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
         legalName.trim(),
         tradingName.trim() || null,
         { sessionToken, idToken },
+        { locale, meetingStartsAt },
       );
       setIntake(converted);
-      saveWorkspaceName(legalName.trim());
-      if (converted.company_id) {
-        saveCompanyId(converted.company_id);
+      if (converted.meeting_token) {
+        meetingTokenRef.current = converted.meeting_token;
       }
-      saveIntakeSession(converted.id, null);
-      setSessionToken(null);
-      router.replace("/companies/dashboard");
+      if (meetingStartsAt) {
+        sentMeetingRef.current = meetingStartsAt;
+      }
+      setFinale("saved");
+      await endBrowserSession();
     } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        await signOutUser().catch(() => undefined);
+        setSignedIn(false);
+      }
       setError(fail(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  function onBooked(startsAt: string) {
+    setMeetingStartsAt(startsAt);
+    const token = meetingTokenRef.current;
+    const current = intake;
+    if (!token || !current || sentMeetingRef.current === startsAt) {
+      return;
+    }
+    sentMeetingRef.current = startsAt;
+    void bookIntakeMeeting(current.id, {
+      token,
+      meeting_starts_at: startsAt,
+      locale,
+    }).catch(() => {
+      sentMeetingRef.current = null;
+    });
   }
 
   async function onDecline() {
@@ -225,11 +302,10 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
     setError(null);
     try {
       await declineIntake(intake.id, await authOpts());
-      clearIntakeSession();
       setIntake(null);
-      setSessionToken(null);
-      setConfirmDecline(false);
-      setPhase("declined");
+      setFinale("deleted");
+      setStep(4);
+      await endBrowserSession();
     } catch (err) {
       setError(fail(err));
     } finally {
@@ -239,278 +315,433 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
 
   function reset() {
     clearIntakeSession();
+    setSignedIn(false);
+    void signOutUser().catch(() => undefined);
     setIntake(null);
     setSessionToken(null);
     setFiles([]);
-    setConfirmDecline(false);
-    setPhase("start");
+    setMeetingStartsAt(null);
+    meetingTokenRef.current = null;
+    sentMeetingRef.current = null;
+    setPhase("flow");
+    setFinale(null);
+    setStep(1);
     setError(null);
+  }
+
+  if (booting) {
+    return <div className="min-h-svh" />;
   }
 
   return (
     <div className="flex min-h-full flex-col">
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-12 lg:py-16">
-        {phase === "start" || phase === "working" ? (
-          <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-5">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
-                {t("start.kicker")}
-              </p>
-              <h1 className="font-editorial text-4xl leading-[1.15] tracking-tight text-balance sm:text-5xl">
-                {t("start.headline")}
-              </h1>
-              <p className="max-w-lg text-base leading-relaxed text-muted-foreground">
-                {t("start.lead")}
-              </p>
-            </div>
-
-            <form
-              className="rounded-3xl border border-border bg-card p-6 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)]"
-              onSubmit={onUpload}
-            >
-              {error ? <ErrorBanner message={error} /> : null}
-
-              {path === "account" ? (
-                <div className="mb-6 space-y-3">
-                  <AuthFields
-                    email={email}
-                    password={password}
-                    setEmail={setEmail}
-                    setPassword={setPassword}
-                  />
-                  <button
-                    type="button"
-                    className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-                    onClick={() => setPath("upload")}
-                  >
-                    {t("start.preferUpload")}
-                  </button>
-                </div>
-              ) : (
-                <p className="mb-6 text-sm text-muted-foreground">
-                  {t("start.needAccount")}{" "}
-                  <button
-                    type="button"
-                    className="font-medium text-foreground underline-offset-4 hover:underline"
-                    onClick={() => setPath("account")}
-                  >
-                    {t("start.haveAccount")}
-                  </button>
-                </p>
-              )}
-
-              <div className="space-y-5">
-                <Field label={t("start.period")}>
-                  <MonthPicker value={period} onChange={setPeriod} disabled={busy} />
-                </Field>
-                <Dropzone files={files} disabled={busy} onFiles={setFiles} />
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-11 w-full"
-                  disabled={busy}
-                >
-                  {busy ? t("start.working") : t("start.submit")}
-                </Button>
-              </div>
-            </form>
-          </div>
-        ) : null}
-
-        {phase === "working" ? <WorkingOverlay line={workingLine} /> : null}
-
-        {phase === "result" && intake ? (
-          <ResultView
-            intake={intake}
-            error={error}
-            busy={busy}
-            signedIn={signedIn}
-            email={email}
-            password={password}
-            legalName={legalName}
-            tradingName={tradingName}
-            confirmDecline={confirmDecline}
-            setEmail={setEmail}
-            setPassword={setPassword}
-            setLegalName={setLegalName}
-            setTradingName={setTradingName}
-            setConfirmDecline={setConfirmDecline}
-            onContinue={onContinue}
-            onDecline={() => void onDecline()}
-            showVerboseTable={showVerboseTable}
-          />
-        ) : null}
-
-        {phase === "converted" && intake ? (
-          <section className="space-y-8">
-            <div className="max-w-2xl space-y-3">
-              <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
-                {t("converted.kicker")}
-              </p>
-              <h1 className="font-editorial text-4xl tracking-tight">
-                {t("converted.headline", {
-                  name: legalName.trim() || t("converted.fallbackName"),
-                })}
-              </h1>
-              <p className="text-muted-foreground">{t("converted.lead")}</p>
-            </div>
-            <TeaserCards intake={intake} />
-          </section>
-        ) : null}
-
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-5 sm:px-6 sm:py-8 lg:py-12">
+        <PublicChrome />
         {phase === "declined" ? (
           <section className="max-w-lg space-y-5">
-            <h1 className="font-editorial text-4xl tracking-tight">
+            <h1 className="font-editorial text-2xl tracking-tight text-balance sm:text-4xl">
               {t("declined.headline")}
             </h1>
-            <p className="text-muted-foreground">{t("declined.lead")}</p>
+            <p className="text-base text-muted-foreground sm:text-lg">{t("declined.lead")}</p>
             <Button type="button" variant="outline" size="lg" onClick={reset}>
               {t("declined.again")}
             </Button>
           </section>
-        ) : null}
+        ) : (
+          <Stepper
+            step={step}
+            onStepChange={setStep}
+            linear
+            showFooter={false}
+            theme="dark"
+            accentColor="#88375c"
+            width="100%"
+            radius={28}
+            indicator="numbers"
+          >
+            <Step title={t("start.stepBrief")}>
+              <BriefStep onContinue={() => setStep(2)} />
+            </Step>
+            <Step title={t("start.stepUpload")}>
+              <form className="mx-auto flex w-full max-w-xl flex-col gap-5" onSubmit={onUpload}>
+                <div className="flex flex-col items-start gap-4 md:flex-row md:justify-between">
+                  <div className="min-w-0 space-y-2">
+                    <p className="text-xs font-medium tracking-[0.16em] text-accent-ink uppercase">
+                      {t("start.uploadKicker")}
+                    </p>
+                    <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">
+                      {t("start.uploadTitle")}
+                    </h2>
+                  </div>
+                  <SsGuide />
+                </div>
+                <div className="space-y-5">
+                  {error && step === 2 ? <ErrorBanner message={error} /> : null}
+                  <Field label={t("start.period")}>
+                    <MonthPicker value={period} onChange={setPeriod} disabled={busy} />
+                  </Field>
+                  <Dropzone files={files} disabled={busy} onFiles={setFiles} />
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="h-11 sm:w-32"
+                      disabled={busy}
+                      onClick={() => setStep(1)}
+                    >
+                      {t("guide.back")}
+                    </Button>
+                    <Button type="submit" size="lg" className="h-11 w-full shrink-0 sm:flex-1" disabled={busy}>
+                      {t("start.submit")}
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </Step>
+            <Step title={t("start.stepResult")}>
+              {intake ? (
+                <ResultView
+                  intake={intake}
+                  busy={busy}
+                  onDecline={() => void onDecline()}
+                  onTalk={() => {
+                    setFinale("talk");
+                    setStep(4);
+                  }}
+                  showVerboseTable={showVerboseTable}
+                />
+              ) : (
+                <p className="text-muted-foreground">{t("result.waiting")}</p>
+              )}
+            </Step>
+            <Step title={t("start.stepClose")}>
+              <CloseView
+                finale={finale}
+                error={error}
+                busy={busy}
+                signedIn={signedIn}
+                email={email}
+                password={password}
+                passwordRepeat={passwordRepeat}
+                legalName={legalName}
+                tradingName={tradingName}
+                booked={Boolean(meetingStartsAt)}
+                setEmail={setEmail}
+                setPassword={setPassword}
+                setPasswordRepeat={setPasswordRepeat}
+                setLegalName={setLegalName}
+                setTradingName={setTradingName}
+                onContinue={onContinue}
+                onBooked={onBooked}
+              />
+            </Step>
+          </Stepper>
+        )}
       </main>
+      {phase === "working" ? <WorkingOverlay line={workingLine} /> : null}
+    </div>
+  );
+}
+
+function BriefStep({ onContinue }: { onContinue: () => void }) {
+  const t = useTranslations("start");
+  const assurances = t.raw("assurances") as string[];
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-6 sm:gap-8">
+      <div className="space-y-3 sm:space-y-4">
+        <p className="text-xs font-medium tracking-[0.16em] text-emerald-300 uppercase">
+          {t("kicker")}
+        </p>
+        <h1 className="font-editorial text-2xl leading-tight tracking-tight text-balance sm:text-4xl sm:leading-[1.15] lg:text-5xl">
+          {t("headline")}
+        </h1>
+        <p className="text-base leading-relaxed text-muted-foreground sm:text-lg">{t("lead")}</p>
+      </div>
+      <ul className="flex list-disc flex-col gap-3 pl-5 marker:text-emerald-600 sm:gap-4">
+        {assurances.map((line) => (
+          <li key={line} className="text-base font-semibold leading-relaxed text-emerald-600 sm:text-lg">
+            {line}
+          </li>
+        ))}
+      </ul>
+      <Button type="button" size="lg" className="h-11 w-full sm:w-fit sm:px-8" onClick={onContinue}>
+        {t("continue")}
+      </Button>
     </div>
   );
 }
 
 function ResultView({
   intake,
+  busy,
+  onDecline,
+  onTalk,
+  showVerboseTable,
+}: {
+  intake: IntakeOut;
+  busy: boolean;
+  onDecline: () => void;
+  onTalk: () => void;
+  showVerboseTable: boolean;
+}) {
+  const t = useTranslations();
+  const model = t.raw("result.model") as string[];
+  return (
+    <div className="space-y-6 sm:space-y-8">
+      <div className="grid items-start gap-6 sm:gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="min-w-0 space-y-6">
+          <SavingsCard intake={intake} />
+          <div className="space-y-3">
+            <h2 className="font-editorial text-xl tracking-tight sm:text-2xl">{t("result.modelTitle")}</h2>
+            <ul className="flex flex-col gap-3">
+              {model.map((line) => (
+                <li key={line} className="leading-relaxed text-muted-foreground">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="space-y-3">
+            <p className="font-editorial text-xl tracking-tight sm:text-2xl">{t("result.continueAsk")}</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <HoldButton
+                className="w-full max-w-full sm:w-auto"
+                disabled={busy}
+                holdTime={1600}
+                backgroundColor="#3f1d28"
+                fillColor="#9f1239"
+                textColor="#f4f1ec"
+                fillTextColor="#ffffff"
+                onHold={onDecline}
+              >
+                {t("result.holdDelete")}
+              </HoldButton>
+              <StarBorder
+                className="w-full max-w-full sm:w-auto"
+                disabled={busy}
+                color="#ffffff"
+                trailColor="#ffffff"
+                duration={4}
+                direction="clockwise"
+                stars={1}
+                trailLength={0.3}
+                thickness={1}
+                radius={12}
+                glow={0.6}
+                hover="lap"
+                sparkle={false}
+                clickPulse
+                theme="dark"
+                onClick={onTalk}
+              >
+                {t("result.talk")}
+              </StarBorder>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showVerboseTable && intake.verbose_people?.length ? (
+        <VerboseTable people={intake.verbose_people} />
+      ) : null}
+    </div>
+  );
+}
+
+function CloseView({
+  finale,
   error,
   busy,
   signedIn,
   email,
   password,
+  passwordRepeat,
   legalName,
   tradingName,
-  confirmDecline,
+  booked,
   setEmail,
   setPassword,
+  setPasswordRepeat,
   setLegalName,
   setTradingName,
-  setConfirmDecline,
   onContinue,
-  onDecline,
-  showVerboseTable,
+  onBooked,
 }: {
-  intake: IntakeOut;
+  finale: Finale;
   error: string | null;
   busy: boolean;
   signedIn: boolean;
   email: string;
   password: string;
+  passwordRepeat: string;
   legalName: string;
   tradingName: string;
-  confirmDecline: boolean;
+  booked: boolean;
   setEmail: (value: string) => void;
   setPassword: (value: string) => void;
+  setPasswordRepeat: (value: string) => void;
   setLegalName: (value: string) => void;
   setTradingName: (value: string) => void;
-  setConfirmDecline: (value: boolean) => void;
   onContinue: (event: React.FormEvent) => void;
-  onDecline: () => void;
-  showVerboseTable: boolean;
+  onBooked: (startsAt: string) => void;
 }) {
   const t = useTranslations();
+  if (finale === "deleted") {
+    return (
+      <section className="mx-auto max-w-lg space-y-5">
+        <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-4xl">{t("declined.headline")}</h2>
+        <p className="text-base text-muted-foreground sm:text-lg">{t("declined.lead")}</p>
+      </section>
+    );
+  }
   return (
-    <section className="space-y-10">
-      <div className="max-w-2xl space-y-3">
-        <p className="text-xs font-medium tracking-[0.16em] text-accent uppercase">
-          {t("result.kicker")}
-        </p>
-        <h1 className="font-editorial text-4xl tracking-tight text-balance">
-          {t("result.headline")}
-        </h1>
-        <p className="text-muted-foreground">{t("result.lead")}</p>
-      </div>
-
-      <TeaserCards intake={intake} />
-      {showVerboseTable && intake.verbose_people?.length ? (
-        <VerboseTable people={intake.verbose_people} />
-      ) : null}
-
-      <form
-        className="max-w-lg space-y-5 rounded-3xl border border-border bg-card p-6"
-        onSubmit={onContinue}
-      >
-        {error ? <ErrorBanner message={error} /> : null}
-        <p className="font-medium">{t("result.continueTitle")}</p>
-        {!signedIn ? (
-          <AuthFields
-            email={email}
-            password={password}
-            setEmail={setEmail}
-            setPassword={setPassword}
-          />
-        ) : null}
-        <Field label={t("result.legalName")}>
-          <TextInput
-            value={legalName}
-            onChange={(event) => setLegalName(event.target.value)}
-            required
-            disabled={busy}
-            autoComplete="organization"
-          />
-        </Field>
-        <Field label={t("result.tradingName")} hint={t("result.optional")}>
-          <TextInput
-            value={tradingName}
-            onChange={(event) => setTradingName(event.target.value)}
-            disabled={busy}
-          />
-        </Field>
-        <Button type="submit" size="lg" className="h-11 w-full" disabled={busy}>
-          {busy ? t("result.opening") : t("result.createWorkspace")}
-        </Button>
-        {confirmDecline ? (
-          <div className="space-y-3 rounded-xl bg-muted p-4 text-sm">
-            <p>{t("result.declineConfirm")}</p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={busy}
-                onClick={onDecline}
-              >
-                {t("result.declineYes")}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setConfirmDecline(false)}
-              >
-                {t("result.cancel")}
-              </Button>
+    <div className="space-y-6 sm:space-y-8">
+      {finale === "saved" ? (
+        <div className="space-y-2">
+          <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">{t("result.savedTitle")}</h2>
+          <p className="text-base text-muted-foreground sm:text-lg">{t("result.savedLead")}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-base text-muted-foreground sm:text-lg">{t("result.bookFirst")}</p>
+          {booked ? <p className="text-base font-medium sm:text-lg">{t("result.booked")}</p> : null}
+        </div>
+      )}
+      <CalInlineEmbed onBooked={onBooked} />
+      {finale === "saved" ? null : (
+        <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)] sm:p-6">
+          {error ? <ErrorBanner message={error} /> : null}
+          <form className="space-y-5" onSubmit={onContinue}>
+            <div className="space-y-1">
+              <p className="text-lg font-medium">{t("result.continueTitle")}</p>
+              <p className="text-muted-foreground">{t("result.accountHint")}</p>
             </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="text-sm text-muted-foreground underline-offset-4 hover:underline"
-            onClick={() => setConfirmDecline(true)}
-          >
-            {t("result.decline")}
-          </button>
-        )}
-      </form>
-    </section>
+            {!signedIn ? (
+              <AuthFields
+                email={email}
+                password={password}
+                passwordRepeat={passwordRepeat}
+                setEmail={setEmail}
+                setPassword={setPassword}
+                setPasswordRepeat={setPasswordRepeat}
+              />
+            ) : null}
+            <Field label={t("result.legalName")}>
+              <TextInput
+                value={legalName}
+                onChange={(event) => setLegalName(event.target.value)}
+                required
+                disabled={busy}
+                autoComplete="organization"
+              />
+            </Field>
+            <Field label={t("result.tradingName")} hint={t("result.optional")}>
+              <TextInput
+                value={tradingName}
+                onChange={(event) => setTradingName(event.target.value)}
+                disabled={busy}
+              />
+            </Field>
+            <CreateWorkspaceButton
+              busy={busy}
+              booked={booked}
+              signedIn={signedIn}
+              email={email}
+              password={password}
+              passwordRepeat={passwordRepeat}
+              legalName={legalName}
+              label={busy ? t("result.opening") : t("result.createWorkspace")}
+            />
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CreateWorkspaceButton({
+  busy,
+  booked,
+  signedIn,
+  email,
+  password,
+  passwordRepeat,
+  legalName,
+  label,
+}: {
+  busy: boolean;
+  booked: boolean;
+  signedIn: boolean;
+  email: string;
+  password: string;
+  passwordRepeat: string;
+  legalName: string;
+  label: string;
+}) {
+  const t = useTranslations();
+  const reasons: string[] = [];
+  if (!booked) {
+    reasons.push(t("result.needMeeting"));
+  }
+  if (!signedIn) {
+    const emailReady = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    if (!emailReady || !password || !passwordRepeat) {
+      reasons.push(t("result.needAccount"));
+    } else if (password !== passwordRepeat) {
+      reasons.push(t("errors.passwordMismatch"));
+    } else if (!passwordIsStrong(password)) {
+      reasons.push(t("errors.weakPassword"));
+    }
+  }
+  if (!legalName.trim()) {
+    reasons.push(t("result.needLegalName"));
+  }
+  const reason = reasons.join(" ");
+  const disabled = busy || reasons.length > 0;
+  const button = (
+    <Button
+      type="submit"
+      size="lg"
+      className={`h-11 w-full${disabled ? " pointer-events-none" : ""}`}
+      disabled={disabled}
+    >
+      {label}
+    </Button>
+  );
+  if (!reason) {
+    return button;
+  }
+  return (
+    <div className="space-y-2">
+      <Tooltip>
+        <TooltipTrigger render={<span className="block w-full" />}>{button}</TooltipTrigger>
+        <TooltipContent className="max-w-xs whitespace-normal text-left">{reason}</TooltipContent>
+      </Tooltip>
+      <p className="text-sm text-muted-foreground">{reason}</p>
+    </div>
   );
 }
 
 function AuthFields({
   email,
   password,
+  passwordRepeat,
   setEmail,
   setPassword,
+  setPasswordRepeat,
 }: {
   email: string;
   password: string;
+  passwordRepeat: string;
   setEmail: (value: string) => void;
   setPassword: (value: string) => void;
+  setPasswordRepeat: (value: string) => void;
 }) {
   const t = useTranslations("auth");
+  const mismatch = passwordRepeat.length > 0 && passwordRepeat !== password;
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="grid gap-3">
       <Field label={t("email")}>
         <TextInput
           type="email"
@@ -519,21 +750,21 @@ function AuthFields({
           onChange={(event) => setEmail(event.target.value)}
         />
       </Field>
-      <Field label={t("password")}>
-        <TextInput
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </Field>
+      <PasswordField value={password} onChange={setPassword} />
+      <PasswordField
+        value={passwordRepeat}
+        onChange={setPasswordRepeat}
+        labelKey="repeat"
+        meter={false}
+        hint={mismatch ? "mismatch" : undefined}
+      />
     </div>
   );
 }
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+    <p className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-destructive">
       {message}
     </p>
   );
@@ -541,10 +772,22 @@ function ErrorBanner({ message }: { message: string }) {
 
 function WorkingOverlay({ line }: { line: string }) {
   return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-background/70 backdrop-blur-sm">
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 shadow-lg">
-        <Loader2 className="size-5 animate-spin text-primary" />
-        <p className="text-sm font-medium">{line}</p>
+    <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: "#070608" }}>
+      <LetterGlitch
+        glitchColors={["#ffffff", "#88375c"]}
+        baseColor="#ffffff"
+        backgroundColor="#070608"
+        glitchAmount={0.4}
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        style={{ position: "absolute", inset: 0, backgroundColor: "#070608" }}
+      />
+      <div className="relative z-10 flex h-full w-full items-end justify-center px-4 py-8 sm:items-center sm:p-10">
+        <p
+          className="w-full max-w-xl rounded-3xl px-5 py-4 text-center font-editorial text-2xl tracking-tight text-balance sm:px-8 sm:py-5 sm:text-4xl lg:text-5xl"
+          style={{ backgroundColor: "rgba(7, 6, 8, 0.72)", color: "#f4f1ec" }}
+        >
+          {line}
+        </p>
       </div>
     </div>
   );

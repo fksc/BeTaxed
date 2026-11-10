@@ -57,7 +57,7 @@ CREATE TABLE company (
     employer_niss_hash BYTEA,
     employer_niss_enc BYTEA,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE'
-        CHECK (status IN ('ACTIVE', 'SUSPENDED', 'CHURNED')),
+        CHECK (status IN ('PENDING', 'ACTIVE', 'SUSPENDED', 'CHURNED')),
     locale VARCHAR(10) NOT NULL DEFAULT 'pt',
     ss_regularized BOOLEAN,                 -- current-cache: a valid SS_NO_DEBT cert covers today
     at_regularized BOOLEAN,                 -- current-cache: a valid AT_NO_DEBT cert covers today
@@ -108,7 +108,8 @@ CREATE INDEX idx_membership_company ON company_membership(company_id);
 ```
 
 **Rules:**
-- Uploader who continues becomes `ADMIN` (membership active immediately).
+- Uploader who continues becomes `ADMIN`. The public close sends `awaiting_activation`, so the company stays `PENDING`, the membership stays inactive, and the user stays `is_active = FALSE` until BeTaxed staff set the company to `ACTIVE`. Signed-in requests that require an account still return 403. Public intake treats that same token as anonymous, so a waiting account can start a new reading.
+- Sales-led and other converts stay `ACTIVE` with an active membership.
 - Sales-led first admin: invite creates `user_base` + membership with `is_active = FALSE` until they set a password (`KB/10`).
 - BeTaxed staff are **not** members. They act with explicit `company_id` in the request (`KB/40_permissions.md`).
 - One person may belong to multiple companies.
@@ -151,7 +152,7 @@ CREATE INDEX idx_company_invite_email ON company_invite(company_id, email);
 - TTL default 72 hours. Expired rows stay `EXPIRED` (or are treated as expired when `expires_at` has passed) until resend or cancel.
 - Resend allowed for `PENDING`, `FAILED`, and `EXPIRED` (new token, new expiry). Not for `ACCEPTED` / `CANCELLED`.
 - Unknown / duplicate active member email → fail closed (409). Open invite for the same email → resend that row.
-- Invite email is the **only** transactional mail in v1 (`KB/08`). Resend or Brevo when `RESEND_API_KEY` / `BREVO_API_KEY` is set (`EMAIL_PROVIDER` to pick); otherwise the API returns `invite_url` for the sender to copy.
+- Invite email and the public-intake welcome are the transactional mail in v1 (`KB/08`). Resend or Brevo when `RESEND_API_KEY` / `BREVO_API_KEY` is set (`EMAIL_PROVIDER` to pick); otherwise the API returns `invite_url` for the sender to copy and skips the welcome.
 - Sales-led company create requires the admin’s given and family name (stored on the invite; also set as Firebase `displayName`). Other member invites may omit names.
 
 ---
@@ -165,6 +166,11 @@ CREATE TABLE intake (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES user_base(id),          -- null until account exists (upload-first)
     email VARCHAR(255),                             -- optional contact
+    sales_call_name VARCHAR(255),                   -- pass-1 call request; cleared on purge
+    sales_call_email VARCHAR(255),
+    sales_call_phone VARCHAR(40),
+    sales_call_at TIMESTAMPTZ,
+    meeting_starts_at TIMESTAMPTZ,                  -- Cal.com slot from the public close, if booked
     session_token_hash BYTEA,                       -- anonymous/browser bind (upload-first)
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN'
         CHECK (status IN ('OPEN', 'CONVERTED', 'DECLINED', 'PURGED')),
@@ -188,7 +194,8 @@ CREATE INDEX idx_intake_status ON intake(status);
 - `user_id` nullable **on purpose** (OD-1 locked: both account-first and upload-first).
 - The four `teaser_*` amounts are what we **showed** (OD-2), not a live ledger. Do not use JSONB.
 - Convert: create `company`, set `converted_company_id`, `status = CONVERTED`, attach batches/employees (`KB/10_product_flow.md#pass-2--stay`).
-- Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed.
+- Decline: `DECLINED` then purge (`KB/10_product_flow.md#wipe-on-decline`). After purge, do not keep PII. A tombstone (`id`, `status=PURGED`, `purged_at`) is allowed. Clear `sales_call_*` with `email`.
+- A sales-call request on an open intake stores name, email, and phone here and may mail `SALES_NOTIFY_EMAIL`. It does not create a company.
 - Add FK `intake.teaser_regime_id → incentive_regime(id)` in the benefit migration.
 
 **Circular FK:** `company.created_from_intake_id` → `intake(id)` added after both tables exist (nullable, set on convert).

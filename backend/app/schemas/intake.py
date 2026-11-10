@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
@@ -55,11 +55,35 @@ class IntakeCreatedOut(IntakeOut):
     session_token: str | None = None
 
 
+class SalesCallIn(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=255)
+    phone: str = Field(min_length=6, max_length=40)
+
+
+class SalesCallOut(BaseModel):
+    ok: bool = True
+
+
 class ConvertIntakeIn(BaseModel):
     legal_name: str = Field(min_length=1, max_length=255)
     trading_name: str | None = Field(default=None, max_length=255)
+    awaiting_activation: bool = False
+    locale: Literal["pt", "en"] = "pt"
+    meeting_starts_at: datetime | None = None
+
+
+class MeetingBookedIn(BaseModel):
+    token: str = Field(min_length=8, max_length=200)
+    meeting_starts_at: datetime
+    locale: Literal["pt", "en"] = "pt"
+
+
+class MeetingBookedOut(BaseModel):
+    ok: bool = True
 
 
 class ConvertIntakeOut(IntakeOut):
     company_id: uuid.UUID
     membership_role: str | None
+    meeting_token: str | None = None

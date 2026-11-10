@@ -1,10 +1,10 @@
 {
   "meta": {
-    "title": "BeTaxed — Social Security savings",
+    "title": "Anteater — Social Security savings",
     "description": "Find unrealized Social Security savings for your company. No recipe."
   },
   "brand": {
-    "name": "BeTaxed",
+    "name": "Anteater",
     "market": "Portugal"
   },
   "userMenu": {
@@ -18,19 +18,94 @@
     "switchTo": "Language"
   },
   "start": {
-    "kicker": "Read the extract",
-    "headline": "There is unrealized Social Security saving in your company.",
-    "lead": "Upload the extract you generate from Segurança Social. We show two totals — what is already within reach, and what could follow. We do not teach the method.",
-    "needAccount": "You do not need an account to see the totals.",
-    "haveAccount": "I already have an account",
-    "preferUpload": "I would rather upload the file first",
+    "kicker": "Let's start digging",
+    "headline": "Upload your files securely and see how much we can save you",
+    "lead": "We read the files in seconds and show a first estimate. Then you decide whether to continue.",
+    "continue": "Continue",
+    "stepBrief": "What we do",
+    "stepUpload": "Upload",
+    "stepResult": "Your saving",
+    "stepClose": "Next",
+    "assurances": [
+      "All your information will be encrypted",
+      "If you decide not to go forward we will immediately delete all information you shared with us.",
+      "Our business model is success based, so you only pay us a percentage if we can save you money."
+    ],
+    "uploadKicker": "The extract",
+    "uploadTitle": "Drop the vínculos file",
     "period": "Declaration month",
-    "submit": "See the totals",
+    "submit": "Read the extract",
     "working": "Working…"
   },
   "dropzone": {
     "title": "Drop the Segurança Social extract",
     "hint": "CSV or Excel. One workbook, or both files (employment and contracts)."
+  },
+  "guide": {
+    "kicker": "Export",
+    "title": "Get the vínculos from Segurança Social Direta",
+    "open": "How to export the file",
+    "pill": "See how to get your vínculos",
+    "peek": "See step by step guide!",
+    "close": "Close",
+    "portal": "Open Segurança Social Direta",
+    "progress": "Step {current} of {total}",
+    "scenarioProgress": "{scenario} · step {current} of {total}",
+    "scenarioAName": "Scenario A",
+    "scenarioBName": "Scenario B",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "forkProgress": "After the search",
+    "forkLead": "Fewer than 50 people follows scenario A. More than 50 follows scenario B.",
+    "under50": "Fewer than 50 people",
+    "over50": "More than 50 people",
+    "shared": [
+      {
+        "title": "Sign in",
+        "body": "Open Segurança Social Direta and sign in with the company’s Social Security number (NISS) and password."
+      },
+      {
+        "title": "Search for vínculos",
+        "body": "In the search field, look up “vínculos” and choose “Consultar e alterar vínculos dos trabalhadores”."
+      },
+      {
+        "title": "Search by workplace and rate",
+        "body": "In “Pesquisar por”, choose “Local de Trabalho e taxa”."
+      },
+      {
+        "title": "Set the period to today",
+        "body": "In “Período a pesquisar”, put today’s date in both ends of the range."
+      },
+      {
+        "title": "Choose the vínculo",
+        "body": "In “Vínculo”, choose “Trabalhadores por conta de outrem”."
+      },
+      {
+        "title": "Include every workplace",
+        "body": "In “Local de trabalho”, leave “Selecione uma opção” so every workplace is included, then click “Pesquisar”."
+      }
+    ],
+    "scenarioA": [
+      {
+        "title": "Download the zip",
+        "body": "Click “Obter vínculos”. A zip file downloads. Open it and drop the “vínculos” and “contratos” CSV files here. You can leave “suspensões” out."
+      }
+    ],
+    "scenarioB": [
+      {
+        "title": "Send the files to Messages",
+        "body": "Click “Obter vínculos”. Because of the size, Segurança Social Direta sends the files to Messages instead of downloading them now."
+      },
+      {
+        "title": "Open the message",
+        "body": "Click the envelope icon (Mensagens) in the top right, then open the message for this request."
+      },
+      {
+        "title": "Download the CSV files",
+        "body": "Under Anexos, download the CSV files named “vínculos” and “contratos” and drop them here. You can leave “suspensões” out."
+      }
+    ]
   },
   "working": {
     "lines": [
@@ -43,12 +118,43 @@
     "kicker": "Opportunity",
     "headline": "There is value left on the table. Not a map of how to take it.",
     "lead": "If you continue, we run the process with you. If you decline, we delete the extract and these figures.",
-    "continueTitle": "Continue with BeTaxed",
+    "waiting": "Upload the extract to see the saving.",
+    "potentialLabel": "Potential saving",
+    "estimate": "Estimate",
+    "perMonth": "{amount} per month",
+    "modelTitle": "How we work",
+    "model": [
+      "We handle the process with you. The technology we built lets us create value for your company.",
+      "A win-win model: no fee when there is no saving for the company.",
+      "This figure is a reading of the information you shared. The amounts can sit under or over the mark once we look at more detailed information."
+    ],
+    "continueAsk": "Would you like to continue?",
+    "talk": "Yes, let's talk",
+    "holdDelete": "No, HOLD TO DELETE",
+    "savedTitle": "Your workspace is saved, and it stays inactive.",
+    "savedLead": "We have your time. We activate the workspace before you can sign in.",
+    "bookFirst": "Book a meeting, then create an account. If you do not do both, we do not keep any of your data and we delete it.",
+    "booked": "Meeting booked. The workspace stays closed until the account and the company name are filled in.",
+    "needMeeting": "Book a meeting first.",
+    "needAccount": "Enter your email, a strong password, and repeat the password.",
+    "needLegalName": "Enter the company’s legal name.",
+    "workspaceTab": "Create workspace",
+    "callTab": "Request a call",
+    "continueTitle": "Continue with Anteater",
+    "accountHint": "New here? Choose an email and a password. Already have an account? Use them to sign in.",
     "legalName": "Legal name",
     "tradingName": "Trading name",
     "optional": "Optional",
     "createWorkspace": "Create workspace",
     "opening": "Opening the workspace…",
+    "callTitle": "Talk to us first",
+    "callLead": "Leave a name and a number. We will call about this reading.",
+    "callName": "Name",
+    "callPhone": "Phone",
+    "callSubmit": "Request a call",
+    "callSending": "Sending…",
+    "callDone": "We have the request.",
+    "callDoneLead": "It is saved with this reading. You can still create the workspace.",
     "decline": "No, delete everything",
     "declineConfirm": "This permanently deletes the file and the totals.",
     "declineYes": "Yes, delete",
@@ -67,9 +173,10 @@
     "password": "Password",
     "kicker": "Account",
     "signIn": "Sign in",
-    "signInTitle": "Sign in to BeTaxed",
+    "signInTitle": "Sign in to Anteater",
     "signInLead": "Use the account you created the workspace with, or one you already have.",
     "signingIn": "Signing in…",
+    "backHome": "Go back to website",
     "noAccount": "No account yet?",
     "goToStart": "Start with a reading of the extract"
   },
@@ -80,16 +187,32 @@
     "lead": "The same totals are stored. Next: contracts, monthly declarations, and the work — in the workspace."
   },
   "declined": {
-    "headline": "The extract and totals were deleted.",
-    "lead": "Nothing stays with us. You can start again whenever you like.",
+    "headline": "All your information was deleted from our servers.",
+    "lead": "The file, the rows we read, and the figures are gone. You can start again whenever you like.",
     "again": "New reading"
+  },
+  "password": {
+    "label": "Password",
+    "veryWeak": "Very weak",
+    "weak": "Weak",
+    "fair": "Fair",
+    "good": "Good",
+    "strong": "Strong",
+    "needStronger": "Make it stronger before continuing.",
+    "repeat": "Repeat password",
+    "show": "Hold to show",
+    "mismatch": "The passwords do not match."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "needFile": "Choose the Segurança Social extract (CSV or Excel).",
     "needAuthStart": "To sign in first, enter email and password.",
     "needAuthContinue": "Create an account (or sign in) to continue.",
+    "weakPassword": "Choose a stronger password.",
+    "passwordMismatch": "The passwords do not match.",
+    "needBooking": "Book a time before creating the workspace.",
     "needLegalName": "Enter the company’s legal name.",
+    "needCall": "Enter a name, email, and phone so we can call you.",
     "parseFailed": "This file could not be read. Use the official employment and contracts extract.",
     "authInvalid": "Incorrect email or password.",
     "authWeak": "Password must be at least 6 characters.",
@@ -117,7 +240,7 @@
     }
   },
   "workspace": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Portugal",
     "navGroup": "Workspace",
     "soon": "Soon",
@@ -221,7 +344,7 @@
       "establishmentReopen": "Reopen",
       "establishmentInvalid": "Enter a name and a 4-digit code.",
       "establishmentDuplicate": "That Segurança Social code is already on this company.",
-      "establishmentForbidden": "Only a company admin or BeTaxed staff can change establishments.",
+      "establishmentForbidden": "Only a company admin or Anteater staff can change establishments.",
       "establishmentFailed": "Could not save the establishment."
     },
     "invoices": {
@@ -369,7 +492,7 @@
     }
   },
   "admins": {
-    "brand": "BeTaxed",
+    "brand": "Anteater",
     "brandHint": "Operations",
     "navGroup": "Ops",
     "soon": "Soon",
@@ -665,6 +788,8 @@
       "crumb": "Company",
       "back": "All companies",
       "title": "Company",
+      "activate": "Activate workspace",
+      "pending": "Inactive until you activate it",
       "lead": "Override the seat cap and invite company users.",
       "hubNavAria": "Company sections",
       "tabOverview": "Overview",
@@ -753,53 +878,6 @@
       "capInvalid": "Enter a whole number of 1 or more.",
       "saveFailed": "Could not save the limit.",
       "needAuth": "Could not load this company."
-    }
-  },
-  "marketing": {
-    "nav": {
-      "brand": "beTaxed",
-      "about": "About us",
-      "contact": "Contact",
-      "start": "Read the extract",
-      "signIn": "Sign in",
-      "workspace": "Workspace",
-      "openMenu": "Open menu"
-    },
-    "footer": {
-      "brand": "beTaxed",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal",
-      "about": "About us",
-      "contact": "Contact",
-      "start": "Read the extract",
-      "privacy": "Privacy policy"
-    },
-    "landing": {
-      "headline": "Tax optimisation",
-      "heroCaption": "Anticipate. Execute. Within the law.",
-      "subhead": "Unveiling and enhancing opportunities — for greater tax efficiency",
-      "lead": "Tax planning and optimisation for companies — a legal way to reduce the tax burden.",
-      "cta": "Read your extract",
-      "p1": "People often look at tax optimisation with suspicion. Tax itself became a stigma: any cut in the bill is assumed to come from something murky and outside the law.",
-      "p2": "Tax work has long since moved from a purely reactive stance with the authorities to a proactive one: taking initiative and anticipating, then executing.",
-      "p3": "A professional approach, proper planning, and execution help your company use, legally, the benefits that apply to its situation. The public screen does not teach the method."
-    },
-    "about": {
-      "kicker": "About us",
-      "headline": "Business tax, with execution.",
-      "p1": "BeTaxed works with companies in Portugal. We find unrealized Social Security savings and, if you stay, we run the process with you.",
-      "p2": "This is not a do-it-yourself calculator. The public screen shows totals; the map for how to get them stays with us.",
-      "p3": "Based in Porto. Contact: geral@betaxed.eu."
-    },
-    "contact": {
-      "kicker": "Contact",
-      "headline": "Get in touch",
-      "email": "geral@betaxed.eu",
-      "address": "Praceta Eng. António de Almeida 70\n3º andar, Escr. 363\n4100-065 Porto\nPortugal"
-    },
-    "privacy": {
-      "headline": "Privacy policy",
-      "lead": "Full legal copy comes later. For now: if you decline after a reading, we delete the extract."
     }
   },
   "notifications": {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date
 
@@ -20,21 +21,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.deps.auth import get_current_user, get_optional_current_user
-from app.models import Intake, UserBase
+from app.models import Company, Intake, UserBase
 from app.schemas.intake import (
     ConvertIntakeIn,
     ConvertIntakeOut,
     IntakeBatchSummary,
     IntakeCreatedOut,
     IntakeOut,
+    MeetingBookedIn,
+    MeetingBookedOut,
+    SalesCallIn,
+    SalesCallOut,
     VerbosePersonOut,
+)
+from app.services.intake_notify import (
+    as_utc,
+    issue_meeting_token,
+    notify_intake_declined,
+    notify_meeting_booked,
+    notify_workspace_saved,
+    read_meeting_token,
 )
 from app.services.intake import (
     convert_intake,
     create_intake,
     latest_batch_summary,
     load_intake_or_404,
+    notify_sales_call,
     purge_intake,
+    record_sales_call,
     require_intake_access,
     require_open,
 )
@@ -45,6 +60,8 @@ from app.services.teaser import compute_verbose_people, persist_intake_teaser
 from app.settings import HEADER_INTAKE_SESSION, verbose_people_enabled
 
 router = APIRouter(prefix="/v1", tags=["intake"])
+
+_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _session_header(
@@ -113,6 +130,34 @@ async def post_intake_upload(
     return await _intake_out(db, intake, latest)
 
 
+@router.post("/intakes/{intake_id}/sales-call", response_model=SalesCallOut)
+async def post_intake_sales_call(
+    intake_id: uuid.UUID,
+    body: SalesCallIn,
+    user: UserBase | None = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+    session_token: str | None = Depends(_session_header),
+) -> SalesCallOut:
+    email = body.email.strip()
+    if _EMAIL.fullmatch(email) is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Enter a valid email address.",
+        )
+    intake = await load_intake_or_404(db, intake_id)
+    require_intake_access(intake, user, session_token)
+    await record_sales_call(
+        db,
+        intake,
+        name=body.name.strip(),
+        email=email,
+        phone=body.phone.strip(),
+    )
+    await db.commit()
+    notify_sales_call(intake)
+    return SalesCallOut()
+
+
 @router.post("/intakes/{intake_id}/convert", response_model=ConvertIntakeOut)
 async def post_intake_convert(
     intake_id: uuid.UUID,
@@ -129,6 +174,8 @@ async def post_intake_convert(
         session_token=session_token,
         legal_name=body.legal_name,
         trading_name=body.trading_name,
+        awaiting_activation=body.awaiting_activation,
+        meeting_starts_at=as_utc(body.meeting_starts_at) if body.meeting_starts_at else None,
     )
     try:
         await db.commit()
@@ -139,13 +186,50 @@ async def post_intake_convert(
             detail="Employer NISS already registered to another company.",
         ) from exc
     await db.refresh(intake)
+    meeting_token = None
+    if body.awaiting_activation:
+        notify_workspace_saved(
+            to_email=user.email,
+            legal_name=company.legal_name,
+            locale=body.locale,
+            meeting_starts_at=intake.meeting_starts_at,
+        )
+        meeting_token = issue_meeting_token(intake.id)
     latest = await latest_batch_summary(db, intake.id)
     out = await _intake_out(db, intake, latest)
     return ConvertIntakeOut(
         **out.model_dump(),
         company_id=company.id,
         membership_role=role,
+        meeting_token=meeting_token,
     )
+
+
+@router.post("/intakes/{intake_id}/meeting", response_model=MeetingBookedOut)
+async def post_intake_meeting(
+    intake_id: uuid.UUID,
+    body: MeetingBookedIn,
+    db: AsyncSession = Depends(get_db),
+) -> MeetingBookedOut:
+    token_intake = read_meeting_token(body.token)
+    if token_intake != intake_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid meeting token.")
+    intake = await load_intake_or_404(db, intake_id)
+    if intake.status != "CONVERTED" or intake.converted_company_id is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This reading is not a workspace yet.")
+    starts = as_utc(body.meeting_starts_at)
+    if intake.meeting_starts_at is not None and as_utc(intake.meeting_starts_at) == starts:
+        return MeetingBookedOut()
+    company = await db.get(Company, intake.converted_company_id)
+    intake.meeting_starts_at = starts
+    await db.commit()
+    notify_meeting_booked(
+        to_email=intake.email,
+        legal_name=company.legal_name if company is not None else "Workspace",
+        locale=body.locale,
+        meeting_starts_at=starts,
+    )
+    return MeetingBookedOut()
 
 
 @router.post("/intakes/{intake_id}/decline", response_model=IntakeOut)
@@ -157,8 +241,19 @@ async def post_intake_decline(
 ) -> IntakeOut:
     intake = await load_intake_or_404(db, intake_id)
     require_intake_access(intake, user, session_token)
+    email = intake.email or (user.email if user is not None else None)
+    saw_estimate = any(
+        value is not None
+        for value in (
+            intake.teaser_now_monthly,
+            intake.teaser_now_window,
+            intake.teaser_potential_monthly,
+            intake.teaser_potential_window,
+        )
+    )
     await purge_intake(db, intake)
     await db.commit()
+    notify_intake_declined(email=email, saw_estimate=saw_estimate)
     await db.refresh(intake)
     return await _intake_out(db, intake, None)
 

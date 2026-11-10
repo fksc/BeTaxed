@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, date, datetime
 
@@ -30,6 +31,7 @@ from app.security.session import (
     new_session_token,
     session_token_matches,
 )
+from app.services.mail import InviteMailError, send_invite_email
 from app.services.ss_apply import (
     apply_ss_batch,
     attach_employment_company,
@@ -38,7 +40,10 @@ from app.services.ss_apply import (
 )
 from app.services.ss_ingest import rekey_leftover_niss
 from app.services.teaser import persist_intake_teaser_if_missing
+from app.settings import get_sales_notify_email
 from app.storage import get_object_storage
+
+logger = logging.getLogger(__name__)
 
 
 def session_grants_access(intake: Intake, token: str | None) -> bool:
@@ -95,6 +100,44 @@ def require_open(intake: Intake) -> None:
         )
 
 
+async def record_sales_call(
+    session: AsyncSession,
+    intake: Intake,
+    *,
+    name: str,
+    email: str,
+    phone: str,
+) -> None:
+    require_open(intake)
+    intake.sales_call_name = name
+    intake.sales_call_email = email
+    intake.sales_call_phone = phone
+    intake.sales_call_at = datetime.now(UTC)
+    intake.email = email
+    await session.flush()
+
+
+def notify_sales_call(intake: Intake) -> None:
+    """Best-effort mail after the row is committed. A missed send keeps the row."""
+    notify = get_sales_notify_email()
+    if not notify or not intake.sales_call_email:
+        return
+    body = (
+        f"Name: {intake.sales_call_name}\n"
+        f"Email: {intake.sales_call_email}\n"
+        f"Phone: {intake.sales_call_phone}\n"
+        f"Intake: {intake.id}\n"
+    )
+    try:
+        send_invite_email(
+            to_email=notify,
+            subject="Anteater sales call request",
+            body=body,
+        )
+    except InviteMailError:
+        logger.warning("sales call mail failed intake=%s", intake.id)
+
+
 async def create_intake(
     session: AsyncSession, user: UserBase | None
 ) -> tuple[Intake, str | None]:
@@ -119,6 +162,8 @@ async def convert_intake(
     session_token: str | None,
     legal_name: str,
     trading_name: str | None,
+    awaiting_activation: bool = False,
+    meeting_starts_at: datetime | None = None,
 ) -> tuple[Intake, Company, str | None]:
     require_open(intake)
     _require_convert_actor(intake, user, session_token)
@@ -142,6 +187,7 @@ async def convert_intake(
         legal_name=name,
         trading_name=trade or None,
         created_from_intake_id=intake.id,
+        status="PENDING" if awaiting_activation else "ACTIVE",
     )
     session.add(company)
     await session.flush()
@@ -150,10 +196,17 @@ async def convert_intake(
     if owner_id is not None:
         session.add(
             CompanyMembership(
-                user_id=owner_id, company_id=company.id, role="ADMIN"
+                user_id=owner_id,
+                company_id=company.id,
+                role="ADMIN",
+                is_active=not awaiting_activation,
             )
         )
         membership_role = "ADMIN"
+        if awaiting_activation:
+            owner = user if user.id == owner_id else await session.get(UserBase, owner_id)
+            if owner is not None and owner.user_type != "BETAXED_STAFF":
+                owner.is_active = False
 
     batches = (
         await session.execute(select(SsBatch).where(SsBatch.intake_id == intake.id))
@@ -195,6 +248,8 @@ async def convert_intake(
     intake.status = "CONVERTED"
     intake.converted_company_id = company.id
     intake.session_token_hash = None
+    if meeting_starts_at is not None:
+        intake.meeting_starts_at = meeting_starts_at
     intake.decided_at = datetime.now(UTC)
     try:
         await session.flush()
@@ -361,6 +416,10 @@ async def purge_intake(session: AsyncSession, intake: Intake) -> Intake:
     intake.decided_at = intake.decided_at or now
     intake.user_id = None
     intake.email = None
+    intake.sales_call_name = None
+    intake.sales_call_email = None
+    intake.sales_call_phone = None
+    intake.sales_call_at = None
     intake.session_token_hash = None
     intake.teaser_now_monthly = None
     intake.teaser_now_window = None

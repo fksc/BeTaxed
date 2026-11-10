@@ -426,7 +426,15 @@ def test_account_first_upload_and_purge(
     asyncio.run(body())
 
 
-def test_upload_first_decline_keeps_no_account(db_session) -> None:
+def test_upload_first_decline_keeps_no_account(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    notices: list[dict] = []
+    monkeypatch.setattr(
+        "app.routers.intakes.notify_intake_declined",
+        lambda **kwargs: notices.append(kwargs),
+    )
+
     async def body() -> None:
         storage_paths: list[str] = []
         intake_id = None
@@ -465,6 +473,7 @@ def test_upload_first_decline_keeps_no_account(db_session) -> None:
                 )
                 assert declined.status_code == 200, declined.text
                 assert declined.json()["status"] == "PURGED"
+                assert notices == [{"email": None, "saw_estimate": True}]
                 for path in storage_paths:
                     assert not Path(path).exists()
         finally:
@@ -474,6 +483,297 @@ def test_upload_first_decline_keeps_no_account(db_session) -> None:
                         delete(Intake).where(Intake.id == intake_id)
                     )
                     await session.commit()
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
+def test_sales_call_persists_and_purge_clears_it(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def body() -> None:
+        intake_id = None
+        sent: dict[str, str] = {}
+
+        def fake_send(*, to_email: str, subject: str, body: str) -> str:
+            sent["to"] = to_email
+            sent["subject"] = subject
+            sent["body"] = body
+            return "link_only"
+
+        monkeypatch.setenv("SALES_NOTIFY_EMAIL", "sales@example.test")
+        monkeypatch.setattr("app.services.intake.send_invite_email", fake_send)
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                intake_id = uuid.UUID(created.json()["id"])
+                session_token = created.json()["session_token"]
+                headers = {HEADER_INTAKE_SESSION: session_token}
+                rejected = await client.post(
+                    f"/v1/intakes/{intake_id}/sales-call",
+                    headers=headers,
+                    json={"name": "Ada", "email": "not-an-email", "phone": "910000000"},
+                )
+                assert rejected.status_code == 422, rejected.text
+                accepted = await client.post(
+                    f"/v1/intakes/{intake_id}/sales-call",
+                    headers=headers,
+                    json={
+                        "name": "Ada Lopes",
+                        "email": "ada@example.test",
+                        "phone": "910000000",
+                    },
+                )
+                assert accepted.status_code == 200, accepted.text
+                assert sent["to"] == "sales@example.test"
+                assert "ada@example.test" in sent["body"]
+                async with AsyncSessionLocal() as session:
+                    row = await session.get(Intake, intake_id)
+                    assert row is not None
+                    assert row.sales_call_name == "Ada Lopes"
+                    assert row.sales_call_email == "ada@example.test"
+                    assert row.sales_call_phone == "910000000"
+                    assert row.email == "ada@example.test"
+                    assert row.sales_call_at is not None
+                declined = await client.post(
+                    f"/v1/intakes/{intake_id}/decline",
+                    headers=headers,
+                )
+                assert declined.status_code == 200, declined.text
+                async with AsyncSessionLocal() as session:
+                    row = await session.get(Intake, intake_id)
+                    assert row is not None
+                    assert row.status == "PURGED"
+                    assert row.sales_call_name is None
+                    assert row.sales_call_email is None
+                    assert row.sales_call_phone is None
+                    assert row.sales_call_at is None
+                    assert row.email is None
+        finally:
+            async with AsyncSessionLocal() as session:
+                if intake_id is not None:
+                    await session.execute(delete(Intake).where(Intake.id == intake_id))
+                    await session.commit()
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
+def test_public_convert_stays_inactive_until_staff_activates(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    identities = _patch_verify(monkeypatch)
+
+    async def body() -> None:
+        intake_id = None
+        fresh_id = None
+        company_id = None
+        user_id = None
+        staff_id = None
+        try:
+            token = _identity(identities, "pending-owner")
+            staff_token = _identity(identities, "pending-staff")
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                payload = created.json()
+                intake_id = uuid.UUID(payload["id"])
+                session_token = payload["session_token"]
+
+                me = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert me.status_code == 200, me.text
+                user_id = uuid.UUID(me.json()["id"])
+
+                converted = await client.post(
+                    f"/v1/intakes/{intake_id}/convert",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        HEADER_INTAKE_SESSION: session_token,
+                    },
+                    json={
+                        "legal_name": "Waiting Lda",
+                        "awaiting_activation": True,
+                    },
+                )
+                assert converted.status_code == 200, converted.text
+                company_id = uuid.UUID(converted.json()["company_id"])
+
+                async with AsyncSessionLocal() as session:
+                    company = await session.get(Company, company_id)
+                    assert company is not None
+                    assert company.status == "PENDING"
+                    owner = await session.get(UserBase, user_id)
+                    assert owner is not None
+                    assert owner.is_active is False
+                    membership = (
+                        await session.execute(
+                            select(CompanyMembership).where(
+                                CompanyMembership.company_id == company_id
+                            )
+                        )
+                    ).scalar_one()
+                    assert membership.is_active is False
+
+                locked = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert locked.status_code == 403
+
+                fresh = await client.post(
+                    "/v1/intakes",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert fresh.status_code == 201, fresh.text
+                assert fresh.json()["user_id"] is None
+                assert fresh.json()["session_token"]
+                fresh_id = uuid.UUID(fresh.json()["id"])
+
+                staff_me = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {staff_token}"}
+                )
+                assert staff_me.status_code == 200, staff_me.text
+                staff_id = uuid.UUID(staff_me.json()["id"])
+                async with AsyncSessionLocal() as session:
+                    staff = await session.get(UserBase, staff_id)
+                    assert staff is not None
+                    staff.user_type = "BETAXED_STAFF"
+                    await session.commit()
+
+                activated = await client.patch(
+                    f"/v1/ops/companies/{company_id}",
+                    headers={"Authorization": f"Bearer {staff_token}"},
+                    json={"status": "ACTIVE"},
+                )
+                assert activated.status_code == 200, activated.text
+                assert activated.json()["status"] == "ACTIVE"
+
+                unlocked = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert unlocked.status_code == 200, unlocked.text
+                async with AsyncSessionLocal() as session:
+                    company = await session.get(Company, company_id)
+                    assert company is not None
+                    assert company.status == "ACTIVE"
+                    membership = (
+                        await session.execute(
+                            select(CompanyMembership).where(
+                                CompanyMembership.company_id == company_id
+                            )
+                        )
+                    ).scalar_one()
+                    assert membership.is_active is True
+        finally:
+            async with AsyncSessionLocal() as session:
+                if fresh_id is not None:
+                    await session.execute(delete(Intake).where(Intake.id == fresh_id))
+                await _cleanup_converted(
+                    session,
+                    intake_id=intake_id,
+                    company_id=company_id,
+                    user_id=user_id,
+                )
+                if staff_id is not None:
+                    staff = await session.get(UserBase, staff_id)
+                    if staff is not None:
+                        await session.delete(staff)
+                await session.commit()
+            await engine.dispose()
+
+    asyncio.run(body())
+
+
+def test_public_convert_sends_welcome_and_later_booking(
+    db_session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    saved: list[dict] = []
+    booked: list[dict] = []
+
+    def record_saved(**kwargs) -> None:
+        saved.append(kwargs)
+
+    def record_booked(**kwargs) -> None:
+        booked.append(kwargs)
+
+    monkeypatch.setattr("app.routers.intakes.notify_workspace_saved", record_saved)
+    monkeypatch.setattr("app.routers.intakes.notify_meeting_booked", record_booked)
+    monkeypatch.setenv("INTAKE_NOTIFY_SECRET", "test-secret")
+    identities = _patch_verify(monkeypatch)
+
+    async def body() -> None:
+        intake_id = None
+        company_id = None
+        user_id = None
+        try:
+            token = _identity(identities, "notify-owner")
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                created = await client.post("/v1/intakes")
+                assert created.status_code == 201, created.text
+                payload = created.json()
+                intake_id = uuid.UUID(payload["id"])
+                session_token = payload["session_token"]
+                me = await client.get(
+                    "/v1/me", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert me.status_code == 200, me.text
+                user_id = uuid.UUID(me.json()["id"])
+                converted = await client.post(
+                    f"/v1/intakes/{intake_id}/convert",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        HEADER_INTAKE_SESSION: session_token,
+                    },
+                    json={
+                        "legal_name": "Notify Lda",
+                        "awaiting_activation": True,
+                        "locale": "en",
+                        "meeting_starts_at": "2026-11-12T15:00:00Z",
+                    },
+                )
+                assert converted.status_code == 200, converted.text
+                company_id = uuid.UUID(converted.json()["company_id"])
+                meeting_token = converted.json()["meeting_token"]
+                assert meeting_token
+                assert saved and saved[0]["legal_name"] == "Notify Lda"
+                assert saved[0]["meeting_starts_at"] is not None
+
+                booked_later = await client.post(
+                    f"/v1/intakes/{intake_id}/meeting",
+                    json={
+                        "token": meeting_token,
+                        "locale": "en",
+                        "meeting_starts_at": "2026-11-13T10:00:00Z",
+                    },
+                )
+                assert booked_later.status_code == 200, booked_later.text
+                assert len(booked) == 1
+                again = await client.post(
+                    f"/v1/intakes/{intake_id}/meeting",
+                    json={
+                        "token": meeting_token,
+                        "locale": "en",
+                        "meeting_starts_at": "2026-11-13T10:00:00Z",
+                    },
+                )
+                assert again.status_code == 200, again.text
+                assert len(booked) == 1
+        finally:
+            async with AsyncSessionLocal() as session:
+                await _cleanup_converted(
+                    session,
+                    intake_id=intake_id,
+                    company_id=company_id,
+                    user_id=user_id,
+                )
             await engine.dispose()
 
     asyncio.run(body())
