@@ -1,10 +1,12 @@
-# Production deploy. Push-to-main is off until the production Cloud Run
-# services are finished. Run this by hand only after that.
+# Production deploy. A merge to main deploys the services whose files changed.
+# Run it by hand to rebuild with no file changes, using the force inputs.
 # Builds and pushes images, runs Alembic through the Cloud SQL proxy, then
 # swaps the Cloud Run image. Linear Anteater-Production is scheduled: sync, then complete.
 name: Deploy Production
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_version:
