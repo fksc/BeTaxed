@@ -27,7 +27,7 @@
     "stepResult": "A poupança",
     "stepClose": "Seguinte",
     "assurances": [
-      "Toda a sua informação fica cifrada",
+      "Toda a sua informação estará encriptada.",
       "Se decidir não avançar, apagamos de imediato toda a informação que partilhou connosco.",
       "O nosso modelo é de sucesso: só paga uma percentagem se conseguirmos poupar-lhe dinheiro."
     ],
@@ -133,8 +133,11 @@
     "holdDelete": "Não, SEGURE PARA APAGAR",
     "savedTitle": "O espaço ficou guardado e permanece inativo.",
     "savedLead": "Ficou a hora. Ativamos o espaço antes de poder entrar.",
-    "bookFirst": "Marque uma hora e depois crie o espaço. São precisos os dois para continuar.",
-    "booked": "Hora marcada. Crie o espaço em baixo para continuar.",
+    "bookFirst": "Marque uma reunião e depois crie uma conta. Se não fizer as duas coisas, não guardamos nenhum dos seus dados e apagamo-los.",
+    "booked": "Reunião marcada. O espaço fica fechado até a conta e o nome da empresa estarem preenchidos.",
+    "needMeeting": "Marque primeiro uma reunião.",
+    "needAccount": "Indique o email, uma palavra-passe forte e repita-a.",
+    "needLegalName": "Indique a denominação legal da empresa.",
     "workspaceTab": "Criar espaço",
     "callTab": "Pedir uma chamada",
     "continueTitle": "Continuar com a Anteater",
