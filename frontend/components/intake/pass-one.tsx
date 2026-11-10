@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { AnteaterLogo } from "@/components/brand/anteater-logo";
 import HoldButton from "@/components/HoldButton";
 import LetterGlitch from "@/components/LetterGlitch";
 import StarBorder from "@/components/StarBorder";
@@ -29,6 +30,7 @@ import {
 import { ApiError, type IntakeOut } from "@/lib/api/types";
 import { getMe } from "@/lib/api/workspace-client";
 import { isVerboseUi } from "@/lib/dev-verbose";
+import { marketingHomeUrl } from "@/lib/marketing-url";
 import { currentIdToken, ensureEmailUser, signInEmail, signOutUser } from "@/lib/firebase";
 import {
   clearIntakeSession,
@@ -347,6 +349,8 @@ export function PassOne({ verboseUi = false }: { verboseUi?: boolean }) {
               {t("declined.again")}
             </Button>
           </section>
+        ) : finale === "saved" ? (
+          <WorkspaceSaved meetingStartsAt={meetingStartsAt} />
         ) : (
           <Stepper
             step={step}
@@ -597,20 +601,12 @@ function CloseView({
   }
   return (
     <div className="space-y-6 sm:space-y-8">
-      {finale === "saved" ? (
-        <div className="space-y-2">
-          <h2 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">{t("result.savedTitle")}</h2>
-          <p className="text-base text-muted-foreground sm:text-lg">{t("result.savedLead")}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <p className="text-base text-muted-foreground sm:text-lg">{t("result.bookFirst")}</p>
-          {booked ? <p className="text-base font-medium sm:text-lg">{t("result.booked")}</p> : null}
-        </div>
-      )}
+      <div className="space-y-2">
+        <p className="text-base text-muted-foreground sm:text-lg">{t("result.bookFirst")}</p>
+        {booked ? <p className="text-base font-medium sm:text-lg">{t("result.booked")}</p> : null}
+      </div>
       <CalInlineEmbed onBooked={onBooked} />
-      {finale === "saved" ? null : (
-        <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)] sm:p-6">
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_40px_oklch(0.22_0.02_250_/_0.06)] sm:p-6">
           {error ? <ErrorBanner message={error} /> : null}
           <form className="space-y-5" onSubmit={onContinue}>
             <div className="space-y-1">
@@ -654,9 +650,68 @@ function CloseView({
               label={busy ? t("result.opening") : t("result.createWorkspace")}
             />
           </form>
-        </div>
-      )}
+      </div>
     </div>
+  );
+}
+
+const HOME_SECONDS = 10;
+const ANTHONY = "https://anteater.pt/Anthony-fl.png";
+
+function formatMeeting(iso: string, locale: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "pt-PT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Lisbon",
+  }).format(date);
+}
+
+function WorkspaceSaved({ meetingStartsAt }: { meetingStartsAt: string | null }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const home = marketingHomeUrl(locale);
+  const [seconds, setSeconds] = useState(HOME_SECONDS);
+  const when = meetingStartsAt ? formatMeeting(meetingStartsAt, locale) : null;
+
+  useEffect(() => {
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const left = HOME_SECONDS - Math.floor((Date.now() - started) / 1000);
+      if (left <= 0) {
+        window.location.assign(home);
+        return;
+      }
+      setSeconds(left);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [home]);
+
+  return (
+    <section className="mx-auto w-full max-w-lg rounded-2xl bg-[#171417] px-6 py-8 text-[#f4f1ec] sm:px-8">
+      <AnteaterLogo className="mb-4 h-auto w-32" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ANTHONY} alt="Anthony" className="mb-4 w-40 rounded-2xl" />
+      <h1 className="font-editorial text-2xl tracking-tight text-balance sm:text-3xl">{t("result.savedTitle")}</h1>
+      <p className="mt-4 text-base leading-relaxed sm:text-lg">{t("result.savedLead")}</p>
+      {when ? (
+        <p className="mt-5 rounded-xl bg-[#241018] px-4 py-4 text-base">{t("result.savedWhen", { when })}</p>
+      ) : null}
+      <a
+        href={home}
+        className="mt-7 inline-flex rounded-full bg-[#88375c] px-4 py-3 text-sm text-[#f4f1ec] no-underline"
+      >
+        {t("result.savedHome")}
+      </a>
+      <p className="mt-4 text-sm text-[#f4f1ec]/70">{t("result.savedCountdown", { seconds })}</p>
+    </section>
   );
 }
 
